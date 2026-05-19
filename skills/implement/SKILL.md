@@ -1,5 +1,6 @@
 ---
-description: Implement a planned task in a tight test-driven loop. Generate → run → observe REAL output → fix. Re-injects spec constraints every ~5 iterations to fight instruction attenuation. No human review gate.
+name: implement
+description: Implement a planned task in a tight test-driven loop. Generate → run → observe REAL output → fix. Re-injects task-brief constraints every ~5 iterations to fight instruction attenuation. No human review gate.
 when_to_use: After /minime:plan has handed off, or whenever the user wants the implementation loop with grounded test execution.
 allowed-tools: Read Edit Write Grep Glob Bash
 ---
@@ -20,11 +21,11 @@ Repeat per acceptance criterion:
 
 ## Constraint re-injection ("Forget-Me-Not")
 
-Every ~5 iterations, OR after any context compaction, re-read the "Constraints / non-negotiables" and "Out of scope" sections of the spec and restate them to yourself in one line. Rules decay across long loops — they get applied in form but lose substance unless refreshed.
+Every ~5 iterations, OR after any context compaction, re-read the "Constraints / non-negotiables" and "Out of scope" sections of the task brief and restate them to yourself in one line. Rules decay across long loops — they get applied in form but lose substance unless refreshed.
 
 ## Scope discipline
-- Touch only what the spec and plan require. If you discover necessary work outside scope, note it for the evidence package — do not silently expand.
-- Keep the diff as small as the spec allows. Small diffs are cheap to verify; large diffs force the reviewer to re-solve instead of check.
+- Touch only what the task brief and plan require. If you discover necessary work outside scope, note it for the evidence package — do not silently expand.
+- Keep the diff as small as the task brief allows. Small diffs are cheap to verify; large diffs force the reviewer to re-solve instead of check.
 
 ## Hand off to /minime:review with
 - the diff

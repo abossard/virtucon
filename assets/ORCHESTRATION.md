@@ -1,6 +1,6 @@
 # Agent Orchestration — minime
 
-A replacement for `brainstorm → plan-review → code → code-review`.
+A replacement for the classical `brainstorm → plan-review → code → code-review`.
 Goal: keep code quality, **remove two of the three human review gates**, and make the surviving gate cheap to clear.
 
 Portable across Claude Code and GitHub Copilot. The flow is four skills plus a plain-text per-repo wiki — no tool lock-in.
@@ -21,10 +21,10 @@ Full citations and findings: `.agent/research/REFERENCES.md`.
 ## The flow
 
 ```
-  YOU: write a short spec (acceptance criteria, EARS-style)   <- only authored artifact
+  YOU: write a short task brief (acceptance criteria, EARS-style)   <- only authored artifact
         │
         ▼
-  /minime:plan       reads wiki, plans silently, self-challenges. NO human gate.
+  /minime:plan       reads wiki, nudges EARS quality if needed, plans silently, self-challenges. NO human gate.
         │
         ▼
   /minime:implement  tight loop: generate → run tests → observe → fix
@@ -41,13 +41,20 @@ Full citations and findings: `.agent/research/REFERENCES.md`.
   /minime:harvest    on every correction you make, writes a cited wiki entry
 ```
 
-Three former gates (spec, plan, code) collapse to one tiered gate. The plan is an *input the agent consumes*, never a document you sign off.
+Three former gates (requirements, plan, code) collapse to one tiered gate. The plan is an *input the agent consumes*, never a document you sign off.
 
 ## The one rule that makes the review gate cheap
 
 The `review` skill hands you an **evidence package**, never a verdict. It must NOT say "this looks correct", show a confidence score next to a conclusion, or argue for its own work. It shows: the scoped diff, the actual test output (real, pasted), the assumptions it made, and the two or three specific lines/decisions it is least sure about. You judge.
 
 This is the single empirically strongest lever in the whole design — a verdict measurably degrades your error detection.
+
+## Subagents and model strength
+
+For larger steps, minime should prefer fresh-context subagents with strong reasoning models.
+Review is always fresh-context by design (`/minime:review` forks to `minime:reviewer`).
+If your harness supports model choice, use top reasoning tiers for these subagents and avoid fast/mini-tier variants for large reasoning-heavy phases.
+Subagents should have enough tool access for their role: full engineering tool access for implementation/investigation, and deliberately read-only access for review isolation.
 
 ## Risk tiers (who reviews what)
 
@@ -60,10 +67,10 @@ When unsure, the tier is HIGH. Tiers are defined in the `review` skill.
 
 ```
 ORCHESTRATION.md                        this file
-spec.template.md                        the short spec you fill in per task
+task.template.md                        the short EARS-style task brief you fill in per task
 CLAUDE.md                               pointer for Claude Code
 .github/copilot-instructions.md         pointer for GitHub Copilot surfaces
-.agent/wiki/<org>__<repo>.md            your per-repo corrections wiki
+.agent/wiki/<org>__<repo>.md            symlink to $HOME/.minime/wiki/repos/<org>__<repo>.md
 .agent/wiki/_TEMPLATE.md                wiki entry format
 .agent/research/REFERENCES.md           empirical basis for every design decision
 ```
@@ -84,4 +91,4 @@ The plugin also ships two agents:
 
 ## Per-repo setup
 
-The wiki is keyed by repo URL. The init skill derives the filename automatically from `git remote get-url origin` — `github.com/acme/billing` becomes `.agent/wiki/acme__billing.md`. Commit the wiki to the repo so Claude and Copilot share it.
+The wiki is keyed by repo URL. The init skill derives the filename automatically from `git remote get-url origin` — `github.com/acme/billing` becomes `.agent/wiki/acme__billing.md`, which is a symlink to the central file at `$HOME/.minime/wiki/repos/acme__billing.md`. The repo keeps the stable entrypoint; the canonical data lives in your user home.

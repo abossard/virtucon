@@ -1,4 +1,4 @@
-# Spec: <one-line task name>
+# Task brief: <one-line task name>
 
 Repo: <repo URL — this keys the wiki>
 
@@ -16,6 +16,13 @@ Use these patterns; each criterion collapses to one checkable claim:
 1.
 2.
 3.
+
+### EARS quality check (quick self-check before running /minime:plan)
+- Each criterion has exactly one verifiable behavior.
+- At least one criterion uses an explicit trigger (`When ... shall ...`) when behavior is event-driven.
+- Edge/error behavior is captured with `If ... then ... shall ...` when relevant.
+- Wording avoids implementation details (state outcomes, not code structure).
+- A test can be named for each criterion without adding extra interpretation.
 
 ## Out of scope
 <Explicitly list what NOT to touch. Prevents scope drift.>

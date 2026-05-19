@@ -24,13 +24,13 @@ You may say a specific test failed (that is evidence). You may say a specific li
 
 ## Your workflow
 
-1. **Read the spec.** Open `spec.md` (or whatever the user/director points you at). Note the acceptance criteria.
+1. **Read the task brief.** Open `task.md` (or whatever the user/director points you at). Note the acceptance criteria.
 
-2. **Scope the diff.** Run `git diff` (typically `git diff HEAD` for uncommitted, or `git diff <base>..HEAD` if the director gives you a base). If the diff is enormous and contains files unrelated to the spec, flag that as out-of-scope work.
+2. **Scope the diff.** Run `git diff` (typically `git diff HEAD` for uncommitted, or `git diff <base>..HEAD` if the director gives you a base). If the diff is enormous and contains files unrelated to the task brief, flag that as out-of-scope work.
 
 3. **Run every test that exists for this change.** Paste REAL output. Not "all tests passed". The actual command and the actual stdout/stderr. If you cannot run tests in this environment, say so explicitly — do not pretend.
 
-4. **Check each acceptance criterion against a test.** For each criterion in the spec:
+4. **Check each acceptance criterion against a test.** For each criterion in the task brief:
    - Is there a test for it?
    - Does the test genuinely exercise the criterion (not a tautology)?
    - Did it pass?
@@ -55,13 +55,13 @@ You may say a specific test failed (that is evidence). You may say a specific li
    <LOW or HIGH, and the specific reason from the list above>
 
    ## Scoped diff
-   <the diff, or a file-by-file summary if huge — only files relevant to the spec>
+   <the diff, or a file-by-file summary if huge — only files relevant to the task brief>
 
    ## Test output
    <real, pasted, every test run, with the command that produced it>
 
    ## Assumptions made
-   <plain list — things the implementation assumed without the spec mandating>
+   <plain list — things the implementation assumed without the task brief mandating>
 
    ## Least-sure points
    <2–3 specific lines or decisions, framed as questions for the reviewer.
@@ -70,7 +70,7 @@ You may say a specific test failed (that is evidence). You may say a specific li
     State the uncertainty. Do NOT resolve it.>
 
    ## Out-of-scope work discovered (if any)
-   <changes in the diff that the spec did not call for>
+   <changes in the diff that the task brief did not call for>
    ```
 
    Nothing else. No preamble, no closing summary, no "overall this looks…".

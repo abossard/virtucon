@@ -20,6 +20,11 @@ no secrets or customer data · consolidate when it grows past ~20 entries.
 - **Trigger:** <when this applies — used for relevance scoring>
 - **Evidence:** <code citation: path:line or symbol — re-verified before trust>
 - **Origin:** <human-correction | failed-approach | observation>
+- **ValueScore:** <0-8 from write filtering rubric>
+- **Confidence:** <high | medium | low>
+- **Status:** <active | stale | superseded>
+- **LastVerified:** <YYYY-MM-DD>
+- **SupersededBy:** <rule name, optional>
 - **Date:** <YYYY-MM-DD>
 
 ---
@@ -30,4 +35,9 @@ no secrets or customer data · consolidate when it grows past ~20 entries.
 - **Trigger:** Any task touching prices, billing, totals, or currency.
 - **Evidence:** `src/billing/money.py:44` (`Money` value object)
 - **Origin:** human-correction (reviewer rejected a float subtotal)
+- **ValueScore:** 8
+- **Confidence:** high
+- **Status:** active
+- **LastVerified:** 2026-05-19
+- **SupersededBy:** 
 - **Date:** 2026-05-19

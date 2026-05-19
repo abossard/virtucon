@@ -17,20 +17,26 @@ Five skills + two agents, distributed as a plugin:
 
 | Skill | Phase | Auto-invoked? |
 |---|---|---|
-| `/minime:plan` | Read the per-repo wiki, plan silently, self-challenge | yes |
+| `/minime:plan` | Read wiki, nudge EARS quality if needed, plan silently, self-challenge | yes |
 | `/minime:implement` | Test-driven generate→run→observe→fix loop | yes |
 | `/minime:review` | Compute risk tier; auto-merge LOW, escalate HIGH with evidence package | yes |
 | `/minime:harvest` | Capture corrections into the per-repo wiki as cited rules | yes |
-| `/minime:init-orchestration` | One-time bootstrap of per-repo files into a target repo | manual only |
+| `/minime:init-orchestration` | One-time bootstrap of user-home minime state (no repo writes) | manual only |
 
 | Agent | Role |
 |---|---|
-| `minime:director` | Runs the four-phase flow end-to-end. Designed for `claude --agent minime:director` (autopilot mode for a single task). Re-injects the flow's discipline at every phase boundary to fight instruction attenuation. |
+| `minime:director` | Runs the four-phase flow end-to-end. Designed for `claude --agent minime:director` (autopilot mode for a single task). Re-injects discipline at phase boundaries, nudges users toward high-quality EARS task briefs, and prefers strong fresh-context subagents for larger steps. |
 | `minime:reviewer` | Read-only reviewer. No Edit/Write tools — structurally cannot "fix" things, can only surface. The `review` skill forks into this agent automatically so the review runs in a fresh context window with no implementation bias. Can also be invoked directly with `@agent-minime:reviewer`. |
 
-Plus a small set of per-repo files dropped into your target repo by `init-orchestration`:
-`ORCHESTRATION.md`, `spec.template.md`, `CLAUDE.md`, `.github/copilot-instructions.md`,
-`.agent/wiki/<org>__<repo>.md` (your corrections wiki), `.agent/research/REFERENCES.md`.
+Runtime state lives in user home (not in your working repository):
+`$HOME/.minime/templates/task.template.md`, `$HOME/.minime/wiki/repos/<org>__<repo>.md`,
+`$HOME/.minime/wiki/orgs/<org>.md`.
+
+### High-level subagent policy
+
+- Use **strong reasoning models only** for subagent work (no fast/mini tiers for reasoning-heavy phases).
+- Give subagents **enough tools for the task** (implementation/investigation needs full engineering tool access).
+- Keep review as the explicit exception: `minime:reviewer` stays read-only in a fresh context.
 
 ---
 
@@ -43,15 +49,15 @@ In Claude Code, add this repo as a marketplace and install the plugin:
 /plugin install minime@minime
 ```
 
-Then, **inside the target repo you want to manage**, run the bootstrap once:
+Run the bootstrap once (from anywhere):
 
 ```text
 /minime:init-orchestration
 ```
 
-That stages the per-repo files. Review with `git diff --cached`, then commit.
+This initializes `$HOME/.minime/*` only and does not create or stage files in your repo.
 
-After that, the orchestration is live: write a `spec.md` for a task, invoke
+After that, the orchestration is live: write a short EARS-style `task.md` (where you prefer), invoke
 `/minime:plan`, and follow the flow.
 
 ---
@@ -60,33 +66,66 @@ After that, the orchestration is live: write a `spec.md` for a task, invoke
 
 Copilot CLI uses the same Agent Skills standard, so the same skill files work.
 
-**Option A — Copilot CLI plugin (if your CLI version supports third-party plugins):**
+### Recommended (team/shared): install from marketplace
 
-```text
-/plugin install minime@<marketplace-name>
+```bash
+copilot plugin marketplace add abossard/minime
+copilot plugin install minime@minime
 ```
 
-(Consult Copilot CLI docs for adding `abossard/minime` as a marketplace; the plugin
-file layout — `skills/<name>/SKILL.md`, `agents/`, `hooks.json`, `.mcp.json` —
-matches Copilot CLI's plugin convention.)
+Verify and inspect what loaded:
 
-**Option B — Per-repo install only (works for VS Code Copilot Chat, web Copilot,
-Copilot Code Review, and the Copilot coding agent):**
+```bash
+copilot plugin list
+copilot plugin marketplace list
+```
 
-Clone this repo somewhere and copy the asset files into your target repo by hand:
+In an interactive session:
+
+```text
+/agent
+/skills list
+```
+
+Update to latest published version:
+
+```bash
+copilot plugin update minime
+```
+
+### Direct-from-repo install (best for development/testing)
+
+Install straight from GitHub:
+
+```bash
+copilot plugin install abossard/minime
+```
+
+Or install from a local checkout:
 
 ```bash
 git clone https://github.com/abossard/minime ~/.minime
-cd /path/to/your/target/repo
-cp -r ~/.minime/assets/. .
-mv .agent/wiki/_TEMPLATE.md .agent/wiki/$(git remote get-url origin \
-    | sed -E 's#^.*github\.com[:/]##; s#\.git$##; s#/#__#g').md
-git add ORCHESTRATION.md spec.template.md CLAUDE.md \
-        .github/copilot-instructions.md .agent
+copilot plugin install ~/.minime
 ```
 
-The `.github/copilot-instructions.md` pointer is what makes every Copilot
-surface (VS Code Chat, web, code review, cloud agent) pick up the flow.
+When you edit plugin files locally, reinstall to refresh the cache:
+
+```bash
+copilot plugin install ~/.minime
+```
+
+### Initialize user-home state
+
+After plugin install:
+
+```text
+/minime:init-orchestration
+```
+
+The init skill creates user-home state only:
+- `$HOME/.minime/templates/task.template.md`
+- `$HOME/.minime/wiki/repos/<org>__<repo>.md`
+- `$HOME/.minime/wiki/orgs/<org>.md`
 
 ---
 
@@ -96,13 +135,14 @@ Two modes — pick the one that fits the task.
 
 ### Manual mode (explicit, step-by-step)
 
-1. **Per task, in the target repo**: copy `spec.template.md` → `spec.md`, fill
-   in the acceptance criteria (EARS-style), commit it.
-2. **Start the flow**: `/minime:plan`. Reads your spec and the per-repo wiki,
-   plans silently, hands off.
+1. **Per task**: copy `$HOME/.minime/templates/task.template.md` → `task.md` (or create your own), fill
+   in EARS-style acceptance criteria.
+2. **Start the flow**: `/minime:plan`. Reads your task brief and the per-repo wiki,
+   nudges EARS quality when needed, then plans silently and hands off.
 3. **Implement**: `/minime:implement`. Test-first loop, real output observed.
 4. **Review**: `/minime:review`. Automatically forks into `minime:reviewer`
-   (fresh context, read-only tools) to remove implementation bias.
+   (fresh context, read-only tools) to remove implementation bias. Prefer the
+   strongest reasoning tier available in your harness for this reviewer pass.
    Auto-merges if LOW risk and tests green; otherwise surfaces an evidence
    package for you.
 5. **Harvest**: `/minime:harvest` after merge. Captures lessons from any
@@ -116,7 +156,7 @@ Start a session as the director:
 claude --agent minime:director
 ```
 
-The director reads `spec.md`, runs all four phases, and stops only when it
+The director reads `task.md`, runs all four phases, and stops only when it
 needs you — either because the review came back HIGH-risk (you see the
 evidence package) or because something destructive needs your authorization.
 
@@ -124,7 +164,7 @@ The director uses your `project` agent memory to accumulate META-learnings
 about how the flow goes in this repo over time (separate from the per-repo
 corrections wiki, which captures engineering rules).
 
-The full one-page overview lives in `ORCHESTRATION.md` once installed.
+The full one-page overview is in this repository’s `assets/ORCHESTRATION.md`.
 
 ---
 
@@ -132,7 +172,7 @@ The full one-page overview lives in `ORCHESTRATION.md` once installed.
 
 | Decision | Source |
 |---|---|
-| One human gate, not three | Over-structured multi-agent pipelines did not improve correctness in the ClassEval Waterfall ablation; spec/design stages had minimal measured effect. |
+| One human gate, not three | Over-structured multi-agent pipelines did not improve correctness in the ClassEval Waterfall ablation; requirements/design stages had minimal measured effect. |
 | Tier review by agent-reported risk | Confidence-based hybridization beat AI-alone and human-alone on DeepMind's Human-AI Complementarity benchmark. |
 | Reviewer surfaces evidence, never a verdict | Showing AI judgments / confidence caused over-reliance and made reviewers measurably *worse* when the AI was wrong; raw evidence "helps when correct, does not hurt when wrong". |
 | Per-repo corrections wiki with cited entries | Mirrors GitHub Copilot's agentic memory design: repo-scoped, citation-verified, adversarial-memory tested. |
@@ -157,9 +197,9 @@ skills/
 agents/
   director.md               minime:director — runs the flow end-to-end
   reviewer.md               minime:reviewer — read-only evidence reviewer
-assets/                     files copied into target repos by init-orchestration
+assets/                     reference assets and templates used by the plugin
   ORCHESTRATION.md
-  spec.template.md
+  task.template.md
   CLAUDE.md
   .github/copilot-instructions.md
   .agent/wiki/_TEMPLATE.md

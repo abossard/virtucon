@@ -1,26 +1,25 @@
 ---
-description: Bootstrap the minime orchestration files into the current repository. Copies ORCHESTRATION.md, spec.template.md, CLAUDE.md, .github/copilot-instructions.md, the wiki template (renamed to <org>__<repo>.md), and the research references. Stages the new files; does not commit.
-when_to_use: First-time setup of the minime flow in a repository. Run once per repo. Idempotent — safe to re-run.
+description: Bootstrap minime user-home state only (no repository writes). Creates task template and wiki files under $HOME/.minime for plugin-only operation.
+when_to_use: First-time setup of the minime flow. Run once per machine/profile. Idempotent — safe to re-run.
 disable-model-invocation: true
-allowed-tools: Bash(git remote get-url *) Bash(git add *) Bash(git status) Bash(cp *) Bash(mkdir *) Bash(ls *) Bash(test *) Bash(sed *)
+allowed-tools: Bash(git remote get-url *) Bash(cp *) Bash(mkdir *) Bash(ls *) Bash(test *) Bash(sed *) Bash(cat *)
 ---
 
 # Skill: init-orchestration
 
-Bootstrap the minime flow into the current repository.
+Bootstrap minime in plugin-only mode.
 
-Run this once after installing the plugin. It copies the per-repo asset files into the repo root, derives the per-repo wiki filename from `git remote get-url origin`, and stages everything. It does **not** commit — review the diff and commit yourself.
+Run this once after installing the plugin. It initializes state under
+`$HOME/.minime` only. It does **not** create, modify, or stage files in the
+current working repository.
 
-## What gets created in the target repo
+## What gets created in user home
 
 ```
-ORCHESTRATION.md                       (workflow overview)
-spec.template.md                       (per-task spec template)
-CLAUDE.md                              (one-line pointer for Claude Code)
-.github/copilot-instructions.md        (one-line pointer for Copilot)
-.agent/wiki/_TEMPLATE.md               (wiki entry template)
-.agent/wiki/<org>__<repo>.md           (your corrections wiki, empty)
-.agent/research/REFERENCES.md          (empirical basis for the flow)
+$HOME/.minime/templates/task.template.md   (per-task EARS task brief template)
+$HOME/.minime/wiki/_TEMPLATE.md            (wiki entry template)
+$HOME/.minime/wiki/repos/<org>__<repo>.md  (repo wiki, created for current repo when detectable)
+$HOME/.minime/wiki/orgs/<org>.md           (org-level wiki)
 ```
 
 ## Bootstrap
@@ -29,16 +28,13 @@ CLAUDE.md                              (one-line pointer for Claude Code)
 set -e
 PLUGIN_ROOT="${CLAUDE_SKILL_DIR}/../.."
 ASSETS="$PLUGIN_ROOT/assets"
-
-if [ ! -d .git ]; then
-  echo "ERROR: not a git repository. cd to your repo root first." >&2
-  exit 1
-fi
+WIKI_HOME="${MINIME_WIKI_HOME:-$HOME/.minime/wiki}"
+MINIME_HOME="${MINIME_HOME:-$HOME/.minime}"
 
 ORIGIN=$(git remote get-url origin 2>/dev/null || echo "")
 if [ -z "$ORIGIN" ]; then
-  SLUG="local__$(basename "$PWD")"
-  echo "NOTE: no git remote 'origin' set. Using slug '$SLUG'. Rename .agent/wiki/$SLUG.md later if you add a remote."
+  SLUG=""
+  echo "NOTE: no git remote 'origin' set. Repo-specific wiki will be created on first run inside a git repo."
 else
   SLUG=$(echo "$ORIGIN" \
     | sed -E 's#^.*github\.com[:/]##; s#^.*gitlab\.com[:/]##; s#^.*bitbucket\.org[:/]##; s#\.git$##' \
@@ -46,7 +42,8 @@ else
   echo "Repo slug: $SLUG  (from $ORIGIN)"
 fi
 
-mkdir -p .agent/wiki .agent/research .github
+mkdir -p "$MINIME_HOME/templates"
+mkdir -p "$WIKI_HOME/repos" "$WIKI_HOME/orgs"
 
 copy_if_missing() {
   src="$1"; dst="$2"
@@ -58,26 +55,41 @@ copy_if_missing() {
   fi
 }
 
-copy_if_missing "$ASSETS/ORCHESTRATION.md"                  "ORCHESTRATION.md"
-copy_if_missing "$ASSETS/spec.template.md"                  "spec.template.md"
-copy_if_missing "$ASSETS/CLAUDE.md"                         "CLAUDE.md"
-copy_if_missing "$ASSETS/.github/copilot-instructions.md"   ".github/copilot-instructions.md"
-copy_if_missing "$ASSETS/.agent/wiki/_TEMPLATE.md"          ".agent/wiki/_TEMPLATE.md"
-copy_if_missing "$ASSETS/.agent/research/REFERENCES.md"     ".agent/research/REFERENCES.md"
-copy_if_missing "$ASSETS/.agent/wiki/_TEMPLATE.md"          ".agent/wiki/$SLUG.md"
+copy_if_missing "$ASSETS/task.template.md"         "$MINIME_HOME/templates/task.template.md"
+copy_if_missing "$ASSETS/.agent/wiki/_TEMPLATE.md" "$WIKI_HOME/_TEMPLATE.md"
 
-git add ORCHESTRATION.md spec.template.md CLAUDE.md \
-        .github/copilot-instructions.md \
-        .agent/wiki/_TEMPLATE.md ".agent/wiki/$SLUG.md" \
-        .agent/research/REFERENCES.md 2>/dev/null || true
+if [ -n "$SLUG" ]; then
+  REPO_WIKI="$WIKI_HOME/repos/$SLUG.md"
+  ORG="${SLUG%%__*}"
+  [ "$ORG" = "$SLUG" ] && ORG="local"
+  ORG_WIKI="$WIKI_HOME/orgs/$ORG.md"
+
+  if [ ! -e "$REPO_WIKI" ]; then
+    cp "$ASSETS/.agent/wiki/_TEMPLATE.md" "$REPO_WIKI"
+    echo "wrote  $REPO_WIKI"
+  else
+    echo "skip   $REPO_WIKI (exists)"
+  fi
+
+  if [ ! -e "$ORG_WIKI" ]; then
+    cat > "$ORG_WIKI" <<EOF
+# Org wiki: $ORG
+
+Shared cross-repo lessons for org "$ORG".
+Use the same entry structure as .agent/wiki/_TEMPLATE.md.
+EOF
+    echo "wrote  $ORG_WIKI"
+  else
+    echo "skip   $ORG_WIKI (exists)"
+  fi
+fi
 
 echo
-echo "Staged. Review with: git diff --cached"
-echo "Then commit with:   git commit -m 'Adopt minime agent orchestration'"
+echo "Initialized plugin-only minime state in $MINIME_HOME"
+echo "No files were written to the working repository."
 ```
 
 ## After running
 
-1. Review `git diff --cached`, then commit when satisfied.
-2. Open `ORCHESTRATION.md` for a one-page overview of the flow.
-3. For your first task: copy `spec.template.md` to `spec.md`, fill it in, then invoke `/minime:plan`.
+1. Create `task.md` from `$HOME/.minime/templates/task.template.md` (or your own format with EARS-style criteria).
+2. Start the workflow with `/minime:plan`.

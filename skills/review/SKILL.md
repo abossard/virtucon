@@ -9,8 +9,12 @@ agent: minime:reviewer
 
 Trigger: `/minime:implement` handed off. This is the ONLY skill in the flow that may reach the human — and only for the HIGH-risk slice.
 
-## Step 1 — Self-review against the spec
-Re-read the spec's acceptance criteria. For each: is there a test, does it genuinely pass (real output), does it actually verify the criterion? Fix gaps by looping back to `/minime:implement`. Do not pass known-incomplete work forward.
+The review must run in a fresh forked context (`context: fork`) with `minime:reviewer`.
+If the harness supports explicit model selection, prefer the strongest available reasoning model for the reviewer (not fast/mini-tier variants).
+Reviewer tool access should remain intentionally read-only for this phase; do not weaken isolation by adding edit/write capabilities.
+
+## Step 1 — Self-review against the task brief
+Re-read the task brief's acceptance criteria. For each: is there a test, does it genuinely pass (real output), does it actually verify the criterion? Fix gaps by looping back to `/minime:implement`. Do not pass known-incomplete work forward.
 
 ## Step 2 — Compute the risk tier
 
