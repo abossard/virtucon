@@ -1,0 +1,29 @@
+# Spec: <one-line task name>
+
+Repo: <repo URL — this keys the wiki>
+
+## Goal
+<2–4 sentences. What outcome, and why. Not how.>
+
+## Acceptance criteria (EARS-style — each must be independently testable)
+Use these patterns; each criterion collapses to one checkable claim:
+- Ubiquitous:  The system shall <requirement>.
+- Event:       When <trigger>, the system shall <response>.
+- State:       While <state>, the system shall <response>.
+- Conditional: If <condition>, then the system shall <response>.
+- Optional:    Where <feature included>, the system shall <response>.
+
+1.
+2.
+3.
+
+## Out of scope
+<Explicitly list what NOT to touch. Prevents scope drift.>
+
+## Constraints / non-negotiables
+<Perf budgets, libraries to use or avoid, patterns to follow. The agent
+re-injects these mid-implementation, so be concrete.>
+
+---
+This is the only artifact you author. The agent's plan is not reviewed by you.
+The value here is the thinking, not the ceremony — keep it short.
