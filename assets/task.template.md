@@ -1,23 +1,27 @@
-# Task brief: <one-line task name>
+# Task: <short-name>
 
-Repo: <repo URL — this keys the wiki>
+Created: <date>  |  Status: planning  |  Repo: <org/repo>
+
+## User's original request (verbatim — do not edit or interpret)
+> <paste the user's exact words here, unmodified>
 
 ## Goal
 <2–4 sentences. What outcome, and why. Not how.>
 
 ## Acceptance criteria (EARS-style — each must be independently testable)
-Use these patterns; each criterion collapses to one checkable claim:
+
+Patterns — each criterion collapses to one checkable claim:
 - Ubiquitous:  The system shall <requirement>.
 - Event:       When <trigger>, the system shall <response>.
 - State:       While <state>, the system shall <response>.
 - Conditional: If <condition>, then the system shall <response>.
 - Optional:    Where <feature included>, the system shall <response>.
 
-1.
-2.
-3.
+- [ ] <criterion 1> — VOI: <decided-by-data | needs-research | undecidable-now>
+- [ ] <criterion 2> — VOI: <level>
+- [ ] <criterion 3> — VOI: <level>
 
-### EARS quality check (quick self-check before running /minime:plan)
+### EARS quality check (quick self-check before planning)
 - Each criterion has exactly one verifiable behavior.
 - At least one criterion uses an explicit trigger (`When ... shall ...`) when behavior is event-driven.
 - Edge/error behavior is captured with `If ... then ... shall ...` when relevant.
@@ -31,6 +35,20 @@ Use these patterns; each criterion collapses to one checkable claim:
 <Perf budgets, libraries to use or avoid, patterns to follow. The agent
 re-injects these mid-implementation, so be concrete.>
 
+## Decisions made
+| Unknown | VOI level | Resolution | Source |
+|---------|-----------|------------|--------|
+| | | | |
+
+## Discovered during review
+<!-- Criteria surfaced by review feedback that should have been in the original EARS.
+     Each gets its own checkbox and VOI level. -->
+
+## User feedback (verbatim — append, never edit or reinterpret)
+<!-- Paste exact user feedback as received, with timestamps. This is raw signal. -->
+
 ---
-This is the only artifact you author. The agent's plan is not reviewed by you.
-The value here is the thinking, not the ceremony — keep it short.
+**Principles**: preserve raw user words, derive actions separately, assess with evidence.
+This file lives at `$HOME/.minime/tasks/<org>__<repo>/<date>-<short-name>.task.md` and
+evolves through plan → implement → review → harvest. Checkmarks track progress;
+VOI levels track how each unknown was resolved.

@@ -16,6 +16,18 @@ Session-based harvest: when invoked without a recent merge, harvest should look 
 - Patterns discovered during implementation that are reusable.
 These still require code citations to be persisted — if a lesson references code, cite it; if it's purely process knowledge, note it as a candidate for the director's project memory instead.
 
+## Learn from the task brief's evolution
+
+Read the persisted task brief at `$HOME/.minime/tasks/<org>__<repo>/<date>-<name>.task.md`. It contains:
+- **Decisions table** — how unknowns were resolved and at what VOI level.
+- **Discovered during review** — criteria that were missing from the original EARS.
+- **User feedback** — verbatim user corrections and steering.
+
+Use this to harvest process-level lessons:
+- If "Discovered during review" has entries, that's a signal the EARS was incomplete. Write a wiki entry about what category of criteria this repo's tasks tend to miss (e.g., "error handling", "auth edge cases").
+- If the Decisions table shows many "undecidable-now" items, note which domains need early user input.
+- User feedback sections are raw signal — never reinterpret them. Extract generalizable rules but cite the user's exact words as the source.
+
 ## Research-grounded memory policies (apply all 5)
 
 1. **Write filtering / scoring policy**

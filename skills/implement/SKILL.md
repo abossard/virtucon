@@ -3,11 +3,17 @@ name: implement
 description: Implement a planned task in a tight test-driven loop. Generate → run → observe REAL output → fix. Re-injects task-brief constraints every ~5 iterations to fight instruction attenuation. No human review gate.
 when_to_use: After /minime:plan has handed off, or whenever the user wants the implementation loop with grounded test execution.
 allowed-tools: Read Edit Write Grep Glob Bash
----
 
 # Skill: implement
 
 Trigger: `/minime:plan` has handed off, or the user invoked you directly with an existing plan. **No human review gate.** Quality here comes from a tight execution-grounded loop, not from human checkpoints.
+
+## Living task brief
+
+The persisted task brief (at `$HOME/.minime/tasks/<org>__<repo>/<date>-<name>.task.md`) is the single source of truth. As you complete each criterion:
+- Tick `[x]` on the criterion when its test goes green.
+- If you resolve an unknown during implementation, add it to the Decisions table with its VOI level and source.
+- If you discover a requirement not in the original EARS, note it but do NOT add it to the criteria — that's review's job.
 
 ## The loop (this is the empirically strongest part of the flow)
 
@@ -31,5 +37,6 @@ Every ~5 iterations, OR after any context compaction, re-read the "Constraints /
 - the diff
 - every test and its real, pasted output
 - assumptions made, and any out-of-scope work discovered
+- the path to the persisted task brief (with checkmarks updated)
 
 **Explicit next step: now invoke `skill("review")`** to get an evidence-based review.

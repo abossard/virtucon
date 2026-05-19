@@ -14,7 +14,7 @@ If the harness supports explicit model selection, prefer the strongest available
 Reviewer tool access should remain intentionally read-only for this phase; do not weaken isolation by adding edit/write capabilities.
 
 ## Step 1 — Self-review against the task brief
-Re-read the task brief's acceptance criteria. For each: is there a test, does it genuinely pass (real output), does it actually verify the criterion? Fix gaps by looping back to `/minime:implement`. Do not pass known-incomplete work forward.
+Re-read the persisted task brief (at `$HOME/.minime/tasks/<org>__<repo>/<date>-<name>.task.md`). For each acceptance criterion: is there a test, does it genuinely pass (real output), does it actually verify the criterion? Check that the checkmarks in the brief match reality. Fix gaps by looping back to `/minime:implement`. Do not pass known-incomplete work forward.
 
 ## Step 1.5 — Gather the full change set
 Do NOT rely only on branch diffs. Collect changes from all sources:
@@ -23,6 +23,12 @@ Do NOT rely only on branch diffs. Collect changes from all sources:
 - `git ls-files --others --exclude-standard` (untracked new files)
 - `git diff main...HEAD` or equivalent (branch diff, if on a branch)
 All of these form the change set for review. Untracked files that are part of the task are reviewable work, not invisible.
+
+## Step 1.7 — Backfill discovered criteria into the EARS
+Check whether the review surfaces requirements that should have been in the original EARS:
+- If feedback, a bug, or an edge case reveals a missing requirement, append it to the "Discovered during review" section of the persisted task brief with its own `- [ ]` checkbox and VOI level.
+- If the human provides feedback, append their exact words verbatim to the "User feedback" section — do NOT paraphrase or interpret.
+- This creates a traceable record of how requirements evolved and helps harvest learn what types of criteria this repo's EARS consistently misses.
 
 ## Step 2 — Compute the risk tier
 

@@ -91,7 +91,15 @@ The plugin ships `hooks/hooks.json` + `hooks/session-start.js`. On every new ses
 2. Inline conversation context (pasted requirements, a table, verbal description).
 3. User is asked to describe the task if neither is present.
 
-The plan skill nudges for EARS quality regardless of source. When the task brief is inline-only, `plan` and `implement` carry the acceptance criteria forward so that `review` (which forks into a fresh context) can still verify each criterion against tests.
+Regardless of source, `plan` creates a **persisted living task brief** at `$HOME/.minime/tasks/<org>__<repo>/<date>-<name>.task.md`. This file:
+- Preserves the user's original request **verbatim** (never reworded or interpreted).
+- Has checkboxes (`[ ]`/`[x]`) on every criterion, ticked by `implement` as tests pass.
+- Carries a VOI level per criterion (`decided-by-data`, `needs-research`, `undecidable-now`).
+- Has a Decisions table recording how each unknown was resolved and from what source.
+- Grows a "Discovered during review" section for criteria surfaced after the initial EARS.
+- Grows a "User feedback" section with verbatim human corrections (timestamped, unedited).
+
+The task brief is the single source of truth across all phases and the traceable record of how a feature's requirements evolved.
 
 ## Review scope: staged + untracked
 
@@ -106,6 +114,16 @@ Untracked files that are part of the task are reviewable work, not invisible.
 - Design decisions with rationale worth preserving.
 - Patterns discovered during implementation.
 Code-cited lessons go to the wiki; purely process knowledge goes to the director's project memory.
+
+`harvest` also reads the persisted task brief's Decisions table and "Discovered during review" section to learn what categories of criteria the EARS consistently misses — that meta-learning feeds the director's process memory and sharpens future EARS nudges.
+
+## Data integrity principle
+
+**Preserve raw signal. Derive actions separately. Assess with evidence. Do not interpret.**
+
+- User-written sentences are never reworded, paraphrased, or reinterpreted — they are copied verbatim.
+- The persisted task brief keeps the user's original request, their feedback, and the review-discovered criteria as separate, immutable sections.
+- Actions and criteria are derived from the raw data but stored alongside it, not in place of it.
 
 ## Explicit skill chaining
 

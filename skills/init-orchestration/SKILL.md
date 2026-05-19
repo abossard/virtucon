@@ -17,6 +17,7 @@ current working repository.
 
 ```
 $HOME/.minime/templates/task.template.md   (per-task EARS task brief template)
+$HOME/.minime/tasks/                       (persisted living task briefs, organized by repo)
 $HOME/.minime/wiki/_TEMPLATE.md            (wiki entry template)
 $HOME/.minime/wiki/repos/<org>__<repo>.md  (repo wiki, created for current repo when detectable)
 $HOME/.minime/wiki/orgs/<org>.md           (org-level wiki)
@@ -43,6 +44,7 @@ else
 fi
 
 mkdir -p "$MINIME_HOME/templates"
+mkdir -p "$MINIME_HOME/tasks"
 mkdir -p "$WIKI_HOME/repos" "$WIKI_HOME/orgs"
 
 copy_if_missing() {

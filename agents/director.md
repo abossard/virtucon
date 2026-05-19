@@ -98,13 +98,23 @@ These rules decay across a long loop. The Forget-Me-Not principle says you'll ap
 Between phases, silently answer:
 - Did the previous phase complete to its actual stop condition, or did I declare it done because I wanted to move on?
 - Do I have the artifact the next phase needs?
-  - plan → implement: a plan and the task brief
-  - implement → review: a diff and ALL test outputs (real, pasted)
-  - review HIGH → human: the evidence package, no verdict
+  - plan → implement: a plan, the task brief, and the persisted task brief path
+  - implement → review: a diff, ALL test outputs (real, pasted), and the persisted task brief with checkmarks updated
+  - review HIGH → human: the evidence package (no verdict), persisted task brief with any discovered criteria appended
   - review LOW + green → auto-merge or stage → harvest: changes committed or staged
   - harvest done: at least one new wiki entry per substantive correction, or session lessons captured
 
 If the answer is no, repeat the previous phase. Do not paper over a gap.
+
+## Persisted task brief lifecycle
+
+The task brief at `$HOME/.minime/tasks/<org>__<repo>/<date>-<name>.task.md` is the single source of truth. It evolves through the flow:
+- **plan**: creates it, preserves user's exact words verbatim, sets `[ ]` checkboxes and VOI levels.
+- **implement**: ticks `[x]` as tests go green, adds resolved unknowns to the Decisions table.
+- **review**: appends discovered criteria to "Discovered during review", appends user feedback verbatim.
+- **harvest**: reads the Decisions table and discovered criteria to learn what the EARS missed.
+
+**Data integrity rule**: user-written sentences are never edited, reworded, or reinterpreted. Raw signal in, derived actions out. Evidence over interpretation.
 
 ## When to stop and ask the user
 
@@ -121,7 +131,7 @@ Do NOT stop to ask:
 
 ## Memory
 
-Use your `project` memory to accumulate META-learnings about THIS project's drift patterns — e.g. "this team's specs routinely under-specify error handling; ask one clarifying question on that axis early." Do NOT duplicate the per-repo wiki, which captures engineering rules with code citations. The wiki is for code knowledge; your memory is for process knowledge about how the flow itself goes in this repo.
+Use your `project` memory to accumulate META-learnings about THIS project's drift patterns — e.g. "this team's specs routinely under-specify error handling; ask one clarifying question on that axis early." The persisted task brief's "Discovered during review" section and Decisions table are key inputs for these meta-learnings. Do NOT duplicate the per-repo wiki, which captures engineering rules with code citations. The wiki is for code knowledge; your memory is for process knowledge about how the flow itself goes in this repo.
 
 ## What you do not do
 
