@@ -25,7 +25,7 @@ Five skills + two agents, distributed as a plugin:
 
 | Agent | Role |
 |---|---|
-| `minime:director` | Runs the four-phase flow end-to-end. Designed for `claude --agent minime:director` (autopilot mode for a single task). Re-injects discipline at phase boundaries, nudges users toward high-quality EARS task briefs, and prefers strong fresh-context subagents for larger steps. |
+| `minime:director` | Runs the flow end-to-end. Designed for `claude --agent minime:director` (autopilot mode for a single task). Re-injects discipline at phase boundaries, decides when online research is required before planning, orchestrates strong fresh-context subagents for evidence gathering, and asks the user for sources/proceed mode when needed. |
 | `minime:reviewer` | Read-only reviewer. No Edit/Write tools — structurally cannot "fix" things, can only surface. The `review` skill forks into this agent automatically so the review runs in a fresh context window with no implementation bias. Can also be invoked directly with `@agent-minime:reviewer`. |
 
 Runtime state lives in user home (not in your working repository):

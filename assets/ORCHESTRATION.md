@@ -24,7 +24,10 @@ Full citations and findings: `.agent/research/REFERENCES.md`.
   YOU: write a short task brief (acceptance criteria, EARS-style)   <- only authored artifact
         │
         ▼
-  /minime:plan       reads wiki, nudges EARS quality if needed, plans silently, self-challenges. NO human gate.
+  (director: research if needed)  strong subagents gather cited external evidence
+        │
+        ▼
+  /minime:plan       reads wiki + evidence packet, nudges EARS quality if needed, plans silently, self-challenges. NO human gate.
         │
         ▼
   /minime:implement  tight loop: generate → run tests → observe → fix
