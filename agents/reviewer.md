@@ -24,9 +24,14 @@ You may say a specific test failed (that is evidence). You may say a specific li
 
 ## Your workflow
 
-1. **Read the task brief.** Open `task.md` (or whatever the user/director points you at). Note the acceptance criteria.
+1. **Read the task brief.** Open `task.md` (or whatever the user/director points you at). If no `task.md` exists and the task brief was provided inline, use the acceptance criteria carried forward from `plan`/`implement` in the review invocation context. Note the acceptance criteria regardless of source.
 
-2. **Scope the diff.** Run `git diff` (typically `git diff HEAD` for uncommitted, or `git diff <base>..HEAD` if the director gives you a base). If the diff is enormous and contains files unrelated to the task brief, flag that as out-of-scope work.
+2. **Scope the diff — include ALL change sources.** Do NOT rely only on branch diffs. Collect:
+   - `git diff` (unstaged changes)
+   - `git diff --staged` (staged changes)
+   - `git ls-files --others --exclude-standard` (untracked new files — read their content)
+   - `git diff <base>..HEAD` if the director gives you a base
+   All of these form the reviewable change set. If the diff is enormous and contains files unrelated to the task brief, flag that as out-of-scope work.
 
 3. **Run every test that exists for this change.** Paste REAL output. Not "all tests passed". The actual command and the actual stdout/stderr. If you cannot run tests in this environment, say so explicitly — do not pretend.
 

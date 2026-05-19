@@ -63,8 +63,14 @@ Run the bootstrap once (from anywhere):
 
 This initializes `$HOME/.minime/*` only and does not create or stage files in your repo.
 
-After that, the orchestration is live: write a short EARS-style `task.md` (where you prefer), invoke
-`/minime:plan`, and follow the flow.
+After that, the orchestration is live: describe your task inline or write a `task.md`, invoke
+`/minime:plan`, and follow the flow. No `task.md` file is required — plan accepts inline context.
+
+### SessionStart hook (auto-nudge)
+
+The plugin ships a `hooks/hooks.json` that injects a nudge into every new session, reminding the
+agent that minime skills are available and should be used for non-trivial tasks. This works
+automatically — no repo-level custom instructions needed.
 
 ---
 
@@ -141,18 +147,21 @@ Two modes — pick the one that fits the task.
 
 ### Manual mode (explicit, step-by-step)
 
-1. **Per task**: copy `$HOME/.minime/templates/task.template.md` → `task.md` (or create your own), fill
-   in EARS-style acceptance criteria.
-2. **Start the flow**: `/minime:plan`. Reads your task brief and the per-repo wiki,
-   nudges EARS quality when needed, then plans silently and hands off.
-3. **Implement**: `/minime:implement`. Test-first loop, real output observed.
-4. **Review**: `/minime:review`. Automatically forks into `minime:reviewer`
-   (fresh context, read-only tools) to remove implementation bias. Prefer the
-   strongest reasoning tier available in your harness for this reviewer pass.
-   Auto-merges if LOW risk and tests green; otherwise surfaces an evidence
-   package for you.
-5. **Harvest**: `/minime:harvest` after merge. Captures lessons from any
-   corrections you made into the wiki, with code citations.
+1. **Per task**: describe your task inline to the agent, or copy
+   `$HOME/.minime/templates/task.template.md` → `task.md` and fill in EARS-style
+   acceptance criteria. **No file required** — plan accepts conversation context directly.
+2. **Start the flow**: `skill("plan")`. Reads your task brief (inline or file) and the
+   per-repo wiki, discovers other installed skills, nudges EARS quality when needed,
+   then plans silently and tells you to invoke `skill("implement")`.
+3. **Implement**: `skill("implement")`. Test-first loop, real output observed.
+   Hands off with explicit instruction to invoke `skill("review")`.
+4. **Review**: `skill("review")`. Automatically forks into `minime:reviewer`
+   (fresh context, read-only tools) to remove implementation bias. Checks staged,
+   unstaged, and untracked files — not just branch diffs. Auto-merges if LOW risk
+   and tests green; otherwise surfaces an evidence package for you.
+5. **Harvest**: `skill("harvest")` after merge or at session end. Captures lessons
+   from any corrections you made into the wiki, with code citations. Works even
+   without a merge — session lessons are harvestable too.
 
 ### Autopilot mode (director agent runs the flow)
 
@@ -162,8 +171,8 @@ Start a session as the director:
 claude --agent minime:director
 ```
 
-The director reads `task.md`, runs all four phases, and stops only when it
-needs you — either because the review came back HIGH-risk (you see the
+The director reads `task.md` or accepts an inline task description, runs all four phases,
+and stops only when it needs you — either because the review came back HIGH-risk (you see the
 evidence package) or because something destructive needs your authorization.
 
 The director uses your `project` agent memory to accumulate META-learnings
@@ -194,6 +203,9 @@ Full citations and findings in [`assets/.agent/research/REFERENCES.md`](assets/.
 .claude-plugin/
   marketplace.json          this repo is also its own Claude Code marketplace
   plugin.json               plugin manifest
+hooks/
+  hooks.json                SessionStart hook config (auto-nudge on session start)
+  session-start.js          injects skill awareness into every session
 skills/
   plan/SKILL.md
   implement/SKILL.md

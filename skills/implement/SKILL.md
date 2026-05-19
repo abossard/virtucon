@@ -31,3 +31,5 @@ Every ~5 iterations, OR after any context compaction, re-read the "Constraints /
 - the diff
 - every test and its real, pasted output
 - assumptions made, and any out-of-scope work discovered
+
+**Explicit next step: now invoke `skill("review")`** to get an evidence-based review.

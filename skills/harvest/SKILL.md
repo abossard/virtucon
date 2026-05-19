@@ -1,15 +1,20 @@
 ---
-name: harvest
-description: Capture lessons from a just-merged task into the per-repo corrections wiki. Human corrections are the highest-value signal. Every entry must cite live code and be a generalised rule, not a task log. Consolidate when the wiki grows past ~20 entries.
-when_to_use: Right after a task is merged (auto-merge by /minime:review or human-merged), or when the user explicitly asks to harvest lessons from recent work.
-allowed-tools: Read Edit Write Grep Glob Bash(git log *) Bash(git diff *) Bash(git show *) Bash(git remote get-url *)
+description: Capture lessons from a just-merged task or current session into the per-repo corrections wiki. Human corrections are the highest-value signal. Every entry must cite live code and be a generalised rule, not a task log. Consolidate when the wiki grows past ~20 entries.
+when_to_use: Right after a task is merged (auto-merge by /minime:review or human-merged), after a significant session with learnings worth preserving, or when the user explicitly asks to harvest lessons from recent work.
+allowed-tools: Read Edit Write Grep Glob Bash(git log *) Bash(git diff *) Bash(git show *) Bash(git remote get-url *) Bash(git status)
 ---
 
 # Skill: harvest
 
-Trigger: a task is merged. Turns raw outcomes — especially human corrections — into durable, cited wiki entries for future tasks.
+Trigger: a task is merged OR a session produced lessons worth capturing (even without a merge). Turns raw outcomes — especially human corrections — into durable, cited wiki entries for future tasks.
 
 Human corrections are the highest-value signal in the system: they passed through a human and survived. Capture them first.
+
+Session-based harvest: when invoked without a recent merge, harvest should look at the current session's conversation for:
+- Corrections the user made to the agent's approach or output.
+- Design decisions with rationale that future tasks should follow.
+- Patterns discovered during implementation that are reusable.
+These still require code citations to be persisted — if a lesson references code, cite it; if it's purely process knowledge, note it as a candidate for the director's project memory instead.
 
 ## Research-grounded memory policies (apply all 5)
 

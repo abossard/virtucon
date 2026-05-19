@@ -21,30 +21,36 @@ Full citations and findings: `.agent/research/REFERENCES.md`.
 ## The flow
 
 ```
-  YOU: write a short task brief (acceptance criteria, EARS-style)   <- only authored artifact
+  YOU: describe the task (inline or as task.md with EARS-style criteria)   <- only authored artifact
         │
         ▼
   (director: research if needed)  strong subagents gather cited external evidence
         │
         ▼
-  /minime:plan       reads wiki + evidence packet, nudges EARS quality if needed, plans silently, self-challenges. NO human gate.
+  skill("plan")      reads wiki + evidence packet, discovers installed skills,
+        │            nudges EARS quality if needed, plans silently, self-challenges.
+        │            NO human gate. Outputs: "now invoke skill("implement")"
         │
         ▼
-  /minime:implement  tight loop: generate → run tests → observe → fix
+  skill("implement") tight loop: generate → run tests → observe → fix
         │            tests front-loaded. NO human gate.
+        │            Outputs: "now invoke skill("review")"
         │
         ▼
-  /minime:review     self-reviews, computes a RISK score, builds an EVIDENCE PACKAGE
+  skill("review")    self-reviews staged+unstaged+untracked, computes RISK, builds EVIDENCE PACKAGE
         │
-        ├── risk = LOW  + tests green ─────────────► auto-merge
+        ├── risk = LOW  + tests green ─────────────► auto-merge (or commit when ready)
         │
         └── risk = HIGH ──► YOU review the evidence package only ──► merge / send back
         │
         ▼
-  /minime:harvest    on every correction you make, writes a cited wiki entry
+  skill("harvest")   on every correction you make, writes a cited wiki entry.
+                     Also captures session lessons even without a merge.
 ```
 
 Three former gates (requirements, plan, code) collapse to one tiered gate. The plan is an *input the agent consumes*, never a document you sign off.
+
+No `task.md` file is required — plan accepts inline conversation context directly. Each skill explicitly tells the agent which skill to invoke next (explicit chaining).
 
 ## The one rule that makes the review gate cheap
 
@@ -55,7 +61,7 @@ This is the single empirically strongest lever in the whole design — a verdict
 ## Subagents and model strength
 
 For larger steps, minime should prefer fresh-context subagents with strong reasoning models.
-Review is always fresh-context by design (`/minime:review` forks to `minime:reviewer`).
+Review is always fresh-context by design (`skill("review")` forks to `minime:reviewer`).
 If your harness supports model choice, use top reasoning tiers for these subagents and avoid fast/mini-tier variants for large reasoning-heavy phases.
 Subagents should have enough tool access for their role: full engineering tool access for implementation/investigation, and deliberately read-only access for review isolation.
 
@@ -69,10 +75,50 @@ Subagents should have enough tool access for their role: full engineering tool a
 
 ## Risk tiers (who reviews what)
 
-- **LOW** — localised, covered by tests you can read, no security/auth/data/migration/public-API surface. → auto-merge on green.
+- **LOW** — localised, covered by tests you can read, no security/auth/data/migration/public-API surface. → auto-merge on green (or stage/commit when the user is ready — minime does not force the git timeline).
 - **HIGH** — touches auth, data integrity, migrations, money, concurrency, a public API, or > ~150 changed lines, OR the agent's self-confidence is low. → human reviews evidence package.
 
 When unsure, the tier is HIGH. Tiers are defined in the `review` skill.
+
+## SessionStart hook (auto-nudge)
+
+The plugin ships `hooks/hooks.json` + `hooks/session-start.js`. On every new session, the hook injects a nudge listing available minime skills and usage guidance into the agent's context — no repo-level custom instructions needed. The nudge tells the agent to use `skill("plan")` for non-trivial tasks and documents the full chain.
+
+## Inline task briefs (no file required)
+
+`plan` accepts task descriptions from three sources:
+1. A `task.md` file in the working directory.
+2. Inline conversation context (pasted requirements, a table, verbal description).
+3. User is asked to describe the task if neither is present.
+
+The plan skill nudges for EARS quality regardless of source. When the task brief is inline-only, `plan` and `implement` carry the acceptance criteria forward so that `review` (which forks into a fresh context) can still verify each criterion against tests.
+
+## Review scope: staged + untracked
+
+The review skill collects the full change set from:
+- `git diff` (unstaged), `git diff --staged` (staged), `git ls-files --others --exclude-standard` (untracked new files), and branch diffs when applicable.
+Untracked files that are part of the task are reviewable work, not invisible.
+
+## Session harvest (no merge required)
+
+`harvest` accepts lessons from the current session even without a merge event. It looks for:
+- Human corrections to the agent's approach or output.
+- Design decisions with rationale worth preserving.
+- Patterns discovered during implementation.
+Code-cited lessons go to the wiki; purely process knowledge goes to the director's project memory.
+
+## Explicit skill chaining
+
+Each skill's hand-off explicitly instructs the agent which skill to invoke next:
+- `plan` → "now invoke `skill("implement")`"
+- `implement` → "now invoke `skill("review")`"
+- `review` → "invoke `skill("harvest")`"
+
+This prevents the agent from optimizing for speed and skipping structured phases.
+
+## Git timeline decoupling
+
+Minime's workflow does not force coupling to the user's git commit cadence. LOW-risk auto-merge is the default for convenience, but the user can commit at their own pace. `harvest` works from session context, not only from merge events.
 
 ## Files in this repo
 
@@ -86,10 +132,12 @@ CLAUDE.md                               pointer for Claude Code
 .agent/research/REFERENCES.md           empirical basis for every design decision
 ```
 
-The four skills (`plan`, `implement`, `review`, `harvest`) live in the **minime plugin** at `<plugin-cache>/skills/<name>/SKILL.md`, not in this repo. Invoke them with `/minime:plan`, `/minime:implement`, etc.
+The four skills (`plan`, `implement`, `review`, `harvest`) live in the **minime plugin** at `<plugin-cache>/skills/<name>/SKILL.md`, not in this repo. Invoke them with `skill("plan")`, `skill("implement")`, etc.
 
-The plugin also ships two agents:
+The plugin also ships:
 
+- **`hooks/`** — a SessionStart hook that auto-nudges the agent toward the
+  structured workflow on every new session.
 - **`minime:director`** — runs the flow end-to-end. Start an autopilot
   session for a single task with `claude --agent minime:director`. It
   re-injects the flow's discipline at every phase boundary and stops only

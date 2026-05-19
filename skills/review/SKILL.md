@@ -16,6 +16,14 @@ Reviewer tool access should remain intentionally read-only for this phase; do no
 ## Step 1 — Self-review against the task brief
 Re-read the task brief's acceptance criteria. For each: is there a test, does it genuinely pass (real output), does it actually verify the criterion? Fix gaps by looping back to `/minime:implement`. Do not pass known-incomplete work forward.
 
+## Step 1.5 — Gather the full change set
+Do NOT rely only on branch diffs. Collect changes from all sources:
+- `git diff` (unstaged changes)
+- `git diff --staged` (staged changes)
+- `git ls-files --others --exclude-standard` (untracked new files)
+- `git diff main...HEAD` or equivalent (branch diff, if on a branch)
+All of these form the change set for review. Untracked files that are part of the task are reviewable work, not invisible.
+
 ## Step 2 — Compute the risk tier
 
 **HIGH** if the change touches ANY of:
@@ -30,7 +38,7 @@ Otherwise **LOW**. **When in doubt, HIGH.** Confidence-based routing only works 
 
 ## Step 3 — Route
 
-- **LOW + all tests green** → auto-merge. Then run `/minime:harvest`.
+- **LOW + all tests green** → auto-merge if on a feature branch, or stage/commit when the user is ready. Then invoke `skill("harvest")`. Do not force a merge if the user's git timeline is different.
 - **HIGH** → build the evidence package below and STOP for the human.
 
 ## Step 4 — The evidence package (HIGH only)
@@ -48,4 +56,4 @@ Showing a conclusion ("looks correct"), or a confidence score attached to a conc
 FORBIDDEN in the package: "this looks correct / LGTM / safe to merge / I'm confident", any overall verdict, any score next to a conclusion, any persuasion. Surface; do not adjudicate. The human adjudicates.
 
 ## Step 5
-After the human decides, run `/minime:harvest`.
+After the human decides, **invoke `skill("harvest")`** to capture lessons from this task.
