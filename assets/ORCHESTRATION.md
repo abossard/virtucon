@@ -59,6 +59,14 @@ Review is always fresh-context by design (`/minime:review` forks to `minime:revi
 If your harness supports model choice, use top reasoning tiers for these subagents and avoid fast/mini-tier variants for large reasoning-heavy phases.
 Subagents should have enough tool access for their role: full engineering tool access for implementation/investigation, and deliberately read-only access for review isolation.
 
+## Formal VOI gate (when to research vs decide)
+
+- Classify unknowns into:
+  - **Decidable-by-data** (resolve via code/docs/tests/sources), and
+  - **Undecidable-now** (value tradeoff/policy preference/irreducible uncertainty).
+- Run extra research only if Value-of-Information is positive in practice: likely to materially change the chosen path.
+- If extra research is unlikely to change the path, stop and request a decision with a compact options/tradeoffs/risks/default packet.
+
 ## Risk tiers (who reviews what)
 
 - **LOW** — localised, covered by tests you can read, no security/auth/data/migration/public-API surface. → auto-merge on green.

@@ -14,7 +14,13 @@ Runs first in the four-phase flow. **No human review gate** — your plan is an 
 
 2. **Locate wiki sources (user-home only).** Run `git remote get-url origin`, derive `<org>__<repo>.md`, and open `$HOME/.minime/wiki/repos/<org>__<repo>.md` directly. Also load `$HOME/.minime/wiki/orgs/<org>.md` when present. If the repo wiki file is absent, tell the user to run `/minime:init-orchestration` once (it initializes `$HOME/.minime/*` only).
 
-3. **Score wiki entries for relevance — do not dump them all in.**
+3. **Run a VOI/decidability triage before full planning.**
+   For each open unknown in the task brief:
+   - If it is **decidable-by-data** (can be resolved via code/docs/tests/vendor guidance), resolve it with evidence first.
+   - If it is **undecidable-now** (value tradeoff/policy preference/irreducible uncertainty), prepare one explicit user decision with options and tradeoffs.
+   Use a Value-of-Information check: do extra research only when it is likely to materially change the implementation choice.
+
+4. **Score wiki entries for relevance — do not dump them all in.**
    Rank candidates with this priority order:
    - Trigger match strength to the current task brief
    - `Status: active` over stale/superseded
@@ -23,16 +29,16 @@ Runs first in the four-phase flow. **No human review gate** — your plan is an 
    - `Origin: human-correction` over weaker signals when tied
    Select only the top ~5 after ranking.
 
-4. **Verify before trusting (citation check).** Each selected entry cites a code location. Open that location. If the code no longer matches the entry, the entry is stale — ignore it and flag it for `/minime:harvest` to fix. Never plan on an unverified memory.
+5. **Verify before trusting (citation check).** Each selected entry cites a code location. Open that location. If the code no longer matches the entry, the entry is stale — ignore it and flag it for `/minime:harvest` to fix. Never plan on an unverified memory.
 
-5. **Plan silently.** Produce an internal implementation plan: files to touch, order of work, which acceptance criteria each step satisfies, and the tests that will prove each one. Working state, not a deliverable.
+6. **Plan silently.** Produce an internal implementation plan: files to touch, order of work, which acceptance criteria each step satisfies, and the tests that will prove each one. Working state, not a deliverable.
 
-6. **Self-challenge (write this down, keep it short).** Answer:
+7. **Self-challenge (write this down, keep it short).** Answer:
    - What is the riskiest assumption in this plan?
    - Under what condition would this approach be wrong?
    - What in the task brief is ambiguous? If genuinely blocking, ask the user ONE question. Otherwise state the assumption and proceed.
 
-7. **Hand off.** Tell the user the plan is ready and that `/minime:implement` is next.
+8. **Hand off.** Tell the user the plan is ready and that `/minime:implement` is next.
 
 ## Rules
 - Do not produce a plan document for human approval. No plan-review gate.

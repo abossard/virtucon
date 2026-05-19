@@ -38,6 +38,12 @@ Runtime state lives in user home (not in your working repository):
 - Give subagents **enough tools for the task** (implementation/investigation needs full engineering tool access).
 - Keep review as the explicit exception: `minime:reviewer` stays read-only in a fresh context.
 
+### Formal VOI policy (decision hygiene)
+
+- Treat unknowns as **decidable-by-data** first; only escalate true **undecidable-now** tradeoffs to user decisions.
+- Apply a Value-of-Information gate: run additional research only if it is likely to materially change the choice.
+- When a decision is still needed, present a compact decision packet (options, tradeoffs, risks, default recommendation).
+
 ---
 
 ## Install — Claude Code

@@ -51,6 +51,21 @@ If sources are ambiguous or missing:
   1) conservative/default-safe assumptions, or
   2) pause until sources are provided.
 
+## Formal VOI decision gate (data first, decisions second)
+
+Before asking the user to decide, classify every unknown:
+
+- **Decidable-by-data**: can be resolved by code/docs/tests/logs/vendor docs or cited web evidence.  
+  Action: resolve it with evidence first.
+- **Undecidable-now**: value tradeoff, policy preference, authority conflict, or irreducible uncertainty.  
+  Action: ask the user to decide explicitly.
+
+Apply a Value-of-Information (VOI) test before extra research:
+- Run another research pass only when it is likely to **materially change** the chosen path and the expected benefit exceeds delay/cost.
+- If additional research is unlikely to change the choice, stop researching and present a clear decision packet (options, tradeoffs, risks, recommended default).
+
+Confidence claims must be evidence-backed (source quality, recency, directness, and cross-source consistency), never intuition-only.
+
 ## Subagent policy for larger steps
 
 <HARD-GATE>
