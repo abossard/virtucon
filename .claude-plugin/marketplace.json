@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "minime",
+  "description": "Evidence-based agent orchestration: plan, implement, review, harvest.",
+  "owner": {
+    "name": "abossard"
+  },
+  "plugins": [
+    {
+      "name": "minime",
+      "source": "./",
+      "description": "Four-phase agent workflow (plan / implement / review / harvest) with a per-repo corrections wiki. One human review gate, tiered by risk. Includes a director agent for autopilot mode and a read-only reviewer subagent that runs review in a fresh context to remove implementation bias."
+    }
+  ]
+}
