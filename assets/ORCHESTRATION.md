@@ -70,6 +70,18 @@ CLAUDE.md                               pointer for Claude Code
 
 The four skills (`plan`, `implement`, `review`, `harvest`) live in the **minime plugin** at `<plugin-cache>/skills/<name>/SKILL.md`, not in this repo. Invoke them with `/minime:plan`, `/minime:implement`, etc.
 
+The plugin also ships two agents:
+
+- **`minime:director`** — runs the flow end-to-end. Start an autopilot
+  session for a single task with `claude --agent minime:director`. It
+  re-injects the flow's discipline at every phase boundary and stops only
+  when it needs you (HIGH-risk review, or a destructive action).
+- **`minime:reviewer`** — the read-only reviewer the `review` skill forks
+  into. Lives in a fresh context window with no `Edit`/`Write` tools, so
+  it is structurally unable to "fix" anything and can only surface. This
+  isolation is what makes the evidence package worth more than an inline
+  self-review.
+
 ## Per-repo setup
 
 The wiki is keyed by repo URL. The init skill derives the filename automatically from `git remote get-url origin` — `github.com/acme/billing` becomes `.agent/wiki/acme__billing.md`. Commit the wiki to the repo so Claude and Copilot share it.

@@ -1,7 +1,8 @@
 ---
-description: Self-review the implementation, compute a risk tier (LOW vs HIGH), and either auto-merge (LOW + green) or build an evidence package for the human (HIGH). Surfaces evidence, never a verdict — that one rule is the empirically strongest lever in the design.
+description: Review the implementation in a fresh subagent context, compute a risk tier (LOW vs HIGH), and either auto-merge (LOW + green) or surface an evidence package for the human (HIGH). Forks into the minime:reviewer subagent so the review is not biased by the implementation reasoning. Surfaces evidence, never a verdict — that one rule is the empirically strongest lever in the design.
 when_to_use: After /minime:implement has handed off, or whenever the user wants the change reviewed and routed.
-allowed-tools: Read Grep Glob Bash(git diff *) Bash(git log *) Bash(git status) Bash(git show *)
+context: fork
+agent: minime:reviewer
 ---
 
 # Skill: review

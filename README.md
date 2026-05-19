@@ -13,7 +13,7 @@ ClassEval, ReasoningBank). See [`assets/.agent/research/REFERENCES.md`](assets/.
 
 ## What you get
 
-Five skills, distributed as a plugin:
+Five skills + two agents, distributed as a plugin:
 
 | Skill | Phase | Auto-invoked? |
 |---|---|---|
@@ -22,6 +22,11 @@ Five skills, distributed as a plugin:
 | `/minime:review` | Compute risk tier; auto-merge LOW, escalate HIGH with evidence package | yes |
 | `/minime:harvest` | Capture corrections into the per-repo wiki as cited rules | yes |
 | `/minime:init-orchestration` | One-time bootstrap of per-repo files into a target repo | manual only |
+
+| Agent | Role |
+|---|---|
+| `minime:director` | Runs the four-phase flow end-to-end. Designed for `claude --agent minime:director` (autopilot mode for a single task). Re-injects the flow's discipline at every phase boundary to fight instruction attenuation. |
+| `minime:reviewer` | Read-only reviewer. No Edit/Write tools — structurally cannot "fix" things, can only surface. The `review` skill forks into this agent automatically so the review runs in a fresh context window with no implementation bias. Can also be invoked directly with `@agent-minime:reviewer`. |
 
 Plus a small set of per-repo files dropped into your target repo by `init-orchestration`:
 `ORCHESTRATION.md`, `spec.template.md`, `CLAUDE.md`, `.github/copilot-instructions.md`,
@@ -87,15 +92,37 @@ surface (VS Code Chat, web, code review, cloud agent) pick up the flow.
 
 ## Use
 
+Two modes — pick the one that fits the task.
+
+### Manual mode (explicit, step-by-step)
+
 1. **Per task, in the target repo**: copy `spec.template.md` → `spec.md`, fill
    in the acceptance criteria (EARS-style), commit it.
-2. **Start the flow**: `/minime:plan`. The agent reads your spec and the
-   per-repo wiki, plans silently, and hands off.
+2. **Start the flow**: `/minime:plan`. Reads your spec and the per-repo wiki,
+   plans silently, hands off.
 3. **Implement**: `/minime:implement`. Test-first loop, real output observed.
-4. **Review**: `/minime:review`. Auto-merges if LOW risk and tests green;
-   otherwise builds an evidence package for you to review.
+4. **Review**: `/minime:review`. Automatically forks into `minime:reviewer`
+   (fresh context, read-only tools) to remove implementation bias.
+   Auto-merges if LOW risk and tests green; otherwise surfaces an evidence
+   package for you.
 5. **Harvest**: `/minime:harvest` after merge. Captures lessons from any
    corrections you made into the wiki, with code citations.
+
+### Autopilot mode (director agent runs the flow)
+
+Start a session as the director:
+
+```bash
+claude --agent minime:director
+```
+
+The director reads `spec.md`, runs all four phases, and stops only when it
+needs you — either because the review came back HIGH-risk (you see the
+evidence package) or because something destructive needs your authorization.
+
+The director uses your `project` agent memory to accumulate META-learnings
+about how the flow goes in this repo over time (separate from the per-repo
+corrections wiki, which captures engineering rules).
 
 The full one-page overview lives in `ORCHESTRATION.md` once installed.
 
@@ -124,9 +151,12 @@ Full citations and findings in [`assets/.agent/research/REFERENCES.md`](assets/.
 skills/
   plan/SKILL.md
   implement/SKILL.md
-  review/SKILL.md
+  review/SKILL.md           forks into minime:reviewer
   harvest/SKILL.md
   init-orchestration/SKILL.md
+agents/
+  director.md               minime:director — runs the flow end-to-end
+  reviewer.md               minime:reviewer — read-only evidence reviewer
 assets/                     files copied into target repos by init-orchestration
   ORCHESTRATION.md
   spec.template.md
