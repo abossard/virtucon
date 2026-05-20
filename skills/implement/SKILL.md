@@ -17,6 +17,14 @@ The persisted task brief (at `MINIME_HOME/<org>/_<repo>/tasks/<date>-<name>.task
 - If you resolve an unknown during implementation, add it to the Decisions table with its VOI level and source.
 - If you discover a requirement not in the original EARS, note it but do NOT add it to the criteria. That's review's job.
 
+## What counts as evidence
+
+Evidence is real output from real execution: test results, command output, HTTP responses, screenshots, logs. Three tiers of evidence weight:
+1. **Full weight**: actual execution output (test results, command output, logs)
+2. **Full weight**: explicit user confirmation
+3. **Some weight**: direct references to code (file, line, symbol)
+4. **Zero weight**: AI statements about code behavior 
+
 ## The loop (this is the empirically strongest part of the flow)
 
 Repeat per acceptance criterion:
@@ -26,6 +34,8 @@ Repeat per acceptance criterion:
 3. **Run the test. Observe the REAL output.** Never assume a run passed. Paste/inspect actual output. "Ran tests, passed" with no output is the classic instruction-attenuation failure.
 4. **Fix** based on real output. Re-run. Prefer executable feedback over purely conversational review loops.
 5. Move to the next criterion only when this one is genuinely green.
+
+**any executables require execution evidence.** Shell scripts, CLI tools, Dockerfiles, Makefiles, and any other new executable artifact must be run with real inputs before marking the criterion done. Applies to any runnable file. "I wrote a script" is not evidence. "I ran the script and here is the output" is.
 
 ## Constraint re-injection
 

@@ -80,4 +80,4 @@ Runs first in the four-phase flow. **No human review gate.** Your plan is an inp
 - Prefer the smallest plan that satisfies the task brief. Avoid process stages not tied to executable evidence.
 - If wiki and live code disagree, the live code wins.
 - **Preserve raw signal.** User-written sentences are never reworded or interpreted. Copy them verbatim into the task brief. Derive actions separately, assess with evidence, do not add interpretation.
-- **Data over interpretation.** Raw data and evidence outrank interpretation. When evidence and interpretation conflict, the evidence wins. This is a scientific principle, not a preference.
+- **Data over interpretation.** Evidence weight tiers: full (execution output, user confirmation), some (direct code references), zero (AI statements without execution or code reference). When evidence and interpretation conflict, the evidence wins.

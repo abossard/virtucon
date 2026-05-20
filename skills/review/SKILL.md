@@ -69,6 +69,7 @@ Uncertainty drivers (any present and unmitigated -> HIGH):
 - **Assumption density**: many unverified assumptions
 - **External state dependency**: DB, network, filesystem, third-party APIs
 - **Novelty**: unfamiliar codebase area, unestablished patterns
+- **New executable without execution evidence**: any runnable artifact that was never executed with real inputs during implementation
 
 **HIGH** if any driver is unmitigated OR the reviewer's honest confidence is below "high".
 **LOW** otherwise. **When in doubt, HIGH.**
@@ -76,6 +77,8 @@ Uncertainty drivers (any present and unmitigated -> HIGH):
 ## Step 6: Build the evidence package
 
 THE ONE RULE: hand the human **evidence, not a verdict.**
+
+Evidence is real output from real execution. Weight tiers: full (execution output, user confirmation), some (direct code references), zero (AI statements without execution or code reference).
 
 The package contains ONLY:
 1. **Criterion traceability table** with evidence methods, boundary assessment, and error coverage (Step 2).
