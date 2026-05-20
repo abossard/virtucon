@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+vscode-extension/dist/
+
+# Packaged extension
+*.vsix
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/.history
+*.swp
+*.swo
+*~
+
+# TypeScript
+*.tsbuildinfo
+
+# Test artifacts
+vscode-extension/.vscode-test/

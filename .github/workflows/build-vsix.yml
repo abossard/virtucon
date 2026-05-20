@@ -1,0 +1,49 @@
+name: Build VSIX
+
+on:
+  push:
+    branches: [main]
+    paths: ['vscode-extension/**']
+  pull_request:
+    paths: ['vscode-extension/**']
+
+defaults:
+  run:
+    working-directory: vscode-extension
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: vscode-extension/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (type-check)
+        run: npm run lint
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Build
+        run: npm run build
+
+      - name: Package VSIX
+        run: npx vsce package --no-dependencies
+
+      - name: Upload VSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: minime-explorer-vsix
+          path: vscode-extension/*.vsix
+          retention-days: 30

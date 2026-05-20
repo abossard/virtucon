@@ -1,0 +1,111 @@
+{
+  "name": "minime-explorer",
+  "displayName": "Minime Explorer",
+  "description": "Browse and search minime agent orchestration data: tasks, wikis, and templates.",
+  "version": "0.1.0",
+  "publisher": "abossard",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abossard/minime"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:minimeExplorer"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "minime",
+          "title": "Minime",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "minime": [
+        {
+          "id": "minimeExplorer",
+          "name": "Explorer"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "minime.refresh",
+        "title": "Minime: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "minime.search",
+        "title": "Minime: Search Wiki Entries"
+      },
+      {
+        "command": "minime.openFile",
+        "title": "Minime: Open File"
+      },
+      {
+        "command": "minime.openMinimeHome",
+        "title": "Minime: Open MINIME_HOME Folder"
+      },
+      {
+        "command": "minime.openLatestTask",
+        "title": "Minime: Open Latest Task"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "minime.refresh",
+          "when": "view == minimeExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "minime.search",
+          "when": "view == minimeExplorer",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Minime",
+      "properties": {
+        "minime.home": {
+          "type": "string",
+          "default": "",
+          "description": "Override MINIME_HOME path. Falls back to env MINIME_HOME, then ~/.minime."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "watch": "npm run compile -- --watch",
+    "build": "npm run compile -- --minify",
+    "test:unit": "node --import tsx node_modules/.bin/_mocha 'test/unit/**/*.test.ts'",
+    "test:integration": "node ./test/runTest.js",
+    "test": "npm run test:unit",
+    "lint": "tsc --noEmit",
+    "package": "vsce package",
+    "prepackage": "npm run build"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^2.3.8",
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.20.0",
+    "mocha": "^11.7.5",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.22.3",
+    "typescript": "^5.3.3"
+  }
+}
