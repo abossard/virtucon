@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SessionStart hook for minime plugin.
-// Injects a nudge into the session context so the agent knows minime skills
-// are available and should be used for non-trivial tasks.
+// Injects a nudge + canonical paths into the session context so the agent
+// knows minime skills are available and where state lives.
 // Must NEVER fail — always exits 0 with valid JSON.
 
 import fs from 'node:fs';
@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = path.resolve(__dirname, '..');
+const MINIME_HOME = process.env.MINIME_HOME || path.join(process.env.HOME || '~', '.minime');
 
 function buildNudge() {
   const skills = [];
@@ -39,6 +40,14 @@ function buildNudge() {
   return [
     '<minime-workflow-nudge>',
     'You have **minime** orchestration skills installed.',
+    '',
+    '**Minime paths (single source of truth — do not hardcode, use these):**',
+    `  MINIME_HOME=${MINIME_HOME}`,
+    `  Templates: ${MINIME_HOME}/templates/`,
+    `  Tasks:     ${MINIME_HOME}/<org>/_<repo>/tasks/`,
+    `  Repo wiki: ${MINIME_HOME}/<org>/_<repo>/wiki.md`,
+    `  Org wiki:  ${MINIME_HOME}/<org>/wiki.md`,
+    `  Template:  ${MINIME_HOME}/_TEMPLATE.md`,
     '',
     'Available skills:',
     skillList,

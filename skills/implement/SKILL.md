@@ -1,8 +1,9 @@
 ---
 name: implement
-description: Implement a planned task in a tight test-driven loop. Generate → run → observe REAL output → fix. Re-injects task-brief constraints every ~5 iterations to fight instruction attenuation. No human review gate.
+description: Implement a planned task in a tight test-driven loop. Generate → run → observe REAL output → fix. Re-injects task-brief constraints after context compaction or when switching focus. No human review gate.
 when_to_use: After /minime:plan has handed off, or whenever the user wants the implementation loop with grounded test execution.
 allowed-tools: Read Edit Write Grep Glob Bash
+---
 
 # Skill: implement
 
@@ -10,7 +11,7 @@ Trigger: `/minime:plan` has handed off, or the user invoked you directly with an
 
 ## Living task brief
 
-The persisted task brief (at `$HOME/.minime/tasks/<org>__<repo>/<date>-<name>.task.md`) is the single source of truth. As you complete each criterion:
+The persisted task brief (at `MINIME_HOME/<org>/_<repo>/tasks/<date>-<name>.task.md`) is the cross-phase task record. As you complete each criterion:
 - Tick `[x]` on the criterion when its test goes green.
 - If you resolve an unknown during implementation, add it to the Decisions table with its VOI level and source.
 - If you discover a requirement not in the original EARS, note it but do NOT add it to the criteria — that's review's job.
@@ -19,15 +20,15 @@ The persisted task brief (at `$HOME/.minime/tasks/<org>__<repo>/<date>-<name>.ta
 
 Repeat per acceptance criterion:
 
-1. **Write the test first** for this criterion. Tests front-loaded had the single largest positive effect on correctness in multi-stage studies.
+1. **Write the test first** for this criterion. Executable tests had the strongest positive effect on correctness in multi-stage studies.
 2. **Implement** the smallest change that could pass it.
 3. **Run the test. Observe the REAL output.** Never assume a run passed — paste/inspect actual output. "Ran tests, passed" with no output is the classic instruction-attenuation failure.
-4. **Fix** based on real output. Re-run. A grounded generate→run→observe→fix loop outperforms agentic role-play choreography.
+4. **Fix** based on real output. Re-run. Prefer executable feedback over purely conversational review loops.
 5. Move to the next criterion only when this one is genuinely green.
 
-## Constraint re-injection ("Forget-Me-Not")
+## Constraint re-injection
 
-Every ~5 iterations, OR after any context compaction, re-read the "Constraints / non-negotiables" and "Out of scope" sections of the task brief and restate them to yourself in one line. Rules decay across long loops — they get applied in form but lose substance unless refreshed.
+After context compaction, long pauses, or when switching to a new criterion/file, re-read the "Constraints / non-negotiables" and "Out of scope" sections of the task brief. Rules decay across long loops unless refreshed.
 
 ## Scope discipline
 - Touch only what the task brief and plan require. If you discover necessary work outside scope, note it for the evidence package — do not silently expand.

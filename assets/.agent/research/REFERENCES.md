@@ -22,24 +22,38 @@ Findings used by this flow:
 - Exploit the solve-verify asymmetry: design AI outputs so humans can check and contest them WITHOUT re-solving the task. → small scoped diffs, pasted real test output, stated assumptions instead of conclusions.
 - Accountability: sampling, escalation bundles, audit trails make both detections and dismissals reviewable. → the corrections wiki is the audit trail; cited entries make decisions reviewable.
 
-## Supporting sources
+## Supporting empirical studies
 
-- ClassEval Waterfall ablation — Evaluating Software Process Models for Multi-Agent Class-Level Code Generation (2025), arXiv:2511.09794. Over-structured multi-agent waterfalls did not reliably improve correctness and raised runtime errors 10–53%; requirements/design stages had minimal effect; testing had the largest positive effect. → one gate, tests front-loaded.
-- Enhancing LLM Code Generation: Multi-Agent Collaboration and Runtime Debugging (2025), arXiv:2505.02133. Execution-grounded debug loops beat agentic role-play choreography. → the implement loop.
-- AgentCoder: Multi-Agent-based Code Generation with Iterative Testing and Optimisation (2024), arXiv:2312.13010. Specialized roles (programmer + test designer + test executor) improved pass@1 on HumanEval/MBPP versus baselines. → role-specialized subagents can help when tightly coupled to executable test feedback.
-- LLMs Get Lost in Multi-Turn Conversation (2025), arXiv:2505.06120. Degradation in multi-turn flows is driven by unreliability (~112% increase), not aptitude loss. → collapse stages, reduce gradual reveal.
-- Context Rot: How Increasing Input Tokens Impacts LLM Performance (Chroma Technical Report, 2025), https://research.trychroma.com/context-rot and replication repo https://github.com/chroma-core/context-rot. Across controlled long-context tasks, performance degrades as input length grows. → prefer concise context windows, refresh context for large steps, and keep prompts self-contained.
-- Instruction attenuation / "Forget-Me-Not" re-injection — practitioner failure-mode analyses, 2026. → constraint re-injection in the implement skill.
-- GitHub Copilot agentic memory (2026), https://github.blog/ai-and-ml/github-copilot/building-an-agentic-memory-system-for-github-copilot/ Repo-scoped memories; every memory carries a code citation and is re-verified against live code before use; adversarial-memory tested. → wiki entries must cite code; plan verifies before trusting.
-- ExpeL/ERL (arXiv:2603.24639) and Google ReasoningBank (2026). Concatenating all past insights scales poorly — score for relevance and inject top-k; memories should be consolidated and allowed to mature. → harvest consolidation, plan relevance-scoring.
-- Memory for Autonomous LLM Agents: Mechanisms, Evaluation, and Applications (2026), arXiv:2603.07670. Formalizes memory as a write-manage-read loop and highlights write-path filtering, contradiction handling, retrieval policy, consolidation, and forgetting as core design axes. → direct basis for harvest's 5 memory policies.
-- Karpathy, "LLM Wiki" pattern (2026 gist): https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f Persistent markdown wiki with incremental integration and maintenance (practitioner pattern, not a controlled scientific benchmark). → operational shape of wiki-as-compounding-artifact.
-- Howard, R. A. (1966), *Information Value Theory*, IEEE Transactions on Systems Science and Cybernetics, SSC-2(1), 22–26. Classic Value-of-Information framing (what information is worth collecting before deciding). → basis for VOI gating before extra research.
-- Raiffa, H., & Schlaifer, R. (1961), *Applied Statistical Decision Theory*. Canonical Bayesian decision-analysis treatment of information value. → supports expected-benefit-vs-cost framing for additional evidence gathering.
-- Simon, H. A. (1955), *A Behavioral Model of Rational Choice*, QJE 69(1), 99–118, https://doi.org/10.2307/1884852. Bounded-rationality limits justify explicit decision hygiene and reduced cognitive load. → supports compact decision packets.
-- Ellsberg, D. (1961), *Risk, Ambiguity, and the Savage Axioms*, QJE 75(4), 643–669, https://doi.org/10.2307/1884324. Demonstrates ambiguity aversion (known-risk preference over unknowns). → supports distinguishing decidable-by-data vs undecidable-now.
-- Dietvorst, B. J., Simmons, J. P., & Massey, C. (2015), *Algorithm Aversion: People Erroneously Avoid Algorithms After Seeing Them Err*, Management Science, https://doi.org/10.1287/mnsc.2015.2218. Human trust in model output is fragile after observed errors. → supports evidence packets over authority assertions.
-- Logg, J. M., Minson, J. A., & Moore, D. A. (2019), *Algorithm Appreciation: People Prefer Algorithmic to Human Judgment*, OBHDP 151, 90–103, https://doi.org/10.1016/j.obhdp.2018.12.005. Algorithm deference can also occur depending on framing/context. → supports calibrated confidence and explicit tradeoff presentation.
+- ClassEval Waterfall ablation (2025), arXiv:2511.09794. Over-structured multi-agent waterfalls did not reliably improve correctness; testing had the largest positive effect. → one gate, tests front-loaded.
+- Enhancing LLM Code Generation: Multi-Agent Collaboration and Runtime Debugging (2025), arXiv:2505.02133. Execution-grounded debug loops outperformed conversational review loops. → the implement loop.
+- AgentCoder (2024), arXiv:2312.13010. Specialized roles improved pass@1 when tightly coupled to executable test feedback. → selective role specialization.
+- LLMs Get Lost in Multi-Turn Conversation (2025), arXiv:2505.06120. Multi-turn degradation driven by unreliability, not aptitude loss. → collapse stages, refresh context.
+- Context Rot (Chroma Technical Report, 2025), https://research.trychroma.com/context-rot. Performance degrades as input length grows. → concise context windows, fresh context for large steps.
+- Memory for Autonomous LLM Agents (2026), arXiv:2603.07670. Formalizes memory as write-manage-read loop. → harvest memory policies.
+- ExpeL/ERL (arXiv:2603.24639). Concatenating all insights scales poorly; score for relevance and consolidate. → harvest consolidation, plan relevance-scoring.
+- Bacchelli & Bird, "Expectations, Outcomes, and Challenges of Modern Code Review" (ICSE 2013). Review is primarily about understanding, not defect detection. → evidence-focused review.
+- Fagan, M.E., "Design and Code Inspections" (IBM Systems Journal, 1976). Structured exit-criteria inspection outperforms ad-hoc review. → traceability table approach.
+- McAleese et al., "LLM Critics Help Catch LLM Bugs" (2024), arXiv:2407.00215. Evidence-anchored critique format outperforms human review in hybrid teams. → evidence package format.
+- Porter, Votta & Basili, "Comparing Detection Methods" (IEEE TSE, 1995). Checklist-based review outperforms ad-hoc. → structured review process.
+
+## Decision theory references
+
+- Howard, R. A. (1966), *Information Value Theory*, IEEE SSC-2(1), 22–26. → VOI gating.
+- Raiffa & Schlaifer (1961), *Applied Statistical Decision Theory*. → benefit-vs-cost framing.
+- Simon, H. A. (1955), *A Behavioral Model of Rational Choice*, QJE 69(1), 99–118. → decision hygiene.
+- Ellsberg, D. (1961), *Risk, Ambiguity, and the Savage Axioms*, QJE 75(4), 643–669. → decidable vs undecidable.
+- Dietvorst et al. (2015), *Algorithm Aversion*, Management Science. → evidence over authority.
+- Logg et al. (2019), *Algorithm Appreciation*, OBHDP 151, 90–103. → calibrated confidence.
+
+## Engineering references (not controlled studies)
+
+- GitHub Copilot agentic memory (2026), https://github.blog/ai-and-ml/github-copilot/building-an-agentic-memory-system-for-github-copilot/. Repo-scoped, citation-verified memories. → wiki design.
+- Karpathy, "LLM Wiki" pattern (2026 gist). Persistent markdown wiki with incremental maintenance. → wiki-as-artifact shape.
+
+## Practitioner heuristics (not empirical — internal observations)
+
+- Instruction attenuation / constraint re-injection: observed pattern where rules applied early in a loop lose substance mid-loop. No formal citation. → re-injection in the implement skill.
+- "Forget-Me-Not" label is a practitioner shorthand, not a published finding.
 
 ## Interpretation notes (for workflow decisions)
 
@@ -51,14 +65,14 @@ Findings used by this flow:
 
 1. **Write filtering / scoring**  
    - Sources: arXiv:2603.07670 (write-path filtering), GitHub Copilot memory blog (store only actionable facts).  
-   - Implementation: `harvest` ValueScore rubric + threshold.
+   - Implementation: `harvest` write filtering heuristic (actionability, reusability, citation quality, novelty).
 
 2. **Conflict handling**  
    - Sources: arXiv:2603.07670 (contradiction handling), GitHub Copilot memory blog (verify citations, correct contradictory memories).  
    - Implementation: active vs superseded status, explicit supersession links.
 
 3. **Retrieval prioritization**  
-   - Sources: ExpeL/ERL + ReasoningBank (top-k relevance over dump-all), GitHub Copilot memory blog (retrieval + future weighted prioritization).  
+   - Sources: ExpeL/ERL (top-k relevance over dump-all), GitHub Copilot memory blog (retrieval + future weighted prioritization).  
    - Implementation: `plan` ranks by trigger match, status, confidence, value, recency.
 
 4. **Decay / forgetting**  

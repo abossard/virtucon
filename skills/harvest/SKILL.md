@@ -1,6 +1,7 @@
 ---
-description: Capture lessons from a just-merged task or current session into the per-repo corrections wiki. Human corrections are the highest-value signal. Every entry must cite live code and be a generalised rule, not a task log. Consolidate when the wiki grows past ~20 entries.
-when_to_use: Right after a task is merged (auto-merge by /minime:review or human-merged), after a significant session with learnings worth preserving, or when the user explicitly asks to harvest lessons from recent work.
+name: harvest
+description: Capture lessons from a just-merged task or current session into the per-repo corrections wiki. Human corrections are the highest-value signal. Every entry must cite live code and be a generalised rule, not a task log.
+when_to_use: Right after a task is merged or staged, after a significant session with learnings worth preserving, or when the user explicitly asks to harvest lessons from recent work.
 allowed-tools: Read Edit Write Grep Glob Bash(git log *) Bash(git diff *) Bash(git show *) Bash(git remote get-url *) Bash(git status)
 ---
 
@@ -18,7 +19,7 @@ These still require code citations to be persisted — if a lesson references co
 
 ## Learn from the task brief's evolution
 
-Read the persisted task brief at `$HOME/.minime/tasks/<org>__<repo>/<date>-<name>.task.md`. It contains:
+Read the persisted task brief at `MINIME_HOME/<org>/_<repo>/tasks/<date>-<name>.task.md`. It contains:
 - **Decisions table** — how unknowns were resolved and at what VOI level.
 - **Discovered during review** — criteria that were missing from the original EARS.
 - **User feedback** — verbatim user corrections and steering.
@@ -30,13 +31,13 @@ Use this to harvest process-level lessons:
 
 ## Research-grounded memory policies (apply all 5)
 
-1. **Write filtering / scoring policy**
-   - Do not store everything. Score each candidate entry:
-     - +2 actionability for future tasks
-     - +2 reusability across files/tasks
-     - +2 evidence quality (clear code citation)
-     - +2 novelty (not duplicate of existing active rule)
-   - Persist only entries with **ValueScore >= 5**.
+1. **Write filtering policy** (heuristic — tune based on results)
+   - Do not store everything. Evaluate each candidate entry for:
+     - Actionability for future tasks
+     - Reusability across files/tasks
+     - Evidence quality (clear code citation)
+     - Novelty (not duplicate of existing active rule)
+   - Persist only entries that score well on most of these dimensions.
 
 2. **Conflict handling policy**
    - If a new rule conflicts with an existing one, do not keep both as active.
@@ -62,7 +63,7 @@ Use this to harvest process-level lessons:
    - If many candidates are rejected for low value or stale evidence, tighten future write filtering.
 
 ## Step 1 — Locate the wikis
-Run `git remote get-url origin`, derive `<org>__<repo>.md`, open `$HOME/.minime/wiki/repos/<org>__<repo>.md`. Also check `$HOME/.minime/wiki/orgs/<org>.md` for cross-repo rules to avoid duplication.
+Run `git remote get-url origin`, derive `<org>` and `<repo>`, open `MINIME_HOME/<org>/_<repo>/wiki.md`. Also check `MINIME_HOME/<org>/wiki.md` for cross-repo rules to avoid duplication.
 
 ## Step 2 — What to capture
 
@@ -73,7 +74,7 @@ Run `git remote get-url origin`, derive `<org>__<repo>.md`, open `$HOME/.minime/
 
 ## Step 3 — How to write an entry
 
-Append to `$HOME/.minime/wiki/repos/<org>__<repo>.md` using the `$HOME/.minime/wiki/_TEMPLATE.md` block. Every entry MUST:
+Append to `MINIME_HOME/<org>/_<repo>/wiki.md` using the `MINIME_HOME/_TEMPLATE.md` block. Every entry MUST:
 
 - **Carry a code citation** — `path:line` or a stable symbol name. An entry with no citation is unsafe and must not be written: future agents re-verify entries against live code before trusting them, and an uncited entry cannot be verified.
 - **Be a generalised rule, not a task log.** Not "fixed the bug in PR 12" but "Money values use integer minor units; never use floats — see billing.py:44."
@@ -81,7 +82,7 @@ Append to `$HOME/.minime/wiki/repos/<org>__<repo>.md` using the `$HOME/.minime/w
 - **Set ValueScore, Confidence, Status, and LastVerified** for ranking and decay policies.
 - **Be dated**, so consolidation can prune the old.
 
-## Step 4 — Consolidation (every ~20 entries, or when the file feels noisy)
+## Step 4 — Consolidation (when retrieval starts surfacing duplicates or stale entries)
 
 Do not let the wiki grow unbounded — a bloated wiki buries the useful entry and slows every future task.
 - Merge several specific entries into one general rule where a pattern is visible (simple notes should mature into preventative rules over time).

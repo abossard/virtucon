@@ -5,18 +5,17 @@ Goal: keep code quality, **remove two of the three human review gates**, and mak
 
 Portable across Claude Code and GitHub Copilot. The flow is four skills plus a plain-text per-repo wiki — no tool lock-in.
 
-## Why it is shaped this way (grounding)
+## Why it is shaped this way
 
-Full citations and findings: `.agent/research/REFERENCES.md`.
+Full citations: `.agent/research/REFERENCES.md`.
 
 | Decision | Source |
 |---|---|
-| One human gate, not three | Spec/design stages have minimal measured effect on correctness (ClassEval Waterfall ablation, 2025); over-structuring lowers correctness. |
-| Tier review by agent-reported risk | Confidence-based hybridization beats uniform review — route only the low-confidence slice to the human (DeepMind, *Human-AI Complementarity*, 2025). |
-| Reviewer surfaces evidence, never a verdict | Showing labels/judgments/confidence caused **over-reliance** and made reviewers *worse* when the AI was wrong; raw evidence alone "helps when correct, does not hurt when wrong" (same paper). |
-| Design outputs to be checkable, not re-solvable | Solve–verify asymmetry — layer AI operative agency under human evaluative agency (Springer, *Designing meaningful human oversight*, 2026). |
-| Per-repo corrections wiki with cited entries | GitHub Copilot agentic memory (2026): repo-scoped, citation-verified memories; adversarial-memory tested. |
-| Score-then-inject, consolidate periodically | ExpeL/ERL — concatenating all insights scales poorly; ReasoningBank — memories should mature. |
+| One human gate, not three | ClassEval Waterfall ablation (2025) |
+| Tier review by uncertainty | DeepMind *Human-AI Complementarity* (2025) |
+| Evidence, never a verdict | Same paper — verdicts cause over-reliance |
+| Checkable outputs | Springer *Designing meaningful human oversight* (2026) |
+| Cited wiki entries | GitHub Copilot agentic memory (2026) |
 
 ## The flow
 
@@ -39,7 +38,7 @@ Full citations and findings: `.agent/research/REFERENCES.md`.
         ▼
   skill("review")    self-reviews staged+unstaged+untracked, computes RISK, builds EVIDENCE PACKAGE
         │
-        ├── risk = LOW  + tests green ─────────────► auto-merge (or commit when ready)
+        ├── risk = LOW  + tests green ─────────────► stage (user commits when ready)
         │
         └── risk = HIGH ──► YOU review the evidence package only ──► merge / send back
         │
@@ -52,18 +51,15 @@ Three former gates (requirements, plan, code) collapse to one tiered gate. The p
 
 No `task.md` file is required — plan accepts inline conversation context directly. Each skill explicitly tells the agent which skill to invoke next (explicit chaining).
 
-## The one rule that makes the review gate cheap
+## The review gate
 
-The `review` skill hands you an **evidence package**, never a verdict. It must NOT say "this looks correct", show a confidence score next to a conclusion, or argue for its own work. It shows: the scoped diff, the actual test output (real, pasted), the assumptions it made, and the two or three specific lines/decisions it is least sure about. You judge.
+The `review` skill owns the full review process — see `skills/review/SKILL.md` for the evidence package format, risk model, and traceability table. The short version: evidence only, no verdicts.
 
-This is the single empirically strongest lever in the whole design — a verdict measurably degrades your error detection.
+## Subagents
 
-## Subagents and model strength
-
-For larger steps, minime should prefer fresh-context subagents with strong reasoning models.
-Review is always fresh-context by design (`skill("review")` forks to `minime:reviewer`).
-If your harness supports model choice, use top reasoning tiers for these subagents and avoid fast/mini-tier variants for large reasoning-heavy phases.
-Subagents should have enough tool access for their role: full engineering tool access for implementation/investigation, and deliberately read-only access for review isolation.
+Review always runs in a fresh context (`skill("review")` forks to `minime:reviewer`).
+For high-risk reasoning, prefer stronger models. Fast models are fine for mechanical work.
+Subagents need enough tools for their role; reviewer stays read-only.
 
 ## Formal VOI gate (when to research vs decide)
 
@@ -73,12 +69,13 @@ Subagents should have enough tool access for their role: full engineering tool a
 - Run extra research only if Value-of-Information is positive in practice: likely to materially change the chosen path.
 - If extra research is unlikely to change the path, stop and request a decision with a compact options/tradeoffs/risks/default packet.
 
-## Risk tiers (who reviews what)
+## Risk tiers
 
-- **LOW** — localised, covered by tests you can read, no security/auth/data/migration/public-API surface. → auto-merge on green (or stage/commit when the user is ready — minime does not force the git timeline).
-- **HIGH** — touches auth, data integrity, migrations, money, concurrency, a public API, or > ~150 changed lines, OR the agent's self-confidence is low. → human reviews evidence package.
+Risk = uncertainty about correctness. Defined in `skills/review/SKILL.md`.
+- **LOW** — well-tested, low uncertainty → stage when ready.
+- **HIGH** — any unmitigated uncertainty driver → human reviews evidence package.
 
-When unsure, the tier is HIGH. Tiers are defined in the `review` skill.
+When unsure, HIGH.
 
 ## SessionStart hook (auto-nudge)
 
@@ -91,7 +88,7 @@ The plugin ships `hooks/hooks.json` + `hooks/session-start.js`. On every new ses
 2. Inline conversation context (pasted requirements, a table, verbal description).
 3. User is asked to describe the task if neither is present.
 
-Regardless of source, `plan` creates a **persisted living task brief** at `$HOME/.minime/tasks/<org>__<repo>/<date>-<name>.task.md`. This file:
+Regardless of source, `plan` creates a **persisted living task brief** at `MINIME_HOME/<org>/_<repo>/tasks/<date>-<name>.task.md`. This file:
 - Preserves the user's original request **verbatim** (never reworded or interpreted).
 - Has checkboxes (`[ ]`/`[x]`) on every criterion, ticked by `implement` as tests pass.
 - Carries a VOI level per criterion (`decided-by-data`, `needs-research`, `undecidable-now`).
@@ -99,13 +96,7 @@ Regardless of source, `plan` creates a **persisted living task brief** at `$HOME
 - Grows a "Discovered during review" section for criteria surfaced after the initial EARS.
 - Grows a "User feedback" section with verbatim human corrections (timestamped, unedited).
 
-The task brief is the single source of truth across all phases and the traceable record of how a feature's requirements evolved.
-
-## Review scope: staged + untracked
-
-The review skill collects the full change set from:
-- `git diff` (unstaged), `git diff --staged` (staged), `git ls-files --others --exclude-standard` (untracked new files), and branch diffs when applicable.
-Untracked files that are part of the task are reviewable work, not invisible.
+The task brief is the cross-phase task record and the traceable record of how a feature's requirements evolved.
 
 ## Session harvest (no merge required)
 
@@ -117,26 +108,9 @@ Code-cited lessons go to the wiki; purely process knowledge goes to the director
 
 `harvest` also reads the persisted task brief's Decisions table and "Discovered during review" section to learn what categories of criteria the EARS consistently misses — that meta-learning feeds the director's process memory and sharpens future EARS nudges.
 
-## Data integrity principle
-
-**Preserve raw signal. Derive actions separately. Assess with evidence. Do not interpret.**
-
-- User-written sentences are never reworded, paraphrased, or reinterpreted — they are copied verbatim.
-- The persisted task brief keeps the user's original request, their feedback, and the review-discovered criteria as separate, immutable sections.
-- Actions and criteria are derived from the raw data but stored alongside it, not in place of it.
-
-## Explicit skill chaining
-
-Each skill's hand-off explicitly instructs the agent which skill to invoke next:
-- `plan` → "now invoke `skill("implement")`"
-- `implement` → "now invoke `skill("review")`"
-- `review` → "invoke `skill("harvest")`"
-
-This prevents the agent from optimizing for speed and skipping structured phases.
-
 ## Git timeline decoupling
 
-Minime's workflow does not force coupling to the user's git commit cadence. LOW-risk auto-merge is the default for convenience, but the user can commit at their own pace. `harvest` works from session context, not only from merge events.
+Minime does not force the user's git commit cadence. The user commits when ready. `harvest` works from session context, not only from merge events.
 
 ## Files in this repo
 
@@ -145,7 +119,7 @@ ORCHESTRATION.md                        this file
 task.template.md                        the short EARS-style task brief you fill in per task
 CLAUDE.md                               pointer for Claude Code
 .github/copilot-instructions.md         pointer for GitHub Copilot surfaces
-.agent/wiki/<org>__<repo>.md            symlink to $HOME/.minime/wiki/repos/<org>__<repo>.md
+.agent/wiki/<org>/_<repo>/wiki.md            symlink to MINIME_HOME/<org>/_<repo>/wiki.md
 .agent/wiki/_TEMPLATE.md                wiki entry format
 .agent/research/REFERENCES.md           empirical basis for every design decision
 ```
@@ -168,4 +142,4 @@ The plugin also ships:
 
 ## Per-repo setup
 
-The wiki is keyed by repo URL. The init skill derives the filename automatically from `git remote get-url origin` — `github.com/acme/billing` becomes `.agent/wiki/acme__billing.md`, which is a symlink to the central file at `$HOME/.minime/wiki/repos/acme__billing.md`. The repo keeps the stable entrypoint; the canonical data lives in your user home.
+The wiki is keyed by repo URL. The init skill derives the path automatically from `git remote get-url origin` — `github.com/acme/billing` becomes `MINIME_HOME/acme__billing/wiki.md`. The canonical data lives in your user home. `MINIME_HOME` is resolved by the SessionStart hook (defaults to `$HOME/.minime`, overridable via env var).

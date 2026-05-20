@@ -7,7 +7,7 @@ Read by `/minime:plan` (relevance-scored, citation-verified before use),
 written by `/minime:harvest`. Shared by Claude and Copilot — commit it to the repo.
 
 Rules: every entry cites live code · entries are general rules, not task logs ·
-no secrets or customer data · consolidate when it grows past ~20 entries.
+no secrets or customer data · consolidate when retrieval surfaces duplicates.
 
 ---
 

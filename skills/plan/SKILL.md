@@ -1,4 +1,5 @@
 ---
+name: plan
 description: Plan a coding task from a task.md brief or inline context. Reads the per-repo corrections wiki (score-and-verify, never dump-all), thinks silently, self-challenges, hands off to implement. No human review gate — the plan is consumed by implement, never signed off.
 when_to_use: When the user has a task to plan — either as a task.md file, inline conversation context, or a verbal description. This skill starts the orchestration flow.
 allowed-tools: Read Grep Glob Bash(git remote get-url *) Bash(git log *) Bash(git status) Bash(ls *) Bash(mkdir *) Write
@@ -18,15 +19,16 @@ Runs first in the four-phase flow. **No human review gate** — your plan is an 
    Then nudge for EARS completeness: if acceptance criteria are vague or non-EARS, ask for a concise refinement using EARS patterns. Nudge, don't block on perfection: ask for the minimum edits needed to make criteria independently testable.
 
 2. **Persist the living task brief.**
-   Derive `<org>__<repo>` from `git remote get-url origin`. Create the task brief at:
-   `$HOME/.minime/tasks/<org>__<repo>/<YYYY-MM-DD>-<short-name>.task.md`
-   Use the template from `$HOME/.minime/templates/task.template.md`. Set all criteria as `- [ ]` (unchecked) and assign a VOI level to each:
+   Derive `<org>` and `<repo>` from `git remote get-url origin`. Create the task brief at:
+   `MINIME_HOME/<org>/_<repo>/tasks/<YYYY-MM-DD>-<short-name>.task.md`
+   Use the template from `MINIME_HOME/templates/task.template.md`. Set all criteria as `- [ ]` (unchecked) and assign a VOI level to each:
    - **decided-by-data** — resolvable from code/docs/tests/specs
    - **needs-research** — resolvable but needs evidence gathering
    - **undecidable-now** — value tradeoff/policy, needs human decision
-   This file evolves through all phases and is the single source of truth for this task.
+   This file evolves through all phases and is the cross-phase task record.
+   (MINIME_HOME is resolved by the SessionStart hook — see the minime-workflow-nudge in your context.)
 
-3. **Locate wiki sources (user-home only).** Run `git remote get-url origin`, derive `<org>__<repo>.md`, and open `$HOME/.minime/wiki/repos/<org>__<repo>.md` directly. Also load `$HOME/.minime/wiki/orgs/<org>.md` when present. If the repo wiki file is absent, tell the user to run `/minime:init-orchestration` once (it initializes `$HOME/.minime/*` only).
+3. **Locate wiki sources (user-home only).** Run `git remote get-url origin`, derive `<org>` and `<repo>`, and open `MINIME_HOME/<org>/_<repo>/wiki.md` directly. Also load `MINIME_HOME/<org>/wiki.md` when present. If the repo wiki file is absent, tell the user to run `/minime:init-orchestration` once.
 
 4. **Discover domain-specific skills and agents.** Scan for other installed skills and agents that could be relevant to this task:
    - Check the current repo for `.agents/`, `.skills/`, `agents/`, `skills/` directories.
@@ -48,7 +50,7 @@ Runs first in the four-phase flow. **No human review gate** — your plan is an 
    - Higher `Confidence` and `ValueScore`
    - More recent `LastVerified`
    - `Origin: human-correction` over weaker signals when tied
-   Select only the top ~5 after ranking.
+   Select only the entries needed for this task after ranking.
 
 7. **Verify before trusting (citation check).** Each selected entry cites a code location. Open that location. If the code no longer matches the entry, the entry is stale — ignore it and flag it for `/minime:harvest` to fix. Never plan on an unverified memory.
 
@@ -63,6 +65,6 @@ Runs first in the four-phase flow. **No human review gate** — your plan is an 
 
 ## Rules
 - Do not produce a plan document for human approval. No plan-review gate.
-- Prefer the smallest plan that satisfies the task brief. Extra structure measurably lowers correctness.
+- Prefer the smallest plan that satisfies the task brief. Avoid process stages not tied to executable evidence.
 - If wiki and live code disagree, the live code wins.
 - **Preserve raw signal.** User-written sentences are never reworded or interpreted. Copy them verbatim into the task brief. Derive actions separately, assess with evidence, do not add interpretation.

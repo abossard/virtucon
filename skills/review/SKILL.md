@@ -1,5 +1,6 @@
 ---
-description: Review the implementation in a fresh subagent context, compute a risk tier (LOW vs HIGH), and either auto-merge (LOW + green) or surface an evidence package for the human (HIGH). Forks into the minime:reviewer subagent so the review is not biased by the implementation reasoning. Surfaces evidence, never a verdict — that one rule is the empirically strongest lever in the design.
+name: review
+description: Review the implementation in a fresh subagent context. Verifies each EARS criterion against evidence (tests, diff, assumptions), computes an uncertainty-based risk tier, and either routes to harvest (LOW) or surfaces an evidence package for the human (HIGH). Surfaces evidence, never a verdict.
 when_to_use: After /minime:implement has handed off, or whenever the user wants the change reviewed and routed.
 context: fork
 agent: minime:reviewer
@@ -9,57 +10,76 @@ agent: minime:reviewer
 
 Trigger: `/minime:implement` handed off. This is the ONLY skill in the flow that may reach the human — and only for the HIGH-risk slice.
 
-The review must run in a fresh forked context (`context: fork`) with `minime:reviewer`.
-If the harness supports explicit model selection, prefer the strongest available reasoning model for the reviewer (not fast/mini-tier variants).
-Reviewer tool access should remain intentionally read-only for this phase; do not weaken isolation by adding edit/write capabilities.
+The review forks into a fresh `minime:reviewer` subagent (`context: fork`).
+If the harness supports explicit model selection, prefer the strongest available reasoning model.
 
-## Step 1 — Self-review against the task brief
-Re-read the persisted task brief (at `$HOME/.minime/tasks/<org>__<repo>/<date>-<name>.task.md`). For each acceptance criterion: is there a test, does it genuinely pass (real output), does it actually verify the criterion? Check that the checkmarks in the brief match reality. Fix gaps by looping back to `/minime:implement`. Do not pass known-incomplete work forward.
+## Empirical basis
 
-## Step 1.5 — Gather the full change set
-Do NOT rely only on branch diffs. Collect changes from all sources:
-- `git diff` (unstaged changes)
-- `git diff --staged` (staged changes)
-- `git ls-files --others --exclude-standard` (untracked new files)
+- Evidence-only assistance outperforms verdict-showing (DeepMind 2025, arXiv:2510.26518).
+- Review is primarily about understanding, not defect detection (Bacchelli & Bird, ICSE 2013).
+- Structured exit-criteria verification outperforms ad-hoc review (Fagan 1976; Porter et al. 1995).
+- Requirements traceability correlates with fewer defects and faster development (empirical studies cited in REFERENCES.md).
+- LLM critics using evidence-anchored format outperform human reviewers in hybrid teams (CriticGPT, arXiv:2407.00215).
+
+## Step 1 — Verify each EARS criterion against evidence
+
+Read the persisted task brief (`MINIME_HOME/<org>/_<repo>/tasks/<date>-<name>.task.md`).
+
+For each acceptance criterion, build a traceability row:
+
+| Criterion | Test exists? | Test exercises it? | Test passes? (real output) | Untested uncertainty |
+|-----------|:---:|:---:|:---:|---|
+| When X, system shall Y | yes/no | genuine/tautology | paste output | what's uncertain |
+
+This is the Fagan exit-criteria approach: verify the low-level artifact (code) against the high-level artifact (EARS criteria). If a criterion has no genuine test, that is evidence of uncertainty — surface it, don't paper over it.
+
+## Step 2 — Backfill discovered criteria into the EARS
+
+If the review surfaces requirements that should have been in the original EARS:
+- Append to the "Discovered during review" section of the task brief with `- [ ]` checkbox and VOI level.
+- If the human provides feedback, append their exact words verbatim to "User feedback" — do NOT paraphrase.
+
+## Step 3 — Gather the full change set
+
+Do NOT rely only on branch diffs. Collect:
+- `git diff` (unstaged) + `git diff --staged` (staged)
+- `git ls-files --others --exclude-standard` (untracked new files — read content)
 - `git diff main...HEAD` or equivalent (branch diff, if on a branch)
-All of these form the change set for review. Untracked files that are part of the task are reviewable work, not invisible.
 
-## Step 1.7 — Backfill discovered criteria into the EARS
-Check whether the review surfaces requirements that should have been in the original EARS:
-- If feedback, a bug, or an edge case reveals a missing requirement, append it to the "Discovered during review" section of the persisted task brief with its own `- [ ]` checkbox and VOI level.
-- If the human provides feedback, append their exact words verbatim to the "User feedback" section — do NOT paraphrase or interpret.
-- This creates a traceable record of how requirements evolved and helps harvest learn what types of criteria this repo's EARS consistently misses.
+## Step 4 — Compute the risk tier
 
-## Step 2 — Compute the risk tier
+Risk is **uncertainty about correctness**, not a domain checklist.
 
-**HIGH** if the change touches ANY of:
-- authentication, authorization, sessions, secrets
-- data integrity, schema migrations, money/billing
-- concurrency / async correctness
-- a public API or contract other code depends on
-- more than ~150 changed lines
-OR your own confidence that this is correct is below "high".
+Uncertainty drivers (any present and unmitigated → HIGH):
+- **Low test coverage** — new/changed behavior without tests
+- **High branching complexity** — many conditional paths = untested states
+- **Weak type safety** — untyped, `any`-heavy code = runtime surprises
+- **Backwards compatibility surface** — shared interfaces, contracts, schemas
+- **Assumption density** — many unverified assumptions
+- **External state dependency** — DB, network, filesystem, third-party APIs
+- **Novelty** — unfamiliar codebase area, unestablished patterns
 
-Otherwise **LOW**. **When in doubt, HIGH.** Confidence-based routing only works when the low-confidence slice is honestly escalated — a miscalibrated "LOW" defeats the whole design.
+**HIGH** if any driver is unmitigated OR the reviewer's honest confidence is below "high".
+**LOW** otherwise. **When in doubt, HIGH.**
 
-## Step 3 — Route
-
-- **LOW + all tests green** → auto-merge if on a feature branch, or stage/commit when the user is ready. Then invoke `skill("harvest")`. Do not force a merge if the user's git timeline is different.
-- **HIGH** → build the evidence package below and STOP for the human.
-
-## Step 4 — The evidence package (HIGH only)
+## Step 5 — Build the evidence package
 
 THE ONE RULE: hand the human **evidence, not a verdict.**
 
-Showing a conclusion ("looks correct"), or a confidence score attached to a conclusion, or an argument for your own work, measurably causes over-reliance and makes the reviewer WORSE at catching your mistakes when you are wrong. Raw evidence alone helps when you are right and does not hurt when you are wrong. So the package contains ONLY:
+The package contains ONLY:
+1. **Criterion traceability table** — the Step 1 table showing each EARS criterion vs its test evidence.
+2. **Scoped diff** — the change, nothing extra.
+3. **Test output** — real, pasted, every test. Not "passed".
+4. **Assumptions made** — plain list.
+5. **Least-sure points** — 2–3 specific lines/decisions as questions. State uncertainty, do NOT resolve it.
+6. **Out-of-scope work discovered** — if any.
 
-1. **Scoped diff** — the change, nothing extra.
-2. **Test output** — real, pasted, every test. Not "passed".
-3. **Assumptions made** — plain list.
-4. **Least-sure points** — the 2–3 specific lines or decisions you are least confident about, as questions: "Is X the right behaviour when Y?" State the uncertainty. Do NOT resolve it for the reviewer.
-5. **Out-of-scope work discovered** — if any.
+FORBIDDEN: "this looks correct / LGTM / safe to merge / I'm confident", any verdict, any score next to a conclusion, any persuasion. The human adjudicates.
 
-FORBIDDEN in the package: "this looks correct / LGTM / safe to merge / I'm confident", any overall verdict, any score next to a conclusion, any persuasion. Surface; do not adjudicate. The human adjudicates.
+## Step 6 — Route
 
-## Step 5
+- **LOW + all tests green** → stage when the user is ready. Then invoke `skill("harvest")`.
+- **HIGH** → present the evidence package and STOP for the human.
+
+## Step 7
 After the human decides, **invoke `skill("harvest")`** to capture lessons from this task.

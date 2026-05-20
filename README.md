@@ -6,8 +6,8 @@ the usual `brainstorm → plan-review → code → code-review` pipeline into **
 tiered human review gate**, kept cheap by handing the reviewer an evidence
 package instead of a verdict.
 
-Every design choice traces to empirical work (DeepMind 2025, Springer 2026,
-ClassEval, ReasoningBank). See [`assets/.agent/research/REFERENCES.md`](assets/.agent/research/REFERENCES.md).
+The core workflow is informed by empirical work (DeepMind 2025, Springer 2026,
+ClassEval). See [`assets/.agent/research/REFERENCES.md`](assets/.agent/research/REFERENCES.md).
 
 ---
 
@@ -19,24 +19,22 @@ Five skills + two agents, distributed as a plugin:
 |---|---|---|
 | `/minime:plan` | Read wiki, nudge EARS quality if needed, plan silently, self-challenge | yes |
 | `/minime:implement` | Test-driven generate→run→observe→fix loop | yes |
-| `/minime:review` | Compute risk tier; auto-merge LOW, escalate HIGH with evidence package | yes |
+| `/minime:review` | Verify criteria against evidence; route by uncertainty tier | yes |
 | `/minime:harvest` | Capture corrections into the per-repo wiki as cited rules | yes |
 | `/minime:init-orchestration` | One-time bootstrap of user-home minime state (no repo writes) | manual only |
 
 | Agent | Role |
 |---|---|
-| `minime:director` | Runs the flow end-to-end. Designed for `claude --agent minime:director` (autopilot mode for a single task). Re-injects discipline at phase boundaries, decides when online research is required before planning, orchestrates strong fresh-context subagents for evidence gathering, and asks the user for sources/proceed mode when needed. |
-| `minime:reviewer` | Read-only reviewer. No Edit/Write tools — structurally cannot "fix" things, can only surface. The `review` skill forks into this agent automatically so the review runs in a fresh context window with no implementation bias. Can also be invoked directly with `@agent-minime:reviewer`. |
+| `minime:director` | Runs the flow end-to-end. Invokes skills in sequence, enforces phase transitions. Designed for `claude --agent minime:director`. |
+| `minime:reviewer` | Read-only reviewer. No Edit/Write tools — configured to surface evidence only. Forks automatically from the `review` skill in a fresh context. |
 
-Runtime state lives in user home (not in your working repository):
-`$HOME/.minime/templates/task.template.md`, `$HOME/.minime/wiki/repos/<org>__<repo>.md`,
-`$HOME/.minime/wiki/orgs/<org>.md`.
+Runtime state lives in `MINIME_HOME` (defaults to `$HOME/.minime`, overridable via env var).
+The SessionStart hook resolves and injects the canonical paths into every session.
 
-### High-level subagent policy
+### Subagent policy
 
-- Use **strong reasoning models only** for subagent work (no fast/mini tiers for reasoning-heavy phases).
-- Give subagents **enough tools for the task** (implementation/investigation needs full engineering tool access).
-- Keep review as the explicit exception: `minime:reviewer` stays read-only in a fresh context.
+- For high-risk or cross-cutting reasoning, prefer stronger models. Fast models are acceptable for mechanical lookups.
+- Give subagents enough tools for the task. Review is the exception: `minime:reviewer` stays read-only.
 
 ### Formal VOI policy (decision hygiene)
 
@@ -61,7 +59,7 @@ Run the bootstrap once (from anywhere):
 /minime:init-orchestration
 ```
 
-This initializes `$HOME/.minime/*` only and does not create or stage files in your repo.
+This initializes `MINIME_HOME` only and does not create or stage files in your repo.
 
 After that, the orchestration is live: describe your task inline or write a `task.md`, invoke
 `/minime:plan`, and follow the flow. No `task.md` file is required — plan accepts inline context.
@@ -135,9 +133,9 @@ After plugin install:
 ```
 
 The init skill creates user-home state only:
-- `$HOME/.minime/templates/task.template.md`
-- `$HOME/.minime/wiki/repos/<org>__<repo>.md`
-- `$HOME/.minime/wiki/orgs/<org>.md`
+- `MINIME_HOME/templates/task.template.md`
+- `MINIME_HOME/<org>/_<repo>/wiki.md`
+- `MINIME_HOME/<org>/wiki.md`
 
 ---
 
@@ -148,17 +146,16 @@ Two modes — pick the one that fits the task.
 ### Manual mode (explicit, step-by-step)
 
 1. **Per task**: describe your task inline to the agent, or copy
-   `$HOME/.minime/templates/task.template.md` → `task.md` and fill in EARS-style
+   `MINIME_HOME/templates/task.template.md` → `task.md` and fill in EARS-style
    acceptance criteria. **No file required** — plan accepts conversation context directly.
 2. **Start the flow**: `skill("plan")`. Reads your task brief (inline or file) and the
    per-repo wiki, discovers other installed skills, nudges EARS quality when needed,
    then plans silently and tells you to invoke `skill("implement")`.
 3. **Implement**: `skill("implement")`. Test-first loop, real output observed.
    Hands off with explicit instruction to invoke `skill("review")`.
-4. **Review**: `skill("review")`. Automatically forks into `minime:reviewer`
-   (fresh context, read-only tools) to remove implementation bias. Checks staged,
-   unstaged, and untracked files — not just branch diffs. Auto-merges if LOW risk
-   and tests green; otherwise surfaces an evidence package for you.
+4. **Review**: `skill("review")`. Forks into `minime:reviewer`
+   (fresh context, read-only tools). Checks staged, unstaged, and untracked files.
+   Stages if LOW risk and tests green; otherwise surfaces an evidence package for you.
 5. **Harvest**: `skill("harvest")` after merge or at session end. Captures lessons
    from any corrections you made into the wiki, with code citations. Works even
    without a merge — session lessons are harvestable too.
@@ -187,13 +184,12 @@ The full one-page overview is in this repository’s `assets/ORCHESTRATION.md`.
 
 | Decision | Source |
 |---|---|
-| One human gate, not three | Over-structured multi-agent pipelines did not improve correctness in the ClassEval Waterfall ablation; requirements/design stages had minimal measured effect. |
-| Tier review by agent-reported risk | Confidence-based hybridization beat AI-alone and human-alone on DeepMind's Human-AI Complementarity benchmark. |
-| Reviewer surfaces evidence, never a verdict | Showing AI judgments / confidence caused over-reliance and made reviewers measurably *worse* when the AI was wrong; raw evidence "helps when correct, does not hurt when wrong". |
-| Per-repo corrections wiki with cited entries | Mirrors GitHub Copilot's agentic memory design: repo-scoped, citation-verified, adversarial-memory tested. |
-| Score-then-inject, consolidate periodically | ExpeL/ERL and ReasoningBank — concatenating all insights scales poorly; memories should mature. |
+| One human gate, not three | Over-structured multi-agent pipelines did not improve correctness (ClassEval Waterfall ablation). |
+| Tier review by uncertainty | Confidence-based hybridization outperformed uniform review (DeepMind 2025). |
+| Reviewer surfaces evidence, never a verdict | Showing verdicts caused over-reliance; evidence alone did not (DeepMind 2025). |
+| Per-repo wiki with cited entries | Repo-scoped, citation-verified memories (GitHub Copilot agentic memory 2026). |
 
-Full citations and findings in [`assets/.agent/research/REFERENCES.md`](assets/.agent/research/REFERENCES.md).
+Full citations in [`assets/.agent/research/REFERENCES.md`](assets/.agent/research/REFERENCES.md).
 
 ---
 

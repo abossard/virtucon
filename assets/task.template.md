@@ -49,6 +49,6 @@ re-injects these mid-implementation, so be concrete.>
 
 ---
 **Principles**: preserve raw user words, derive actions separately, assess with evidence.
-This file lives at `$HOME/.minime/tasks/<org>__<repo>/<date>-<short-name>.task.md` and
+This file lives at `MINIME_HOME/<org>/_<repo>/tasks/<date>-<short-name>.task.md` and
 evolves through plan → implement → review → harvest. Checkmarks track progress;
 VOI levels track how each unknown was resolved.
