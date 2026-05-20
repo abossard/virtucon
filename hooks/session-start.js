@@ -9,7 +9,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PLUGIN_ROOT = path.resolve(__dirname, '..');
+const PLUGIN_ROOT = process.env.PLUGIN_ROOT
+  || process.env.CLAUDE_PLUGIN_ROOT
+  || process.env.CLAUDE_SKILL_DIR && path.resolve(process.env.CLAUDE_SKILL_DIR, '..', '..')
+  || path.resolve(__dirname, '..');
 const MINIME_HOME = process.env.MINIME_HOME || path.join(process.env.HOME || '~', '.minime');
 
 function buildNudge() {
@@ -67,18 +70,21 @@ function buildNudge() {
 
 function main() {
   const nudge = buildNudge();
-  const output = {};
 
-  if (process.env.CURSOR_PLUGIN_ROOT) {
-    output.additional_context = nudge;
-  } else if (process.env.CLAUDE_PLUGIN_ROOT && !process.env.COPILOT_CLI) {
-    output.hookSpecificOutput = {
+  // Output format varies by platform:
+  // - Copilot CLI: reads `additionalContext` at top level
+  // - Claude Code: reads `hookSpecificOutput.additionalContext`
+  // - Cursor: reads `additional_context`
+  // - VS Code Copilot: reads `additionalContext` at top level
+  // We emit all formats so the nudge works everywhere.
+  const output = {
+    additionalContext: nudge,
+    additional_context: nudge,
+    hookSpecificOutput: {
       hookEventName: 'SessionStart',
       additionalContext: nudge,
-    };
-  } else {
-    output.additionalContext = nudge;
-  }
+    },
+  };
 
   process.stdout.write(JSON.stringify(output, null, 2) + '\n');
 }
