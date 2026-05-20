@@ -1,4 +1,4 @@
-# test-org/test-repo -- Corrections Wiki
+# test-org/test-repo: Corrections Wiki
 
 ---
 

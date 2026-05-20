@@ -22,5 +22,6 @@ fi
 
 echo "Installing $VSIX_FILE..."
 code --install-extension "$VSIX_FILE" --force
+code-insiders --install-extension "$VSIX_FILE" --force
 
 echo "Done. Reload VS Code to activate."

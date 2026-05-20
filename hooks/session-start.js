@@ -2,7 +2,7 @@
 // SessionStart hook for minime plugin.
 // Injects a nudge + canonical paths into the session context so the agent
 // knows minime skills are available and where state lives.
-// Must NEVER fail — always exits 0 with valid JSON.
+// Must NEVER fail. Always exits 0 with valid JSON.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -34,14 +34,14 @@ function buildNudge() {
   }
 
   const skillList = skills
-    .map((s) => `  - **minime:${s.name}** — ${s.desc}`)
+    .map((s) => `  - **minime:${s.name}**: ${s.desc}`)
     .join('\n');
 
   return [
     '<minime-workflow-nudge>',
     'You have **minime** orchestration skills installed.',
     '',
-    '**Minime paths (single source of truth — do not hardcode, use these):**',
+    '**Minime paths (single source of truth. Do not hardcode; use these):**',
     `  MINIME_HOME=${MINIME_HOME}`,
     `  Templates: ${MINIME_HOME}/templates/`,
     `  Tasks:     ${MINIME_HOME}/<org>/_<repo>/tasks/`,
@@ -57,9 +57,9 @@ function buildNudge() {
     '- After implementation, invoke skill("review") to get an evidence-based review.',
     '- After merge or session end, invoke skill("harvest") to capture lessons.',
     '- For the full autopilot flow, use the minime:director agent.',
-    '- plan accepts inline task descriptions — no task.md file required.',
+    '- plan accepts inline task descriptions. No task.md file is required.',
     '',
-    'Skill chaining: plan → implement → review → harvest.',
+    'Skill chaining: plan -> implement -> review -> harvest.',
     'Each skill will tell you which skill to invoke next.',
     '</minime-workflow-nudge>',
   ].join('\n');

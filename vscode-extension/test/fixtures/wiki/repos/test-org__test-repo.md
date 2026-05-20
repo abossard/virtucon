@@ -1,4 +1,4 @@
-# test-org/test-repo -- Corrections Wiki (Legacy)
+# test-org/test-repo: Corrections Wiki (Legacy)
 
 ---
 

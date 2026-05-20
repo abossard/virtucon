@@ -8,7 +8,7 @@ agent: minime:reviewer
 
 # Skill: review
 
-Trigger: `/minime:implement` handed off. This is the ONLY skill in the flow that may reach the human — and only for the HIGH-risk slice.
+Trigger: `/minime:implement` handed off. This is the ONLY skill in the flow that may reach the human. It does so only for the HIGH-risk slice.
 
 The review forks into a fresh `minime:reviewer` subagent (`context: fork`).
 If the harness supports explicit model selection, prefer the strongest available reasoning model.
@@ -21,65 +21,79 @@ If the harness supports explicit model selection, prefer the strongest available
 - Requirements traceability correlates with fewer defects and faster development (empirical studies cited in REFERENCES.md).
 - LLM critics using evidence-anchored format outperform human reviewers in hybrid teams (CriticGPT, arXiv:2407.00215).
 
-## Step 1 — Verify each EARS criterion against evidence
+## Step 1: Validate task brief integrity
+
+Read the persisted task brief. Before verifying criteria, check:
+- Does every criterion with passing test evidence have `[x]`? If not, flag it as a process gap.
+- Is the `Status:` field consistent with the actual state? (e.g., all criteria done but status still says `planning`)
+- Are the Decisions table entries filled in?
+Report any mismatches in the evidence package under "Process gaps".
+
+## Step 2: Verify each EARS criterion against evidence
 
 Read the persisted task brief (`MINIME_HOME/<org>/_<repo>/tasks/<date>-<name>.task.md`).
 
 For each acceptance criterion, build a traceability row:
 
-| Criterion | Test exists? | Test exercises it? | Test passes? (real output) | Untested uncertainty |
-|-----------|:---:|:---:|:---:|---|
-| When X, system shall Y | yes/no | genuine/tautology | paste output | what's uncertain |
+| Criterion | Evidence method | Test at boundary? | Error cases? | Test passes? (raw output) | Untested uncertainty |
+|-----------|:---:|:---:|:---:|:---:|---|
+| When X, system shall Y | tool + boundary | yes/internal/missing | yes/no | paste output | what's uncertain |
 
-This is the Fagan exit-criteria approach: verify the low-level artifact (code) against the high-level artifact (EARS criteria). If a criterion has no genuine test, that is evidence of uncertainty — surface it, don't paper over it.
+- **Test at boundary?** Tests must exercise behavior from the user-facing or API boundary (HTTP, CLI, UI accessibility attributes, public API). Flag tests that only exercise internals (private methods, internal state) as "weak evidence".
+- **Error cases?** Every criterion should have at least one error/wrong-input test. Flag missing error coverage.
 
-## Step 2 — Backfill discovered criteria into the EARS
+This is the Fagan exit-criteria approach: verify the low-level artifact (code) against the high-level artifact (EARS criteria). If a criterion has no genuine test, that is evidence of uncertainty. Surface it, don't paper over it.
+
+## Step 3: Backfill discovered criteria into the EARS
 
 If the review surfaces requirements that should have been in the original EARS:
 - Append to the "Discovered during review" section of the task brief with `- [ ]` checkbox and VOI level.
-- If the human provides feedback, append their exact words verbatim to "User feedback" — do NOT paraphrase.
+- If the human provides feedback, append their exact words verbatim to "User feedback". Do NOT paraphrase.
 
-## Step 3 — Gather the full change set
+## Step 4: Gather the full change set
 
 Do NOT rely only on branch diffs. Collect:
 - `git diff` (unstaged) + `git diff --staged` (staged)
-- `git ls-files --others --exclude-standard` (untracked new files — read content)
+- `git ls-files --others --exclude-standard` (untracked new files; read content)
 - `git diff main...HEAD` or equivalent (branch diff, if on a branch)
 
-## Step 4 — Compute the risk tier
+## Step 5: Compute the risk tier
 
 Risk is **uncertainty about correctness**, not a domain checklist.
 
-Uncertainty drivers (any present and unmitigated → HIGH):
-- **Low test coverage** — new/changed behavior without tests
-- **High branching complexity** — many conditional paths = untested states
-- **Weak type safety** — untyped, `any`-heavy code = runtime surprises
-- **Backwards compatibility surface** — shared interfaces, contracts, schemas
-- **Assumption density** — many unverified assumptions
-- **External state dependency** — DB, network, filesystem, third-party APIs
-- **Novelty** — unfamiliar codebase area, unestablished patterns
+Uncertainty drivers (any present and unmitigated -> HIGH):
+- **Low test coverage**: new/changed behavior without tests
+- **High branching complexity**: many conditional paths = untested states
+- **Weak type safety**: untyped, `any`-heavy code = runtime surprises
+- **Backwards compatibility surface**: shared interfaces, contracts, schemas
+- **Assumption density**: many unverified assumptions
+- **External state dependency**: DB, network, filesystem, third-party APIs
+- **Novelty**: unfamiliar codebase area, unestablished patterns
 
 **HIGH** if any driver is unmitigated OR the reviewer's honest confidence is below "high".
 **LOW** otherwise. **When in doubt, HIGH.**
 
-## Step 5 — Build the evidence package
+## Step 6: Build the evidence package
 
 THE ONE RULE: hand the human **evidence, not a verdict.**
 
 The package contains ONLY:
-1. **Criterion traceability table** — the Step 1 table showing each EARS criterion vs its test evidence.
-2. **Scoped diff** — the change, nothing extra.
-3. **Test output** — real, pasted, every test. Not "passed".
-4. **Assumptions made** — plain list.
-5. **Least-sure points** — 2–3 specific lines/decisions as questions. State uncertainty, do NOT resolve it.
-6. **Out-of-scope work discovered** — if any.
+1. **Criterion traceability table** with evidence methods, boundary assessment, and error coverage (Step 2).
+2. **Scoped diff** the change, nothing extra.
+3. **Test output** real, pasted, every test. Not "passed".
+4. **Assumptions made** plain list.
+5. **Least-sure points** 2-3 specific lines/decisions as questions. State uncertainty, do NOT resolve it.
+6. **Out-of-scope work discovered** if any.
+7. **Process gaps** any task brief integrity issues found in Step 1.
+
+**Evidence-first principle.** Present raw data (test output, command output, diff) FIRST. Label any analysis or interpretation separately and after the raw evidence. Data outranks interpretation. If they conflict, the data wins.
 
 FORBIDDEN: "this looks correct / LGTM / safe to merge / I'm confident", any verdict, any score next to a conclusion, any persuasion. The human adjudicates.
 
-## Step 6 — Route
+## Step 7: Route
 
-- **LOW + all tests green** → stage when the user is ready. Then invoke `skill("harvest")`.
-- **HIGH** → present the evidence package and STOP for the human.
+- **LOW + all tests green** -> invite the user to stage when ready. Then invoke `skill("harvest")`.
+- **HIGH** -> present the evidence package and STOP for the human.
 
-## Step 7
+## Step 8
 After the human decides, **invoke `skill("harvest")`** to capture lessons from this task.

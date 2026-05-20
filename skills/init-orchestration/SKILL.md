@@ -1,7 +1,7 @@
 ---
 name: init-orchestration
 description: Bootstrap minime user-home state only (no repository writes). Creates task template and wiki files under MINIME_HOME (defaults to $HOME/.minime) for plugin-only operation.
-when_to_use: First-time setup of the minime flow. Run once per machine/profile. Idempotent — safe to re-run.
+when_to_use: First-time setup of the minime flow. Run once per machine/profile. Idempotent. Safe to re-run.
 disable-model-invocation: true
 allowed-tools: Bash(git remote get-url *) Bash(cp *) Bash(mkdir *) Bash(ls *) Bash(test *) Bash(sed *) Bash(cat *)
 ---

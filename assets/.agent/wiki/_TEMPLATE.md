@@ -1,10 +1,10 @@
-# Corrections Wiki — <org>/<repo>
+# Corrections Wiki: <org>/<repo>
 
 Repo URL: <url>   (this file is keyed to it; one wiki per repo)
 
 Per-repo engineering knowledge distilled from past tasks and human corrections.
 Read by `/minime:plan` (relevance-scored, citation-verified before use),
-written by `/minime:harvest`. Shared by Claude and Copilot — commit it to the repo.
+written by `/minime:harvest`. Shared by Claude and Copilot. Commit it to the repo.
 
 Rules: every entry cites live code · entries are general rules, not task logs ·
 no secrets or customer data · consolidate when retrieval surfaces duplicates.
@@ -17,8 +17,8 @@ no secrets or customer data · consolidate when retrieval surfaces duplicates.
 
 ### <short rule name>
 - **Rule:** <the generalised lesson, one or two sentences>
-- **Trigger:** <when this applies — used for relevance scoring>
-- **Evidence:** <code citation: path:line or symbol — re-verified before trust>
+- **Trigger:** <when this applies (used for relevance scoring)>
+- **Evidence:** <code citation: path:line or symbol (re-verified before trust)>
 - **Origin:** <human-correction | failed-approach | observation>
 - **ValueScore:** <0-8 from write filtering rubric>
 - **Confidence:** <high | medium | low>
@@ -29,7 +29,7 @@ no secrets or customer data · consolidate when retrieval surfaces duplicates.
 
 ---
 
-### EXAMPLE — Money is integer minor units
+### EXAMPLE: Money is integer minor units
 - **Rule:** All monetary values are integer minor units (cents). Never use
   floats for money; never divide before formatting at the boundary.
 - **Trigger:** Any task touching prices, billing, totals, or currency.
