@@ -12,7 +12,8 @@ export function parseTaskFile(filePath: string): MinimeTask | undefined {
 }
 
 export function parseTaskContent(content: string, filePath: string): MinimeTask | undefined {
-  const fileName = path.basename(filePath, '.task.md');
+  const ext = filePath.endsWith('.task.md') ? '.task.md' : '.md';
+  const fileName = path.basename(filePath, ext);
   const dateMatch = fileName.match(/^(\d{4}-\d{2}-\d{2})-(.+)$/);
 
   const date = dateMatch ? dateMatch[1] : '';
@@ -37,21 +38,27 @@ export function parseTaskContent(content: string, filePath: string): MinimeTask 
 }
 
 function extractField(content: string, fieldName: string): string | undefined {
-  // Match "Status: value" in the header line
-  const pattern = new RegExp(`${fieldName}:\\s*(.+?)(?:\\s*\\||$)`, 'im');
-  const match = content.match(pattern);
-  return match ? match[1].trim() : undefined;
+  // Match "Status: value" in header line (pipe-separated) or "## Status: value" or bare "Status: value"
+  const patterns = [
+    new RegExp(`${fieldName}:\\s*(.+?)(?:\\s*\\||$)`, 'im'),
+    new RegExp(`^##\\s*${fieldName}:\\s*(.+)$`, 'im'),
+  ];
+  for (const pattern of patterns) {
+    const match = content.match(pattern);
+    if (match) return match[1].trim();
+  }
+  return undefined;
 }
 
 function extractGoal(content: string): string {
-  const goalSection = content.match(/## Goal\s*\n([\s\S]*?)(?=\n## |\n---|$)/);
+  const goalSection = content.match(/## (?:Goal|Context)\s*\n([\s\S]*?)(?=\n## |\n---|$)/);
   if (!goalSection) return '';
   return goalSection[1].trim().split('\n')[0].trim();
 }
 
 export function countCriteria(content: string): { total: number; checked: number } {
   const criteriaSection = content.match(
-    /## Acceptance criteria[\s\S]*?\n([\s\S]*?)(?=\n## |\n---|$)/
+    /## (?:Acceptance [Cc]riteria|EARS [Cc]riteria)[\s\S]*?\n([\s\S]*?)(?=\n## |\n---|$)/
   );
   if (!criteriaSection) return { total: 0, checked: 0 };
 

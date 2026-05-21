@@ -11,7 +11,9 @@ Trigger: `/minime:plan` has handed off, or the user invoked you directly with an
 
 ## Living task brief
 
-The persisted task brief (at `MINIME_HOME/<org>/_<repo>/tasks/<date>-<name>.task.md`) is the cross-phase task record. As you complete each criterion:
+Locate the persisted task brief at `MINIME_HOME/<org>/_<repo>/tasks/<date>-<name>.task.md`. If MINIME_HOME is not in your context, fall back to the env var `MINIME_HOME`, then default to `~/.minime`. **Read the file at the start of this phase to confirm it exists.** If it does not exist, the plan phase failed to persist it; create it now before proceeding.
+
+As you complete each criterion:
 - Tick `[x]` on the criterion when its test goes green. **Do this immediately. Do not batch check-offs for later.**
 - Add a reference to the test or the verbatim output or links to it with current date and time.
 - If you resolve an unknown during implementation, add it to the Decisions table with its VOI level and source.

@@ -86,7 +86,7 @@ function scanNewConvention(minimeHome: string, orgMap: Map<string, MinimeOrg>): 
       // Scan tasks
       const tasksDir = path.join(repoPath, 'tasks');
       if (isDirectory(tasksDir)) {
-        const taskFiles = safeReaddir(tasksDir).filter(f => f.endsWith('.task.md'));
+        const taskFiles = safeReaddir(tasksDir).filter(f => f.endsWith('.md'));
         for (const taskFile of taskFiles) {
           const taskPath = path.join(tasksDir, taskFile);
           const task = parseTaskFile(taskPath);
@@ -133,7 +133,7 @@ function scanLegacyTasks(minimeHome: string, orgMap: Map<string, MinimeOrg>): vo
     const org = getOrCreateOrg(orgMap, orgName, path.join(minimeHome, orgName));
     const repo = getOrCreateRepo(org, repoName, repoTasksDir);
 
-    const taskFiles = safeReaddir(repoTasksDir).filter(f => f.endsWith('.task.md'));
+    const taskFiles = safeReaddir(repoTasksDir).filter(f => f.endsWith('.md'));
     for (const taskFile of taskFiles) {
       const taskPath = path.join(repoTasksDir, taskFile);
       const task = parseTaskFile(taskPath);

@@ -87,9 +87,40 @@ A test task still in planning phase.
       assert.strictEqual(task.status, 'unknown');
       assert.strictEqual(task.shortName, 'bad');
     });
+
+    it('should parse plain .md files (not .task.md)', () => {
+      const content = `Status: implemented\n\n# Fix bugs\n\n## Context\nThree bugs found.\n\n## EARS Criteria\n\n- [x] Bug 1 fixed\n- [x] Bug 2 fixed`;
+      const task = parseTaskContent(content, '/fake/task.md');
+      assert.ok(task);
+      assert.strictEqual(task.shortName, 'task');
+      assert.strictEqual(task.status, 'implemented');
+      assert.strictEqual(task.totalCriteria, 2);
+      assert.strictEqual(task.checkedCriteria, 2);
+    });
+
+    it('should extract goal from ## Context when ## Goal absent', () => {
+      const content = `# Task\n\n## Context\nThree bugs discovered.\n\n## Criteria`;
+      const task = parseTaskContent(content, '/fake/2026-01-01-bugs.task.md');
+      assert.ok(task);
+      assert.strictEqual(task.goal, 'Three bugs discovered.');
+    });
+
+    it('should extract status from ## Status: header', () => {
+      const content = `# Task\n\n## Status: implemented\n\n## EARS Criteria\n\n- [x] Done`;
+      const task = parseTaskContent(content, '/fake/data-persistence.md');
+      assert.ok(task);
+      assert.strictEqual(task.status, 'implemented');
+      assert.strictEqual(task.shortName, 'data-persistence');
+    });
   });
 
   describe('countCriteria', () => {
+    it('should count EARS Criteria section', () => {
+      const content = `## EARS Criteria\n\n- [x] C1 done\n- [ ] C2 pending\n- [x] C3 done`;
+      const result = countCriteria(content);
+      assert.strictEqual(result.total, 3);
+      assert.strictEqual(result.checked, 2);
+    });
     it('should count mixed criteria', () => {
       const content = `## Acceptance criteria\n\n- [x] Done\n- [ ] Not done\n- [x] Also done`;
       const result = countCriteria(content);

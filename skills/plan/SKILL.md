@@ -12,17 +12,19 @@ Runs first in the four-phase flow. **No human review gate.** Your plan is an inp
 ## Steps
 
 1. **Persist the living task brief FIRST. This is non-negotiable.**
-   Derive `<org>` and `<repo>` from `git remote get-url origin`. Create the task brief at:
+   Derive `<org>` and `<repo>` from `git remote get-url origin`.
+   Resolve `MINIME_HOME`: check for it in the minime-workflow-nudge injected into your context. If absent, fall back to the env var `MINIME_HOME`. If that is also unset, default to `~/.minime`.
+   Create the task brief at:
    `MINIME_HOME/<org>/_<repo>/tasks/<YYYY-MM-DD>-<short-name>.task.md`
-   Use `mkdir -p` to ensure the directory exists, then write the file.
+   Run `mkdir -p` to ensure the directory exists, then write the file.
+   **Do NOT write task.md to the working directory.** The task brief must go to MINIME_HOME, not the repo.
    Use the template from `MINIME_HOME/templates/task.template.md`. Set all criteria as `- [ ]` (unchecked) and assign a VOI level to each:
    - **decided-by-data**: resolvable from code/docs/tests/specs
    - **needs-research**: resolvable but needs evidence gathering
    - **undecidable-now**: value tradeoff/policy, needs human decision
    This file evolves through all phases and is the cross-phase task record.
    If the file already exists (re-planning), edit it in place. Do not create a duplicate.
-   (MINIME_HOME is resolved by the SessionStart hook. See the minime-workflow-nudge in your context.)
-   **STOP and verify**: confirm the file exists on disk before proceeding to step 2.
+   **STOP and verify**: read the file back from disk to confirm it was written. If it wasn't, fix the path and retry before proceeding.
 
 2. **Accept the task brief from wherever it lives.**
    - If `task.md` exists in the working directory, use it.
