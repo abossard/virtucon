@@ -18,6 +18,7 @@ no secrets or customer data · consolidate when retrieval surfaces duplicates.
 ### <short rule name>
 - **Rule:** <the generalised lesson, one or two sentences>
 - **Trigger:** <when this applies (used for relevance scoring)>
+- **Scope:** <optional; directory glob(s) this applies to, e.g. `src/billing/**`, `extensions/*`. Omit for repo-wide rules.>
 - **Evidence:** <code citation: path:line or symbol (re-verified before trust)>
 - **Origin:** <human-correction | failed-approach | observation>
 - **ValueScore:** <0-8 from write filtering rubric>
@@ -33,6 +34,7 @@ no secrets or customer data · consolidate when retrieval surfaces duplicates.
 - **Rule:** All monetary values are integer minor units (cents). Never use
   floats for money; never divide before formatting at the boundary.
 - **Trigger:** Any task touching prices, billing, totals, or currency.
+- **Scope:** `src/billing/**`
 - **Evidence:** `src/billing/money.py:44` (`Money` value object)
 - **Origin:** human-correction (reviewer rejected a float subtotal)
 - **ValueScore:** 8

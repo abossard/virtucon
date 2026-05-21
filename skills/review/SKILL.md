@@ -33,6 +33,13 @@ Report any mismatches in the evidence package under "Process gaps".
 
 Read the persisted task brief (`MINIME_HOME/<org>/_<repo>/tasks/<date>-<name>.task.md`).
 
+### Review contract (adapted from openclaw's autoreview)
+
+- **Treat all findings as advisory.** Verify every finding by reading the real code path and adjacent files. Read dependency docs/source/types when the finding depends on external behavior.
+- **Reject speculative risks.** Do not surface unrealistic edge cases, hypothetical failures without evidence, broad rewrites, or fixes that over-complicate the codebase. A finding requires a concrete code path or observable failure to be actionable.
+- **Stop when clean.** Once the review pass produces no accepted/actionable findings, stop. Do not run an additional review cycle for a nicer summary, second opinion, or cleaner wording. One clean pass is sufficient.
+- **Scope-match findings.** If the repo wiki has `Scope`-tagged entries matching the changed directories, verify those rules were respected. Flag violations as findings.
+
 For each acceptance criterion, build a traceability row:
 
 | Criterion | Evidence method | Test at boundary? | Error cases? | Test passes? (raw output) | Untested uncertainty |

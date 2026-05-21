@@ -29,6 +29,24 @@ Evidence is real output from real execution: test results, command output, HTTP 
 
 ## The loop (this is the empirically strongest part of the flow)
 
+### Test-scope classification (before running tests)
+
+Before running tests for a criterion, classify the touched surface and choose the narrowest proof:
+
+1. **Identify what changed**: list the files/directories the current implementation step touches.
+2. **Choose the narrowest test scope that proves the criterion**:
+   - If only one file changed: run that file's colocated or directly related tests.
+   - If a module/package changed: run that module's test suite.
+   - If a cross-cutting contract changed (API, schema, shared types): broaden to integration/contract tests.
+3. **Broaden only when the touched contract demands it.** Do not reflexively run the whole suite. A full suite run is justified only when: the change touches shared infrastructure, build configuration, or dependency versions.
+4. **Record what was tested and why** that scope was sufficient. If you chose narrow scope, state why broader was unnecessary.
+
+Adapted from openclaw's "prove touched surface" principle: narrow tests first, broaden only when the contract demands it.
+
+### Scoped wiki entries
+
+When entering a directory for the first time in a task, check the repo wiki for entries whose `Scope` field matches that directory. These entries carry directory-specific guidance (the equivalent of in-repo AGENTS.md files). Apply any matching active entries as constraints for work in that directory. If no scoped entries exist, proceed normally.
+
 Repeat per acceptance criterion:
 
 1. **Write the test first** at the user-facing or API boundary. The test must exercise the behavior the way a user or consumer would: through public APIs, CLI commands, HTTP endpoints, or UI elements via accessibility/visual attributes. Do NOT test internal implementation details (private methods, internal state, wiring). Include at least one error/wrong-input case alongside the happy path. Executable tests had the strongest positive effect on correctness in multi-stage studies.

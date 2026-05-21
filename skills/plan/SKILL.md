@@ -51,6 +51,7 @@ Runs first in the four-phase flow. **No human review gate.** Your plan is an inp
 
 6. **Score wiki entries for relevance. Do not dump them all in.**
    Rank candidates with this priority order:
+   - `Scope` match: if an entry has a `Scope` field (directory glob), it applies only when the task touches those directories. Entries without `Scope` are repo-wide and always eligible. Scoped entries replace in-repo AGENTS.md files — they carry the same directory-specific guidance but live in the wiki.
    - Trigger match strength to the current task brief
    - `Status: active` over stale/superseded
    - Higher `Confidence` and `ValueScore`
@@ -61,6 +62,11 @@ Runs first in the four-phase flow. **No human review gate.** Your plan is an inp
 7. **Verify before trusting (citation check).** Each selected entry cites a code location. Open that location. If the code no longer matches the entry, the entry is stale. Ignore it and flag it for `/minime:harvest` to fix. Never plan on an unverified memory.
 
 8. **Plan silently.** Produce an internal implementation plan: files to touch, order of work, which acceptance criteria each step satisfies, and the tests that will prove each one. Working state, not a deliverable.
+
+   **Fix-shape decision (mandatory).** For each change area, decide and record:
+   - **Clean bounded refactor** (default): move ownership to the right boundary, delete stale abstractions, remove duplicate logic. Preferred when the touched code has accumulated workarounds, wrapper layers, or scattered fallbacks.
+   - **Smallest patch**: minimal surgical change. Use only when the scope is genuinely narrow, the existing structure is sound, and a refactor would expand the blast radius without improving the code.
+   State the choice and one-line rationale in the plan. This prevents the common failure mode of accumulating workarounds task-over-task. Adapted from openclaw's "fix shape" principle: handle real production states and shipped paths; do not defend against hypothetical edge cases.
 
 9. **Test strategy critique (mandatory, before implementation).**
    Dispatch the test strategy to a rubber-duck agent for critique. The rubber-duck must verify:

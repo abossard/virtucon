@@ -79,6 +79,7 @@ Append to `MINIME_HOME/<org>/_<repo>/wiki.md` using the `MINIME_HOME/_TEMPLATE.m
 - **Carry a code citation**: `path:line` or a stable symbol name. An entry with no citation is unsafe and must not be written: future agents re-verify entries against live code before trusting them, and an uncited entry cannot be verified.
 - **Be a generalised rule, not a task log.** Not "fixed the bug in PR 12" but "Money values use integer minor units; never use floats (see billing.py:44)."
 - **State the trigger**: when this applies, so it can be relevance-scored.
+- **Set `Scope` when the rule is directory-specific.** Use directory globs (e.g. `src/billing/**`, `extensions/*`). This is the substitute for in-repo AGENTS.md files: scoped guidance lives in the wiki, keyed to directories. Omit `Scope` for repo-wide rules. A single entry may list multiple globs separated by commas.
 - **Set ValueScore, Confidence, Status, and LastVerified** for ranking and decay policies.
 - **Be dated**, so consolidation can prune the old.
 
@@ -93,3 +94,14 @@ Do not let the wiki grow unbounded. A bloated wiki buries the useful entry and s
 - Keep repo-specific rules in the repo wiki and cross-repo conventions in the org wiki.
 - Never store secrets, tokens, credentials, or customer data.
 - The wiki holds engineering knowledge, not a changelog.
+
+## Auto-harvest triggers
+
+Harvest should be invoked (not silently — the director or user triggers it) at these moments:
+
+1. **After review completes (LOW risk + green):** the review skill hands off to harvest. This is the primary trigger.
+2. **After human corrections:** when the user rejects, corrects, or steers the agent's approach during any phase, the correction is the highest-value signal. The directing agent should invoke harvest before the session ends.
+3. **At session end with uncaptured lessons:** if the session produced design decisions, failed approaches, or discovered patterns that are not yet in the wiki, harvest should run. The director checks: "did this session produce corrections or learnings not yet harvested?"
+4. **After a merge or ship:** when `git push` or a PR merge completes a task, harvest captures what the full cycle taught.
+
+These are documented triggers, not automatic silent execution. The directing agent or user invokes `skill("harvest")` at these points. Harvest never runs without being called.
