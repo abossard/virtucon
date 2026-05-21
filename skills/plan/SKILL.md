@@ -1,7 +1,7 @@
 ---
 name: plan
-description: Plan a coding task from a task.md brief or inline context. Reads the per-repo corrections wiki (score-and-verify, never dump-all), thinks silently, self-challenges, and hands off to implement. No human review gate. The plan is consumed by implement and is never signed off.
-when_to_use: When the user has a task to plan: either as a task.md file, inline conversation context, or a verbal description. This skill starts the orchestration flow.
+description: "Plan a coding task from a task.md brief or inline context. Reads the per-repo corrections wiki (score-and-verify, never dump-all), thinks silently, self-challenges, and hands off to implement. No human review gate. The plan is consumed by implement and is never signed off."
+when_to_use: "When the user has a task to plan, whether as a task.md file, inline conversation context, or a verbal description. This skill starts the orchestration flow."
 allowed-tools: Read Edit Grep Glob Bash(git remote get-url *) Bash(git log *) Bash(git status) Bash(ls *) Bash(mkdir *) Write
 ---
 
