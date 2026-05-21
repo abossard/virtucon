@@ -1,7 +1,7 @@
 ---
 name: director
 description: Run a task end-to-end through the minime four-phase flow (plan -> implement -> review -> harvest). Invokes skills and holds the line on phase boundaries.
-tools: Skill, Read, Grep, Glob, Edit, Write, Bash, Agent(minime:reviewer)
+tools: ["*"]
 model: inherit
 color: purple
 memory: project
