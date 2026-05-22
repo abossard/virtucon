@@ -49,6 +49,14 @@ Runs first in the four-phase flow. **No human review gate.** Your plan is an inp
    - If it is **undecidable-now**, prepare one explicit user decision with options and tradeoffs, then record the outcome.
    Update the VOI level on each criterion in the persisted task brief as you resolve unknowns.
 
+   **File research answers into the wiki (Karpathy compound-knowledge principle).**
+   When a "needs-research" item is resolved with evidence (citations, code references, API docs, upstream behavior), the resolved answer is a wiki entry candidate. Do not write it to the wiki directly (that is harvest's job). Instead, append it to a `## Research resolved` section in the task brief with:
+   - The question that was resolved
+   - The answer with citations
+   - A suggested `Trigger` for future retrieval
+   - A suggested `Scope` if directory-specific
+   Harvest will evaluate these candidates using its write-filtering policy and persist the worthy ones. This ensures research compounds across tasks instead of evaporating into chat history.
+
 6. **Score wiki entries for relevance. Do not dump them all in.**
    Rank candidates with this priority order:
    - `Scope` match: if an entry has a `Scope` field (directory glob), it applies only when the task touches those directories. Entries without `Scope` are repo-wide and always eligible. Scoped entries replace in-repo AGENTS.md files — they carry the same directory-specific guidance but live in the wiki.

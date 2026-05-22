@@ -68,9 +68,10 @@ Run `git remote get-url origin`, derive `<org>` and `<repo>`, open `MINIME_HOME/
 ## Step 2: What to capture
 
 1. **Corrections (priority).** Anything the human changed, rejected, or sent back during review. Each becomes one entry. The before/after IS the lesson.
-2. **Stale entries** flagged by `/minime:plan` during its citation check. Fix or delete them.
-3. **Episodic notes**: an approach that failed and why ("tried X, broke Y").
-4. Skip anything already covered. No duplicates.
+2. **Research candidates from plan.** Read the task brief's `## Research resolved` section. Each entry is a wiki candidate produced when plan resolved a "needs-research" VOI item. Evaluate each using the write-filtering policy: actionability, reusability, evidence quality, novelty. Persist worthy ones as new wiki entries. Reject the rest and include the count in the run summary.
+3. **Stale entries** flagged by `/minime:plan` during its citation check. Fix or delete them.
+4. **Episodic notes**: an approach that failed and why ("tried X, broke Y").
+5. Skip anything already covered. No duplicates.
 
 ## Step 3: How to write an entry
 
@@ -105,3 +106,47 @@ Harvest should be invoked (not silently — the director or user triggers it) at
 4. **After a merge or ship:** when `git push` or a PR merge completes a task, harvest captures what the full cycle taught.
 
 These are documented triggers, not automatic silent execution. The directing agent or user invokes `skill("harvest")` at these points. Harvest never runs without being called.
+
+## Step 5: Wiki lint (Karpathy compound-knowledge health check)
+
+When invoked with a lint request (user says "lint the wiki", "wiki health check", or harvest is run periodically), perform a structured health check on `MINIME_HOME/<org>/_<repo>/wiki.md`. This is the wiki equivalent of `pnpm check:changed` — prove the wiki is healthy, don't just assume it.
+
+### Lint checklist
+
+Run each check and record findings:
+
+1. **Stale citations.** For every active entry, open the cited code location. If the file/line/symbol no longer exists or the code no longer matches the rule, mark the entry `Status: stale` with today's date.
+2. **Contradictions.** Scan for pairs of active entries whose rules conflict (e.g., one says "use floats", another says "use integers for money"). Flag contradictions with both entry names and the conflicting statements.
+3. **Orphan entries.** Two kinds: (a) *Scope orphans*: entries whose `Scope` glob matches zero current files or directories. (b) *Evidence orphans*: entries whose cited file or symbol no longer exists, even if the scope still matches. For renamed/moved files, check `git log --name-status --diff-filter=R` to suggest the likely new path before marking stale.
+4. **Duplicate / near-duplicate entries.** Entries with overlapping triggers and similar rules. Candidates for consolidation.
+5. **Missing coverage gaps.** Directories with significant code that have no scoped wiki entries. Not every directory needs one, but flag directories that have been touched in recent tasks (check `git log --name-only` for last 10 commits) and have no wiki guidance.
+6. **Research candidates.** Check the task brief's `## Research resolved` section (written by plan). Evaluate each candidate using the write-filtering policy. Persist worthy ones as new wiki entries.
+
+### Lint report
+
+After running all checks, produce a lint report:
+
+```
+Wiki lint: <repo> (<date>)
+- Entries scanned: <N>
+- Stale: <N> (list names)
+- Contradictions: <N> (list pairs)
+- Orphans: <N> (list names)
+- Duplicates: <N> (list candidates for merge)
+- Coverage gaps: <N> (list directories)
+- Research candidates filed: <N> (list)
+- Actions taken: <list of status changes, merges, new entries>
+```
+
+Act on findings using the existing write-filtering, conflict, decay, and consolidation policies. Lint is an enforcement mode, not a parallel policy. Split actions by safety:
+
+**Auto-fix (safe, objective):**
+- Mark entries `Status: stale` when cited file/symbol no longer exists
+- Update `LastVerified` when citation still matches
+- Flag orphan scopes
+
+**Report-only (requires judgment or human input):**
+- Merge duplicate entries (may lose unique trigger context)
+- Delete entries (irreversible)
+- Supersede contradictions (unless newer better-cited rule is obvious)
+- Create new entries from research candidates (must pass write-filtering policy)
