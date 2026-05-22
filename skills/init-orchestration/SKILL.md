@@ -39,7 +39,7 @@ if [ -z "$ORIGIN" ]; then
   echo "NOTE: no git remote 'origin' set. Repo-specific wiki will be created on first run inside a git repo."
 else
   REPO_PATH=$(echo "$ORIGIN" \
-    | sed -E 's#^.*github\.com[:/]##; s#^.*gitlab\.com[:/]##; s#^.*bitbucket\.org[:/]##; s#\.git$##')
+    | sed -E 's#^https?://([^.]+)\.visualstudio\.com/.+/_git/(.+)$#\1/\2#; s#^https?://dev\.azure\.com/([^/]+)/.+/_git/(.+)$#\1/\2#; s#^git@ssh\.dev\.azure\.com:v3/([^/]+)/[^/]+/(.+)$#\1/\2#; s#^.*github\.com[:/]##; s#^.*gitlab\.com[:/]##; s#^.*bitbucket\.org[:/]##; s#\.git$##')
   ORG=$(echo "$REPO_PATH" | cut -d/ -f1)
   REPO=$(echo "$REPO_PATH" | cut -d/ -f2)
   [ -z "$ORG" ] && ORG="local"

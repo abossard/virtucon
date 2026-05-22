@@ -13,6 +13,7 @@ Runs first in the four-phase flow. **No human review gate.** Your plan is an inp
 
 1. **Persist the living task brief FIRST. This is non-negotiable.**
    Derive `<org>` and `<repo>` from `git remote get-url origin`.
+   Supported remote formats: GitHub, GitLab, Bitbucket, Azure DevOps (visualstudio.com, dev.azure.com, ssh.dev.azure.com). For Azure DevOps, org is the subdomain or first path segment; repo is the segment after `_git/`.
    Resolve `MINIME_HOME`: check for it in the minime-workflow-nudge injected into your context. If absent, fall back to the env var `MINIME_HOME`. If that is also unset, default to `~/.minime`.
    Create the task brief at:
    `MINIME_HOME/<org>/_<repo>/tasks/<YYYY-MM-DD>-<short-name>.task.md`

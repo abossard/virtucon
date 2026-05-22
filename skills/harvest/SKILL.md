@@ -63,7 +63,7 @@ Use this to harvest process-level lessons:
    - If many candidates are rejected for low value or stale evidence, tighten future write filtering.
 
 ## Step 1: Locate the wikis
-Run `git remote get-url origin`, derive `<org>` and `<repo>`, open `MINIME_HOME/<org>/_<repo>/wiki.md`. Also check `MINIME_HOME/<org>/wiki.md` for cross-repo rules to avoid duplication.
+Run `git remote get-url origin`, derive `<org>` and `<repo>`. Supported remote formats: GitHub, GitLab, Bitbucket, Azure DevOps (visualstudio.com, dev.azure.com, ssh.dev.azure.com). For Azure DevOps, org is the subdomain or first path segment; repo is the segment after `_git/`. Open `MINIME_HOME/<org>/_<repo>/wiki.md`. Also check `MINIME_HOME/<org>/wiki.md` for cross-repo rules to avoid duplication.
 
 ## Step 2: What to capture
 
