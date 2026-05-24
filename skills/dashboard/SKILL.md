@@ -1,3 +1,10 @@
+---
+name: dashboard
+description: Open the minime dashboard — a native webview showing tasks, wiki entries, and project actions across all minime-managed repos.
+when_to_use: When the user asks to open the minime dashboard, view project status, or manage project actions visually.
+allowed-tools: Read Edit Write Grep Glob Bash
+---
+
 # Skill: dashboard
 
 Trigger: User asks to open the minime dashboard, or `/minime:dashboard`.
