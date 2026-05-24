@@ -72,6 +72,104 @@ automatically. No repo-level custom instructions are needed.
 
 ---
 
+## Install: GitHub.com (Copilot Cloud Agent)
+
+Copilot cloud agent on GitHub.com supports **custom agents, agent skills, and hooks** natively.
+You can use minime's full orchestration on github.com by placing the skill and agent files
+in your repository's `.github/` directory.
+
+The only feature that is **CLI-only** is the plugin marketplace install command (`copilot plugin install`).
+On github.com you add the files directly to your repo instead.
+
+### Step-by-step: add minime to a repository for GitHub.com
+
+**Option A: Install with `gh skill` (recommended)**
+
+```bash
+# Install all minime skills into your repo (run from inside your target repo)
+gh skill install abossard/minime plan
+gh skill install abossard/minime implement
+gh skill install abossard/minime review
+gh skill install abossard/minime harvest
+gh skill install abossard/minime init-orchestration
+```
+
+Then add the agent profiles and hooks:
+
+```bash
+# Copy agent profiles (gh skill doesn't handle agents yet)
+mkdir -p .github/agents
+curl -sL https://raw.githubusercontent.com/abossard/minime/main/agents/director.md \
+  -o .github/agents/minime-director.agent.md
+curl -sL https://raw.githubusercontent.com/abossard/minime/main/agents/reviewer.md \
+  -o .github/agents/minime-reviewer.agent.md
+
+# Copy hooks
+mkdir -p .github/hooks
+curl -sL https://raw.githubusercontent.com/abossard/minime/main/hooks/hooks.json \
+  -o .github/hooks/minime-hooks.json
+curl -sL https://raw.githubusercontent.com/abossard/minime/main/hooks/session-start.js \
+  -o .github/hooks/session-start.js
+```
+
+Commit and push:
+
+```bash
+git add .github/skills/ .github/agents/ .github/hooks/
+git commit -m "feat: add minime orchestration for Copilot"
+git push
+```
+
+**Option B: Copy files manually**
+
+```bash
+# From a local clone of minime
+git clone https://github.com/abossard/minime /tmp/minime
+
+# Copy into your target repo
+cp -r /tmp/minime/skills/ YOUR_REPO/.github/skills/
+mkdir -p YOUR_REPO/.github/agents
+cp /tmp/minime/agents/director.md YOUR_REPO/.github/agents/minime-director.agent.md
+cp /tmp/minime/agents/reviewer.md YOUR_REPO/.github/agents/minime-reviewer.agent.md
+cp -r /tmp/minime/hooks/ YOUR_REPO/.github/hooks/
+
+cd YOUR_REPO
+git add .github/
+git commit -m "feat: add minime orchestration for Copilot"
+git push
+```
+
+**After install: use on GitHub.com**
+
+- Go to [github.com/copilot/agents](https://github.com/copilot/agents)
+- Select your repository from the dropdown
+- Your minime agents appear in the agent picker
+- Skills are loaded automatically by Copilot when relevant to your prompt
+- Update skills later with `gh skill update`
+
+### What requires separate setup
+
+| Feature | GitHub.com | Copilot CLI |
+|---------|:---:|:---:|
+| Agent profiles (director, reviewer) | Yes (`.github/agents/`) | Yes (plugin or `.github/agents/`) |
+| Skills (plan, implement, review, harvest) | Yes (`.github/skills/` or `gh skill install`) | Yes (plugin or `.github/skills/`) |
+| Hooks (session-start nudge) | Yes (`.github/hooks/`) | Yes (plugin or `~/.copilot/hooks/`) |
+| MCP server tools | Yes | Yes |
+| `copilot plugin install` marketplace | No (use `gh skill install` instead) | Yes |
+| Per-repo wiki (`MINIME_HOME`) | Manual setup needed | Auto via `init-orchestration` |
+
+### References
+
+- [About agent skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills)
+- [Adding agent skills for cloud agent](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/cloud-agent/add-skills)
+- [Managing skills with `gh skill`](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/cloud-agent/add-skills#managing-skills-with-github-cli)
+- [Creating custom agents for cloud agent](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/create-custom-agents)
+- [Hooks for cloud agent](https://docs.github.com/en/copilot/concepts/agents/hooks)
+- [Customization cheat sheet (feature matrix)](https://docs.github.com/en/copilot/reference/customization-cheat-sheet)
+- [Agent Skills specification (open standard)](https://agentskills.io/specification)
+
+---
+
 ## Install: GitHub Copilot CLI
 
 Copilot CLI uses the same Agent Skills standard, so the same skill files work.

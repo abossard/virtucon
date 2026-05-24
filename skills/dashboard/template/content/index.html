@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minime Dashboard</title>
+  <script src="/__bridge.js"></script>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>⚡ Minime</h1>
+    <div class="scope-selector">
+      <select id="project-selector">
+        <option value="__loading">Loading…</option>
+      </select>
+      <button id="refresh-btn" title="Refresh">↻</button>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <div id="onboarding" class="panel hidden">
+      <h2>Welcome to Minime</h2>
+      <p id="onboarding-message"></p>
+    </div>
+
+    <div id="dashboard-panels">
+      <section id="tasks-panel" class="panel">
+        <h2>📋 Tasks</h2>
+        <div id="tasks-list" class="card-list"></div>
+      </section>
+
+      <section id="wiki-panel" class="panel">
+        <h2>📖 Wiki</h2>
+        <div id="wiki-list" class="card-list"></div>
+      </section>
+
+      <section id="actions-panel" class="panel">
+        <h2>🚀 Quick Actions</h2>
+        <div id="actions-list" class="card-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <span id="status-bar">Ready</span>
+  </footer>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>

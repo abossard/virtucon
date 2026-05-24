@@ -68,7 +68,40 @@ function buildNudge() {
   ].join('\n');
 }
 
+function ensureDashboardSymlink() {
+  // Create user-level extension symlink so CLI discovers the dashboard
+  // without per-repo scaffolding. Idempotent: no-op if already correct.
+  const userExtDir = path.join(process.env.HOME || '~', '.copilot', 'extensions');
+  const linkPath = path.join(userExtDir, 'minime-dashboard');
+  const target = path.join(PLUGIN_ROOT, 'skills', 'dashboard', 'template');
+
+  try {
+    // Verify target exists
+    if (!fs.existsSync(target)) return;
+
+    // Ensure ~/.copilot/extensions/ exists
+    fs.mkdirSync(userExtDir, { recursive: true });
+
+    try {
+      const existing = fs.readlinkSync(linkPath);
+      if (existing === target) return; // already correct
+      // Points elsewhere — warn via stderr (doesn't corrupt JSON stdout)
+      process.stderr.write(`[minime] WARNING: ${linkPath} points to ${existing}, expected ${target}\n`);
+      return; // don't overwrite user's custom symlink
+    } catch {
+      // readlinkSync throws if linkPath doesn't exist or isn't a symlink
+      if (fs.existsSync(linkPath)) return; // regular dir/file — don't touch
+    }
+
+    fs.symlinkSync(target, linkPath, 'dir');
+  } catch {
+    // Non-fatal — dashboard just won't auto-register
+  }
+}
+
 function main() {
+  ensureDashboardSymlink();
+
   const nudge = buildNudge();
 
   // Output format varies by platform:
