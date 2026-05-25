@@ -7,16 +7,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/abossard/minime"
+    "url": "https://github.com/abossard/virtucon"
   },
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "Other"
-  ],
-  "activationEvents": [
-    "onView:minimeExplorer"
   ],
   "main": "./dist/extension.js",
   "contributes": {

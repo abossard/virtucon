@@ -1,6 +1,6 @@
 # Minime Explorer - VS Code Extension
 
-Browse and search [minime](https://github.com/abossard/minime) agent orchestration data directly from VS Code.
+Browse and search [minime](https://github.com/abossard/virtucon) agent orchestration data directly from VS Code.
 
 ## Features
 

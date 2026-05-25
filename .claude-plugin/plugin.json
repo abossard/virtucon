@@ -1,12 +1,12 @@
 {
-  "name": "minime",
+  "name": "virtucon",
   "description": "Evidence-based agent orchestration. Four skills (blueprint / replicate / inspect / extract) collapse a brainstorm-plan-code-review pipeline into one tiered human gate, plus a dr-evil agent that drives the flow end-to-end and a frau subagent that runs inspection with full tool access in a fresh context to remove implementation bias. Ships a lab skill that bootstraps the per-repo files into any target repo.",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "author": {
     "name": "abossard"
   },
-  "homepage": "https://github.com/abossard/minime",
-  "repository": "https://github.com/abossard/minime",
+  "homepage": "https://github.com/abossard/virtucon",
+  "repository": "https://github.com/abossard/virtucon",
   "license": "MIT",
   "keywords": [
     "orchestration",
