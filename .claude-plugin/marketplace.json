@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
-  "name": "minime",
+  "name": "virtucon",
   "description": "Evidence-based agent orchestration: blueprint, replicate, inspect, extract.",
   "owner": {
     "name": "abossard"

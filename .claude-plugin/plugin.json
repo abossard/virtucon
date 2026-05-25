@@ -1,5 +1,5 @@
 {
-  "name": "virtucon",
+  "name": "minime",
   "description": "Evidence-based agent orchestration. Four skills (blueprint / replicate / inspect / extract) collapse a brainstorm-plan-code-review pipeline into one tiered human gate, plus a dr-evil agent that drives the flow end-to-end and a frau subagent that runs inspection with full tool access in a fresh context to remove implementation bias. Ships a lab skill that bootstraps the per-repo files into any target repo.",
   "version": "0.2.17",
   "author": {
