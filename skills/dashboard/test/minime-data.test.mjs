@@ -14,6 +14,7 @@ import {
   resolveMinimeHome,
   validateUrl, validateClearPaths,
   createRingBuffer, mergeActions,
+  parseWorkspaceYaml, scanSessions,
 } from '../template/lib/minime-data.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -777,5 +778,106 @@ describe('mergeActions', () => {
     const result = mergeActions(config, discovered);
     assert.equal(result.length, 1);
     assert.equal(result[0].allowed, true);
+  });
+});
+
+// ── parseWorkspaceYaml ───────────────────────────────────────────────
+
+describe('parseWorkspaceYaml', () => {
+  it('parses flat YAML with known keys', () => {
+    const content = `id: abc-123
+name: My Session
+repository: org/repo
+branch: main
+created_at: 2026-05-24T10:00:00.000Z
+updated_at: 2026-05-24T20:00:00.000Z`;
+    const result = parseWorkspaceYaml(content);
+    assert.equal(result.id, 'abc-123');
+    assert.equal(result.name, 'My Session');
+    assert.equal(result.repository, 'org/repo');
+    assert.equal(result.branch, 'main');
+    assert.equal(result.created_at, '2026-05-24T10:00:00.000Z');
+    assert.equal(result.updated_at, '2026-05-24T20:00:00.000Z');
+  });
+
+  it('strips surrounding quotes', () => {
+    const content = `name: "Quoted Name"\nbranch: 'single-quoted'`;
+    const result = parseWorkspaceYaml(content);
+    assert.equal(result.name, 'Quoted Name');
+    assert.equal(result.branch, 'single-quoted');
+  });
+
+  it('skips comments and blank lines', () => {
+    const content = `# comment\n\nname: Test\n# another`;
+    const result = parseWorkspaceYaml(content);
+    assert.equal(result.name, 'Test');
+    assert.equal(Object.keys(result).length, 1);
+  });
+
+  it('handles values with colons', () => {
+    const content = `name: Session: important one`;
+    const result = parseWorkspaceYaml(content);
+    assert.equal(result.name, 'Session: important one');
+  });
+});
+
+// ── scanSessions ─────────────────────────────────────────────────────
+
+describe('scanSessions', () => {
+  const SESSION_FIXTURES = join(FIXTURES, 'session-state');
+
+  it('returns sessions sorted by updatedAt desc', () => {
+    const sessions = scanSessions(SESSION_FIXTURES);
+    assert.ok(sessions.length >= 2, `Expected at least 2 sessions, got ${sessions.length}`);
+    // active-session has updatedAt 2026-05-24, inactive-session 2026-05-20
+    assert.equal(sessions[0].id, 'active-session');
+    assert.equal(sessions[0].name, 'Implementing Auth Module');
+    assert.equal(sessions[0].repository, 'testorg/myapp');
+    assert.equal(sessions[0].branch, 'feature-x');
+  });
+
+  it('detects active sessions via lock files', () => {
+    const sessions = scanSessions(SESSION_FIXTURES);
+    const active = sessions.find(s => s.id === 'active-session');
+    const inactive = sessions.find(s => s.id === 'inactive-session');
+    assert.equal(active.active, true);
+    assert.equal(inactive.active, false);
+  });
+
+  it('skips dirs without workspace.yaml', () => {
+    const sessions = scanSessions(SESSION_FIXTURES);
+    const noYaml = sessions.find(s => s.id === 'no-yaml');
+    assert.equal(noYaml, undefined);
+  });
+
+  it('returns empty array when directory does not exist', () => {
+    const sessions = scanSessions('/tmp/nonexistent-session-state-dir-xyz');
+    assert.deepEqual(sessions, []);
+  });
+
+  it('uses repository as fallback name when name field is missing', () => {
+    const sessions = scanSessions(SESSION_FIXTURES);
+    const unnamed = sessions.find(s => s.id === 'unnamed-session');
+    assert.ok(unnamed, 'unnamed-session should be present');
+    assert.equal(unnamed.name, 'otherorg/unnamed-project');
+  });
+
+  it('includes plan snippet when plan.md exists', () => {
+    const sessions = scanSessions(SESSION_FIXTURES);
+    const active = sessions.find(s => s.id === 'active-session');
+    assert.ok(active.planSnippet.includes('Auth Module'), `Expected plan snippet to contain "Auth Module", got: ${active.planSnippet}`);
+    const inactive = sessions.find(s => s.id === 'inactive-session');
+    assert.equal(inactive.planSnippet, '');
+  });
+
+  it('respects limit parameter', () => {
+    const sessions = scanSessions(SESSION_FIXTURES, { limit: 1 });
+    assert.equal(sessions.length, 1);
+  });
+
+  it('filters by repo when specified', () => {
+    const sessions = scanSessions(SESSION_FIXTURES, { repo: 'testorg/other-repo' });
+    assert.equal(sessions.length, 1);
+    assert.equal(sessions[0].repository, 'testorg/other-repo');
   });
 });

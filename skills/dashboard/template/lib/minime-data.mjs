@@ -2,7 +2,7 @@
 // Ported from vscode-extension/src/{parsers,utils} (TypeScript → plain ESM JS)
 // Supports both new convention (<org>/_<repo>/) and legacy (<org>__<repo>/) layouts
 
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, basename, resolve, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 
@@ -530,4 +530,92 @@ export function mergeActions(config, discoveredActions) {
     allowed: config.allowedActions.includes(a.name),
     pinned: (config.pinnedActions || []).includes(a.name),
   }));
+}
+
+// ── session scanner ──────────────────────────────────────────────────
+
+export function parseWorkspaceYaml(content) {
+  const result = {};
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const colonIdx = trimmed.indexOf(':');
+    if (colonIdx === -1) continue;
+    const key = trimmed.slice(0, colonIdx).trim();
+    let value = trimmed.slice(colonIdx + 1).trim();
+    // Strip surrounding quotes
+    if ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    result[key] = value;
+  }
+  return result;
+}
+
+function readSnippet(filePath, maxBytes = 300) {
+  const fd = openSync(filePath, 'r');
+  try {
+    const buf = Buffer.alloc(maxBytes);
+    const bytesRead = readSync(fd, buf, 0, maxBytes, 0);
+    return buf.toString('utf8', 0, bytesRead).trim();
+  } finally {
+    closeSync(fd);
+  }
+}
+
+export function scanSessions(sessionStateDir, { limit = 50, repo = null } = {}) {
+  if (!existsSync(sessionStateDir)) return [];
+
+  const entries = readdirSync(sessionStateDir, { withFileTypes: true });
+  const dirs = entries.filter(e => e.isDirectory());
+
+  // Pre-sort by mtime descending, then take `limit` to avoid parsing all 700+
+  const withMtime = dirs.map(d => {
+    const dirPath = join(sessionStateDir, d.name);
+    const mtime = statSync(dirPath).mtimeMs;
+    return { name: d.name, dirPath, mtime };
+  });
+  withMtime.sort((a, b) => b.mtime - a.mtime);
+  const candidates = withMtime.slice(0, limit);
+
+  const sessions = [];
+  for (const { name: dirName, dirPath, mtime } of candidates) {
+    const yamlPath = join(dirPath, 'workspace.yaml');
+    if (!existsSync(yamlPath)) continue;
+
+    const yaml = parseWorkspaceYaml(readFileSync(yamlPath, 'utf-8'));
+
+    // Filter by repo if requested
+    if (repo && (!yaml.repository || yaml.repository !== repo)) continue;
+
+    const lockFiles = readdirSync(dirPath).filter(f => f.startsWith('inuse.') && f.endsWith('.lock'));
+    const active = lockFiles.length > 0;
+
+    let planSnippet = '';
+    const planPath = join(dirPath, 'plan.md');
+    if (existsSync(planPath)) {
+      planSnippet = readSnippet(planPath, 300);
+    }
+
+    sessions.push({
+      id: dirName,
+      name: yaml.name || yaml.repository || dirName,
+      repository: yaml.repository || '',
+      branch: yaml.branch || '',
+      createdAt: yaml.created_at || '',
+      updatedAt: yaml.updated_at || '',
+      active,
+      planSnippet,
+      mtime,
+    });
+  }
+
+  // Already sorted by mtime (updatedAt proxy), but re-sort by updatedAt if available
+  sessions.sort((a, b) => {
+    if (a.updatedAt && b.updatedAt) return b.updatedAt.localeCompare(a.updatedAt);
+    return b.mtime - a.mtime;
+  });
+
+  return sessions;
 }

@@ -95,13 +95,14 @@ main {
 #dashboard-panels {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   gap: 16px;
 }
 
 #tasks-panel { grid-column: 1; grid-row: 1; }
 #wiki-panel { grid-column: 2; grid-row: 1; }
-#actions-panel { grid-column: 1 / -1; grid-row: 2; }
+#sessions-panel { grid-column: 1 / -1; grid-row: 2; }
+#actions-panel { grid-column: 1 / -1; grid-row: 3; }
 
 .panel {
   background: var(--bg-panel);
@@ -282,4 +283,29 @@ footer {
   letter-spacing: 0.5px;
   border-top: 1px solid var(--border);
   margin-top: 8px;
+}
+
+/* Sessions panel */
+#sessions-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.session-active {
+  border-left: 3px solid var(--success) !important;
+}
+
+.session-snippet {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg);
+  padding: 4px 8px;
+  border-radius: 4px;
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
 }

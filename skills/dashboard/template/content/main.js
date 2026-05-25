@@ -9,6 +9,8 @@ const selector = document.getElementById('project-selector');
 const refreshBtn = document.getElementById('refresh-btn');
 const tasksList = document.getElementById('tasks-list');
 const wikiList = document.getElementById('wiki-list');
+const sessionsList = document.getElementById('sessions-list');
+const sessionsActiveBadge = document.getElementById('sessions-active-badge');
 const actionsList = document.getElementById('actions-list');
 const statusBar = document.getElementById('status-bar');
 const onboarding = document.getElementById('onboarding');
@@ -127,6 +129,66 @@ function typeIcon(type) {
     case 'script': return '▶️';
     default: return '▶️';
   }
+}
+
+function renderSessions(sessions) {
+  clearChildren(sessionsList);
+  if (!sessions || sessions.length === 0) {
+    sessionsList.appendChild(emptyState('No sessions found'));
+    sessionsActiveBadge.classList.add('hidden');
+    return;
+  }
+
+  const activeCount = sessions.filter(s => s.active).length;
+  if (activeCount > 0) {
+    sessionsActiveBadge.textContent = `${activeCount} active`;
+    sessionsActiveBadge.classList.remove('hidden');
+  } else {
+    sessionsActiveBadge.classList.add('hidden');
+  }
+
+  for (const session of sessions) {
+    const icon = el('span', { className: 'icon' }, [session.active ? '🟢' : '⚪']);
+    const title = el('div', { className: 'title' }, [session.name]);
+    const parts = [];
+    if (session.repository) parts.push(session.repository);
+    if (session.branch) parts.push(`⎇ ${session.branch}`);
+    if (session.updatedAt) {
+      parts.push(formatRelativeTime(session.updatedAt));
+    }
+    const meta = el('div', { className: 'meta' }, [parts.join(' · ')]);
+    const details = el('div', { className: 'details' }, [title, meta]);
+
+    const children = [icon, details];
+
+    if (session.planSnippet) {
+      const snippet = el('div', { className: 'session-snippet' }, [
+        session.planSnippet.slice(0, 120) + (session.planSnippet.length > 120 ? '…' : ''),
+      ]);
+      children.push(snippet);
+    }
+
+    if (session.active) {
+      children.push(el('span', { className: 'badge badge-active' }, ['active']));
+    }
+
+    const card = el('div', { className: `card ${session.active ? 'session-active' : ''}` }, children);
+    sessionsList.appendChild(card);
+  }
+}
+
+function formatRelativeTime(isoStr) {
+  const date = new Date(isoStr);
+  if (isNaN(date.getTime())) return isoStr;
+  const now = Date.now();
+  const diff = now - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
 }
 
 function typeLabel(type) {
@@ -377,11 +439,16 @@ async function loadScopeData() {
 async function loadAllData() {
   setStatus('Loading all projects…');
   try {
-    const data = await api.getAllData();
+    const [data, sessions] = await Promise.all([
+      api.getAllData(),
+      api.getSessions(),
+    ]);
     renderTasks(data.tasks);
     renderWiki(data.wikiEntries);
-    renderActions([]); // No actions in all-projects view
-    setStatus(`${data.tasks.length} tasks, ${data.wikiEntries.length} wiki entries`);
+    renderSessions(sessions);
+    renderActions([]);
+    const activeCount = sessions.filter(s => s.active).length;
+    setStatus(`${data.tasks.length} tasks, ${data.wikiEntries.length} wiki, ${sessions.length} sessions (${activeCount} active)`);
   } catch (err) {
     setStatus(`Error: ${err.message}`);
   }
@@ -390,11 +457,16 @@ async function loadAllData() {
 async function loadProjectData(org, repo) {
   setStatus(`Loading ${org}/${repo}…`);
   try {
-    const data = await api.getProjectData(org, repo);
+    const repoFilter = `${org}/${repo}`;
+    const [data, sessions] = await Promise.all([
+      api.getProjectData(org, repo),
+      api.getSessions({ repo: repoFilter }),
+    ]);
     renderTasks(data.tasks);
     renderWiki(data.wikiEntries);
+    renderSessions(sessions);
     renderActions(data.actions);
-    setStatus(`${data.tasks.length} tasks, ${data.wikiEntries.length} wiki, ${data.actions.length} actions`);
+    setStatus(`${data.tasks.length} tasks, ${data.wikiEntries.length} wiki, ${sessions.length} sessions, ${data.actions.length} actions`);
   } catch (err) {
     setStatus(`Error: ${err.message}`);
   }

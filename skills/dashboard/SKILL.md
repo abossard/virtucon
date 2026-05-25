@@ -1,6 +1,6 @@
 ---
 name: dashboard
-description: Open the minime dashboard — a native webview showing tasks, wiki entries, and project actions across all minime-managed repos.
+description: Open the minime dashboard — a native webview showing tasks, wiki entries, sessions, and project actions across all minime-managed repos.
 when_to_use: When the user asks to open the minime dashboard, view project status, or manage project actions visually.
 allowed-tools: Read Edit Write Grep Glob Bash
 ---
@@ -11,11 +11,11 @@ Trigger: User asks to open the minime dashboard, or `/minime:dashboard`.
 
 ## What this skill does
 
-Opens a native webview dashboard that shows minime tasks, wiki entries, and project actions. The dashboard auto-installs as a user-level extension at `~/.copilot/extensions/minime-dashboard/` — no per-repo scaffolding needed.
+Opens a native webview dashboard that shows minime tasks, wiki entries, active Copilot CLI sessions, and project actions. The dashboard auto-installs as a user-level extension at `~/.copilot/extensions/copilot-dashboard/` — replacing the generic debug dashboard with the full-featured minime one.
 
 ## How it works
 
-The session-start hook creates a symlink from the plugin's template directory to `~/.copilot/extensions/minime-dashboard/`. The Copilot CLI discovers user-level extensions automatically, so the `/minime-dashboard` command is available in every session.
+The session-start hook creates a symlink from the plugin's template directory to `~/.copilot/extensions/copilot-dashboard/`. This takes over the `/dashboard` slash command and the `copilot_dashboard_show/eval/close` tool names. The Copilot CLI discovers user-level extensions automatically, so `/dashboard` is available in every session.
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ The session-start hook creates a symlink from the plugin's template directory to
 
 ## Usage
 
-Once installed, use `/minime-dashboard` in any Copilot CLI session to open the dashboard.
+Once installed, use `/dashboard` in any Copilot CLI session to open the dashboard.
 
 ## Custom actions
 

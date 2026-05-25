@@ -14,6 +14,7 @@ import {
   resolveMinimeHome, scanMinimeHome, findLatestTask,
   loadDashboardConfig, discoverProjectActions, getStatusIcon,
   validateUrl, validateClearPaths, createRingBuffer, mergeActions,
+  scanSessions,
 } from "./lib/minime-data.mjs";
 
 const CWD = process.cwd();
@@ -280,10 +281,16 @@ function getOnboardingInfo() {
   };
 }
 
+const SESSION_STATE_DIR = join(process.env.HOME || process.env.USERPROFILE || '', '.copilot', 'session-state');
+
+function getSessions({ limit, repo } = {}) {
+  return scanSessions(SESSION_STATE_DIR, { limit: limit || 50, repo: repo || null });
+}
+
 // ── Webview setup ──
 
 const webview = new CopilotWebview({
-  extensionName: "minime_dashboard",
+  extensionName: "copilot_dashboard",
   contentDir: join(import.meta.dirname, "content"),
   title: "Minime Dashboard",
   width: 1100,
@@ -295,6 +302,7 @@ const webview = new CopilotWebview({
     getProjectActions,
     runAction,
     getOnboardingInfo,
+    getSessions,
     getBackgroundProcesses,
     getProcessOutput,
     stopProcess: stopBackgroundProcess,
@@ -305,8 +313,8 @@ const webview = new CopilotWebview({
 const session = await joinSession({
   tools: webview.tools,
   commands: [{
-    name: "minime-dashboard",
-    description: "Open the Minime Dashboard — view tasks, wiki, and project actions",
+    name: "dashboard",
+    description: "Open the Minime Dashboard — view tasks, wiki, sessions, and project actions",
     handler: webview.show,
   }],
   hooks: {
