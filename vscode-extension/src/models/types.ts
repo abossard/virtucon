@@ -22,6 +22,7 @@ export interface MinimeTask {
   goal: string;
   totalCriteria: number;
   checkedCriteria: number;
+  modifiedAt: number;
 }
 
 export interface WikiEntry {

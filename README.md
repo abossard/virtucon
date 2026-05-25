@@ -62,12 +62,12 @@ The SessionStart hook resolves and injects the canonical paths into every sessio
 - When a decision is still needed, present a compact decision packet (options, tradeoffs, risks, default recommendation).
 
 ---
-
+`/minime:lab` is the only required initialization step.
 
 This initializes `VIRTUCON_HQ` only and does not create or stage files in your repo.
 
-After that, the orchestration is live: describe your task inline or write a `task.md`, invoke
-`/minime:blueprint`, and follow the flow. No `task.md` file is required. Blueprint accepts inline context.
+After that, the orchestration is live: describe your task inline or into a file and invoke
+`/minime:blueprint` pointing to it and follow the flow.
 
 ### SessionStart hook (auto-nudge)
 
@@ -127,8 +127,7 @@ Two modes: pick the one that fits the task.
 
 ### 🔧 Manual mode (explicit, step-by-step)
 
-1. **Per task**: describe your task inline to the agent, or copy
-   `VIRTUCON_HQ/templates/task.template.md` → `task.md` and fill in EARS-style
+1. **Per task**: describe your task inline to the agent, it will fill in EARS-style
    acceptance criteria. **No file required.** Blueprint accepts conversation context directly.
 2. **Start the flow**: `skill("blueprint")`. Reads your task brief (inline or file) and the
    per-repo wiki, discovers other installed skills, nudges EARS quality when needed,
@@ -156,7 +155,7 @@ Or use /agent to select Dr. Evil:
 /agent
 ```
 
-Dr. Evil reads `task.md` or accepts an inline task description, runs all four phases,
+Dr. Evil reads accepts a task description and runs all four phases,
 and stops only when it needs you. This happens either because the inspection came back HIGH-risk (you see the
 evidence package) or because something destructive needs your authorization.
 

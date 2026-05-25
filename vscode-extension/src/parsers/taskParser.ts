@@ -5,7 +5,12 @@ import { MinimeTask } from '../models/types';
 export function parseTaskFile(filePath: string): MinimeTask | undefined {
   try {
     const content = fs.readFileSync(filePath, 'utf-8');
-    return parseTaskContent(content, filePath);
+    const task = parseTaskContent(content, filePath);
+    if (task) {
+      const stat = fs.statSync(filePath);
+      task.modifiedAt = stat.mtimeMs;
+    }
+    return task;
   } catch {
     return undefined;
   }
@@ -34,6 +39,7 @@ export function parseTaskContent(content: string, filePath: string): MinimeTask 
     goal,
     totalCriteria: total,
     checkedCriteria: checked,
+    modifiedAt: 0,
   };
 }
 

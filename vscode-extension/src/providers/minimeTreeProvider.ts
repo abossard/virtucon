@@ -3,6 +3,7 @@ import * as path from 'path';
 import { MinimeOrg, MinimeRepo, MinimeTask, WikiEntry, TreeNodeType } from '../models/types';
 import { scanMinimeHome, getTemplatePaths, resolveMinimeHome } from '../utils/paths';
 import { getStatusIcon } from '../parsers/taskParser';
+import { sortTasks, sortWikiEntries, sortRepos, sortOrgs } from '../utils/sorting';
 
 interface TreeNodeData {
   type: TreeNodeType;
@@ -144,7 +145,7 @@ export class MinimeTreeProvider implements vscode.TreeDataProvider<TreeNodeData>
   private getRootChildren(): TreeNodeData[] {
     const children: TreeNodeData[] = [];
 
-    for (const org of this.orgs) {
+    for (const org of sortOrgs(this.orgs)) {
       children.push({
         type: 'org',
         label: org.name,
@@ -170,8 +171,7 @@ export class MinimeTreeProvider implements vscode.TreeDataProvider<TreeNodeData>
   }
 
   private getOrgChildren(org: MinimeOrg): TreeNodeData[] {
-    return org.repos
-      .sort((a, b) => a.name.localeCompare(b.name))
+    return sortRepos(org.repos)
       .map(repo => ({
         type: 'repo' as TreeNodeType,
         label: repo.name,
@@ -204,8 +204,7 @@ export class MinimeTreeProvider implements vscode.TreeDataProvider<TreeNodeData>
       return [{ type: 'empty', label: 'No tasks' }];
     }
 
-    return repo.tasks
-      .sort((a, b) => b.date.localeCompare(a.date))
+    return sortTasks(repo.tasks)
       .map(task => ({
         type: 'task' as TreeNodeType,
         label: task.shortName,
@@ -219,7 +218,7 @@ export class MinimeTreeProvider implements vscode.TreeDataProvider<TreeNodeData>
       return [{ type: 'empty', label: repo.wikiPath ? 'No entries' : 'No wiki file' }];
     }
 
-    return repo.wikiEntries.map(entry => ({
+    return sortWikiEntries(repo.wikiEntries).map(entry => ({
       type: 'wikiEntry' as TreeNodeType,
       label: entry.name,
       filePath: entry.filePath,

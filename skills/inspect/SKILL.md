@@ -85,7 +85,10 @@ Uncertainty drivers (any present and unmitigated -> HIGH):
 
 THE ONE RULE: hand the human **evidence, not a verdict.**
 
-Evidence is real output from real execution. Weight tiers: full (execution output, user confirmation), some (direct code references), zero (AI statements without execution or code reference).
+Evidence is real output from real execution. Weight tiers: 
+- 1. full value (execution output, user confirmation)
+- 2. some value (direct code references)
+- 3. zero value (AI statements without execution or code reference)
 
 The package contains ONLY:
 1. **Criterion traceability table** with evidence methods, boundary assessment, and error coverage (Step 2).
