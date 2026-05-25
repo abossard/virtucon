@@ -1,7 +1,0 @@
-id: active-session
-cwd: /Users/test/projects/myapp
-repository: testorg/myapp
-branch: feature-x
-name: Implementing Auth Module
-created_at: 2026-05-24T10:00:00.000Z
-updated_at: 2026-05-24T20:30:00.000Z

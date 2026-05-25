@@ -68,53 +68,7 @@ function buildNudge() {
   ].join('\n');
 }
 
-function ensureDashboardSymlink() {
-  // Symlink the minime dashboard as `copilot-dashboard` so it takes over
-  // the generic dashboard's tool names (copilot_dashboard_show/eval/close)
-  // and the /dashboard slash command.
-  const userExtDir = path.join(process.env.HOME || '~', '.copilot', 'extensions');
-  const linkPath = path.join(userExtDir, 'copilot-dashboard');
-  const target = path.join(PLUGIN_ROOT, 'skills', 'dashboard', 'template');
-  const sentinel = path.join(target, 'lib', 'minime-data.mjs');
-
-  try {
-    // Verify target exists AND contains our sentinel file
-    if (!fs.existsSync(target) || !fs.existsSync(sentinel)) return;
-
-    // Ensure ~/.copilot/extensions/ exists
-    fs.mkdirSync(userExtDir, { recursive: true });
-
-    // Clean up old minime-dashboard symlink if present
-    const oldLink = path.join(userExtDir, 'minime-dashboard');
-    try {
-      const oldTarget = fs.readlinkSync(oldLink);
-      if (oldTarget === target) fs.unlinkSync(oldLink);
-    } catch { /* doesn't exist or not a symlink */ }
-
-    try {
-      const existing = fs.readlinkSync(linkPath);
-      if (existing === target) return; // already correct
-      // Points elsewhere — replace it (we're taking over copilot-dashboard)
-      fs.unlinkSync(linkPath);
-    } catch {
-      // readlinkSync throws if linkPath doesn't exist or isn't a symlink
-      if (fs.existsSync(linkPath)) {
-        // Regular dir/file — rename it out of the way
-        const backup = linkPath + '.backup-' + Date.now();
-        fs.renameSync(linkPath, backup);
-        process.stderr.write(`[minime] Backed up existing ${linkPath} to ${backup}\n`);
-      }
-    }
-
-    fs.symlinkSync(target, linkPath, 'dir');
-  } catch {
-    // Non-fatal — dashboard just won't auto-register
-  }
-}
-
 function main() {
-  ensureDashboardSymlink();
-
   const nudge = buildNudge();
 
   // Output format varies by platform:
