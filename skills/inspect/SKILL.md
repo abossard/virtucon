@@ -1,16 +1,16 @@
 ---
-name: review
-description: Review the implementation in a fresh subagent context. Verifies each EARS criterion against evidence (tests, diff, assumptions), computes an uncertainty-based risk tier, and either routes to harvest (LOW) or surfaces an evidence package for the human (HIGH). Surfaces evidence, never a verdict.
-when_to_use: After /minime:implement has handed off, or whenever the user wants the change reviewed and routed.
+name: inspect
+description: Inspect the implementation in a fresh subagent context. Verifies each EARS criterion against evidence (tests, diff, assumptions), computes an uncertainty-based risk tier, and either routes to extract (LOW) or surfaces an evidence package for the human (HIGH). Surfaces evidence, never a verdict.
+when_to_use: After /minime:replicate has handed off, or whenever the user wants the change reviewed and routed.
 context: fork
-agent: minime:reviewer
+agent: minime:frau
 ---
 
-# Skill: review
+# Skill: inspect
 
-Trigger: `/minime:implement` handed off. This is the ONLY skill in the flow that may reach the human. It does so only for the HIGH-risk slice.
+Trigger: `/minime:replicate` handed off. This is the ONLY skill in the flow that may reach the human. It does so only for the HIGH-risk slice.
 
-The review forks into a fresh `minime:reviewer` subagent (`context: fork`).
+The review forks into a fresh `minime:frau` subagent (`context: fork`).
 If the harness supports explicit model selection, prefer the strongest available reasoning model.
 
 ## Empirical basis
@@ -31,7 +31,7 @@ Report any mismatches in the evidence package under "Process gaps".
 
 ## Step 2: Verify each EARS criterion against evidence
 
-Read the persisted task brief (`MINIME_HOME/<org>/_<repo>/tasks/<date>-<name>.task.md`).
+Read the persisted task brief (`VIRTUCON_HQ/<org>/_<repo>/tasks/<date>-<name>.task.md`).
 
 ### Review contract (adapted from openclaw's autoreview)
 
@@ -102,8 +102,8 @@ FORBIDDEN: "this looks correct / LGTM / safe to merge / I'm confident", any verd
 
 ## Step 7: Route
 
-- **LOW + all tests green** -> invite the user to stage when ready. Then invoke `skill("harvest")`.
+- **LOW + all tests green** -> invite the user to stage when ready. Then invoke `skill("extract")`.
 - **HIGH** -> present the evidence package and STOP for the human.
 
 ## Step 8
-After the human decides, **invoke `skill("harvest")`** to capture lessons from this task.
+After the human decides, **invoke `skill("extract")`** to capture lessons from this task.

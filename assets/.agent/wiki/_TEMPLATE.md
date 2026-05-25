@@ -3,8 +3,8 @@
 Repo URL: <url>   (this file is keyed to it; one wiki per repo)
 
 Per-repo engineering knowledge distilled from past tasks and human corrections.
-Read by `/minime:plan` (relevance-scored, citation-verified before use),
-written by `/minime:harvest`. Shared by Claude and Copilot. Commit it to the repo.
+Read by `/minime:blueprint` (relevance-scored, citation-verified before use),
+written by `/minime:extract`. Shared by Claude and Copilot. Commit it to the repo.
 
 Rules: every entry cites live code · entries are general rules, not task logs ·
 no secrets or customer data · consolidate when retrieval surfaces duplicates.

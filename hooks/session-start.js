@@ -13,7 +13,7 @@ const PLUGIN_ROOT = process.env.PLUGIN_ROOT
   || process.env.CLAUDE_PLUGIN_ROOT
   || process.env.CLAUDE_SKILL_DIR && path.resolve(process.env.CLAUDE_SKILL_DIR, '..', '..')
   || path.resolve(__dirname, '..');
-const MINIME_HOME = process.env.MINIME_HOME || path.join(process.env.HOME || '~', '.minime');
+const VIRTUCON_HQ = process.env.VIRTUCON_HQ || path.join(process.env.HOME || '~', '.minime');
 
 function buildNudge() {
   const skills = [];
@@ -45,21 +45,21 @@ function buildNudge() {
     'You have **minime** orchestration skills installed.',
     '',
     '**Minime paths (single source of truth. Do not hardcode; use these):**',
-    `  MINIME_HOME=${MINIME_HOME}`,
-    `  Templates: ${MINIME_HOME}/templates/`,
-    `  Tasks:     ${MINIME_HOME}/<org>/_<repo>/tasks/`,
-    `  Repo wiki: ${MINIME_HOME}/<org>/_<repo>/wiki.md`,
-    `  Org wiki:  ${MINIME_HOME}/<org>/wiki.md`,
-    `  Template:  ${MINIME_HOME}/_TEMPLATE.md`,
+    `  VIRTUCON_HQ=${VIRTUCON_HQ}`,
+    `  Templates: ${VIRTUCON_HQ}/templates/`,
+    `  Tasks:     ${VIRTUCON_HQ}/<org>/_<repo>/tasks/`,
+    `  Repo wiki: ${VIRTUCON_HQ}/<org>/_<repo>/wiki.md`,
+    `  Org wiki:  ${VIRTUCON_HQ}/<org>/wiki.md`,
+    `  Template:  ${VIRTUCON_HQ}/_TEMPLATE.md`,
     '',
     'Available skills:',
     skillList,
     '',
     'Usage guidance:',
-    '- For non-trivial tasks, invoke skill("plan") BEFORE starting implementation.',
-    '- After implementation, invoke skill("review") to get an evidence-based review.',
-    '- After merge or session end, invoke skill("harvest") to capture lessons.',
-    '- For the full autopilot flow, use the minime:director agent.',
+    '- For non-trivial tasks, invoke skill("blueprint") BEFORE starting implementation.',
+    '- After implementation, invoke skill("inspect") to get an evidence-based review.',
+    '- After merge or session end, invoke skill("extract") to capture lessons.',
+    '- For the full autopilot flow, use the minime:dr-evil agent.',
     '- plan accepts inline task descriptions. No task.md file is required.',
     '',
     'Skill chaining: plan -> implement -> review -> harvest.',

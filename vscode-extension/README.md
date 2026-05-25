@@ -4,7 +4,7 @@ Browse and search [minime](https://github.com/abossard/minime) agent orchestrati
 
 ## Features
 
-- **Tree View**: Sidebar explorer showing orgs, repos, tasks, and wiki entries from MINIME_HOME
+- **Tree View**: Sidebar explorer showing orgs, repos, tasks, and wiki entries from VIRTUCON_HQ
 - **Task Status**: Visual indicators for task status (planning, implementing, done, blocked)
 - **Criteria Progress**: Shows checked/total acceptance criteria per task
 - **Wiki Search**: Quick pick search across all wiki entries by name, rule, or trigger
@@ -32,17 +32,17 @@ MINIME
 
 | Command | Description |
 |---------|-------------|
-| `Minime: Refresh` | Re-scan MINIME_HOME and update the tree |
+| `Minime: Refresh` | Re-scan VIRTUCON_HQ and update the tree |
 | `Minime: Search Wiki Entries` | Quick pick filtered search across all wiki entries |
 | `Minime: Open File` | Open a task or wiki file in the editor |
-| `Minime: Open MINIME_HOME Folder` | Reveal MINIME_HOME in the OS file manager |
+| `Minime: Open VIRTUCON_HQ Folder` | Reveal VIRTUCON_HQ in the OS file manager |
 | `Minime: Open Latest Task` | Jump to the most recent task file |
 
 ## Configuration
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `minime.home` | `""` | Override MINIME_HOME path. Falls back to env `MINIME_HOME`, then `~/.minime`. |
+| `minime.home` | `""` | Override VIRTUCON_HQ path. Falls back to env `VIRTUCON_HQ`, then `~/.minime`. |
 
 ## Install from Source
 

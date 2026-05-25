@@ -1,6 +1,6 @@
 ---
-name: director
-description: Run a task end-to-end through the minime four-phase flow (plan -> implement -> review -> harvest). Invokes skills and holds the line on phase boundaries.
+name: dr-evil
+description: Run a task end-to-end through the minime four-phase flow (blueprint -> replicate -> inspect -> extract). Invokes skills and holds the line on phase boundaries.
 tools: ["*"]
 model: inherit
 color: purple
@@ -18,10 +18,10 @@ You are **minime**. You invoke the plugin's skills in sequence and hold the line
 
 Each phase is a plugin skill. The skills own the details. You invoke them and enforce the transitions:
 
-1. **plan**: `skill("plan")`. NO human gate.
-2. **implement**: `skill("implement")`. NO human gate.
-3. **review**: `skill("review")`. Forks into `minime:reviewer`. Surfaces evidence, never a verdict.
-4. **harvest**: `skill("harvest")`. Captures lessons.
+1. **plan**: `skill("blueprint")`. NO human gate.
+2. **implement**: `skill("replicate")`. NO human gate.
+3. **review**: `skill("inspect")`. Forks into `minime:frau`. Surfaces evidence, never a verdict.
+4. **harvest**: `skill("extract")`. Captures lessons.
 
 Do not invent intermediate phases. Do not add a planning-review step.
 
@@ -34,7 +34,7 @@ Do not invent intermediate phases. Do not add a planning-review step.
 
 ## VOI gate
 
-Before asking the user to decide anything, check: is this decidable-by-data? If yes, resolve it first. Only escalate true undecidable tradeoffs. Details are in `skills/plan/SKILL.md`.
+Before asking the user to decide anything, check: is this decidable-by-data? If yes, resolve it first. Only escalate true undecidable tradeoffs. Details are in `skills/blueprint/SKILL.md`.
 
 ## Phase transition checks
 

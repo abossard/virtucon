@@ -1,11 +1,11 @@
 ---
-name: plan
-description: "Plan a coding task from a task.md brief or inline context. Reads the per-repo corrections wiki (score-and-verify, never dump-all), thinks silently, self-challenges, and hands off to implement. No human review gate. The plan is consumed by implement and is never signed off."
+name: blueprint
+description: "Blueprint a coding task from a task.md brief or inline context. Reads the per-repo corrections wiki (score-and-verify, never dump-all), thinks silently, self-challenges, and hands off to replicate. No human review gate. The blueprint is consumed by replicate and is never signed off."
 when_to_use: "When the user has a task to plan, whether as a task.md file, inline conversation context, or a verbal description. This skill starts the orchestration flow."
 allowed-tools: Read Edit Grep Glob Bash(git remote get-url *) Bash(git log *) Bash(git status) Bash(ls *) Bash(mkdir *) Write
 ---
 
-# Skill: plan
+# Skill: blueprint
 
 Runs first in the four-phase flow. **No human review gate.** Your plan is an input the next skill consumes, not a document anyone signs off.
 
@@ -14,12 +14,12 @@ Runs first in the four-phase flow. **No human review gate.** Your plan is an inp
 1. **Persist the living task brief FIRST. This is non-negotiable.**
    Derive `<org>` and `<repo>` from `git remote get-url origin`.
    Supported remote formats: GitHub, GitLab, Bitbucket, Azure DevOps (visualstudio.com, dev.azure.com, ssh.dev.azure.com). For Azure DevOps, org is the subdomain or first path segment; repo is the segment after `_git/`.
-   Resolve `MINIME_HOME`: check for it in the minime-workflow-nudge injected into your context. If absent, fall back to the env var `MINIME_HOME`. If that is also unset, default to `~/.minime`.
+   Resolve `VIRTUCON_HQ`: check for it in the minime-workflow-nudge injected into your context. If absent, fall back to the env var `VIRTUCON_HQ`. If that is also unset, default to `~/.minime`.
    Create the task brief at:
-   `MINIME_HOME/<org>/_<repo>/tasks/<YYYY-MM-DD>-<short-name>.task.md`
+   `VIRTUCON_HQ/<org>/_<repo>/tasks/<YYYY-MM-DD>-<short-name>.task.md`
    Run `mkdir -p` to ensure the directory exists, then write the file.
-   **Do NOT write task.md to the working directory.** The task brief must go to MINIME_HOME, not the repo.
-   Use the template from `MINIME_HOME/templates/task.template.md`. Set all criteria as `- [ ]` (unchecked) and assign a VOI level to each:
+   **Do NOT write task.md to the working directory.** The task brief must go to VIRTUCON_HQ, not the repo.
+   Use the template from `VIRTUCON_HQ/templates/task.template.md`. Set all criteria as `- [ ]` (unchecked) and assign a VOI level to each:
    - **decided-by-data**: resolvable from code/docs/tests/specs
    - **needs-research**: resolvable but needs evidence gathering
    - **undecidable-now**: value tradeoff/policy, needs human decision
@@ -35,7 +35,7 @@ Runs first in the four-phase flow. **No human review gate.** Your plan is an inp
    Then nudge for EARS completeness: if acceptance criteria are vague or non-EARS, ask for a concise refinement using EARS patterns. Nudge, don't block on perfection: ask for the minimum edits needed to make criteria independently testable.
    **Evidence method (mandatory).** Each criterion MUST include an evidence method, for example: `| Evidence: <how this will be verified>`. The evidence method specifies: (1) what tool or framework, (2) at what boundary (API, CLI, UI accessibility attributes, public interface), (3) what constitutes pass vs fail. If a criterion has no evidence method, BLOCK. Do not proceed until one is defined. Tests must target the user-facing or API boundary, not internal implementation details.
 
-3. **Locate wiki sources (user-home only).** Run `git remote get-url origin`, derive `<org>` and `<repo>`, and open `MINIME_HOME/<org>/_<repo>/wiki.md` directly. Also load `MINIME_HOME/<org>/wiki.md` when present. If the repo wiki file is absent, tell the user to run `/minime:init-orchestration` once.
+3. **Locate wiki sources (user-home only).** Run `git remote get-url origin`, derive `<org>` and `<repo>`, and open `VIRTUCON_HQ/<org>/_<repo>/wiki.md` directly. Also load `VIRTUCON_HQ/<org>/wiki.md` when present. If the repo wiki file is absent, tell the user to run `/minime:lab` once.
 
 4. **Discover domain-specific skills and agents.** Scan for other installed skills and agents that could be relevant to this task:
    - Check the current repo for `.agents/`, `.skills/`, `agents/`, `skills/` directories.
@@ -68,7 +68,7 @@ Runs first in the four-phase flow. **No human review gate.** Your plan is an inp
    - `Origin: human-correction` over weaker signals when tied
    Select only the entries needed for this task after ranking.
 
-7. **Verify before trusting (citation check).** Each selected entry cites a code location. Open that location. If the code no longer matches the entry, the entry is stale. Ignore it and flag it for `/minime:harvest` to fix. Never plan on an unverified memory.
+7. **Verify before trusting (citation check).** Each selected entry cites a code location. Open that location. If the code no longer matches the entry, the entry is stale. Ignore it and flag it for `/minime:extract` to fix. Never plan on an unverified memory.
 
 8. **Plan silently.** Produce an internal implementation plan: files to touch, order of work, which acceptance criteria each step satisfies, and the tests that will prove each one. Working state, not a deliverable.
 
@@ -90,7 +90,7 @@ Runs first in the four-phase flow. **No human review gate.** Your plan is an inp
    - Under what condition would this approach be wrong?
    - What in the task brief is ambiguous? If genuinely blocking, ask the user ONE question. Otherwise state the assumption and proceed.
 
-11. **Hand off.** Tell the user the plan is ready, then instruct: **now invoke `skill("implement")`** to start the test-driven implementation loop. Pass the path to the persisted task brief.
+11. **Hand off.** Tell the user the plan is ready, then instruct: **now invoke `skill("replicate")`** to start the test-driven implementation loop. Pass the path to the persisted task brief.
 
 ## Rules
 - Do not produce a plan document for human approval. No plan-review gate.

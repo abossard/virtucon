@@ -162,7 +162,7 @@ export class MinimeTreeProvider implements vscode.TreeDataProvider<TreeNodeData>
     if (children.length === 0) {
       children.push({
         type: 'empty',
-        label: 'No minime data found. Run /minime:init-orchestration',
+        label: 'No minime data found. Run /minime:lab',
       });
     }
 

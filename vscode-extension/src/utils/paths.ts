@@ -13,8 +13,8 @@ export function resolveMinimeHome(config?: MinimeConfig): string {
   if (config?.settingHome) {
     return config.settingHome;
   }
-  if (process.env.MINIME_HOME) {
-    return process.env.MINIME_HOME;
+  if (process.env.VIRTUCON_HQ) {
+    return process.env.VIRTUCON_HQ;
   }
   return path.join(os.homedir(), '.minime');
 }

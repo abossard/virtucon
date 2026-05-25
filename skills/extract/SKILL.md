@@ -1,11 +1,11 @@
 ---
-name: harvest
-description: Capture lessons from a just-merged task or current session into the per-repo corrections wiki. Human corrections are the highest-value signal. Every entry must cite live code and be a generalised rule, not a task log.
-when_to_use: Right after a task is merged or staged, after a significant session with learnings worth preserving, or when the user explicitly asks to harvest lessons from recent work.
+name: extract
+description: Extract lessons from a just-merged task or current session into the per-repo corrections wiki. Human corrections are the highest-value signal. Every entry must cite live code and be a generalised rule, not a task log.
+when_to_use: Right after a task is merged or staged, after a significant session with learnings worth preserving, or when the user explicitly asks to extract lessons from recent work.
 allowed-tools: Read Edit Write Grep Glob Bash(git log *) Bash(git diff *) Bash(git show *) Bash(git remote get-url *) Bash(git status)
 ---
 
-# Skill: harvest
+# Skill: extract
 
 Trigger: a task is merged OR a session produced lessons worth capturing (even without a merge). It turns raw outcomes, especially human corrections, into durable, cited wiki entries for future tasks.
 
@@ -19,7 +19,7 @@ These still require code citations to be persisted. If a lesson references code,
 
 ## Learn from the task brief's evolution
 
-Read the persisted task brief at `MINIME_HOME/<org>/_<repo>/tasks/<date>-<name>.task.md`. It contains:
+Read the persisted task brief at `VIRTUCON_HQ/<org>/_<repo>/tasks/<date>-<name>.task.md`. It contains:
 - **Decisions table**: how unknowns were resolved and at what VOI level.
 - **Discovered during review**: criteria that were missing from the original EARS.
 - **User feedback**: verbatim user corrections and steering.
@@ -47,7 +47,7 @@ Use this to harvest process-level lessons:
 3. **Retrieval prioritization policy**
    - Ensure each entry has a concrete `Trigger` and `Confidence`.
    - Prefer entries that are: trigger-matched, active, recently verified, and high-confidence.
-   - Keep entry wording short and specific to improve top-k selection quality in `/minime:plan`.
+   - Keep entry wording short and specific to improve top-k selection quality in `/minime:blueprint`.
 
 4. **Decay / forgetting policy**
    - Every harvest pass: re-verify citations for recently touched areas.
@@ -63,19 +63,19 @@ Use this to harvest process-level lessons:
    - If many candidates are rejected for low value or stale evidence, tighten future write filtering.
 
 ## Step 1: Locate the wikis
-Run `git remote get-url origin`, derive `<org>` and `<repo>`. Supported remote formats: GitHub, GitLab, Bitbucket, Azure DevOps (visualstudio.com, dev.azure.com, ssh.dev.azure.com). For Azure DevOps, org is the subdomain or first path segment; repo is the segment after `_git/`. Open `MINIME_HOME/<org>/_<repo>/wiki.md`. Also check `MINIME_HOME/<org>/wiki.md` for cross-repo rules to avoid duplication.
+Run `git remote get-url origin`, derive `<org>` and `<repo>`. Supported remote formats: GitHub, GitLab, Bitbucket, Azure DevOps (visualstudio.com, dev.azure.com, ssh.dev.azure.com). For Azure DevOps, org is the subdomain or first path segment; repo is the segment after `_git/`. Open `VIRTUCON_HQ/<org>/_<repo>/wiki.md`. Also check `VIRTUCON_HQ/<org>/wiki.md` for cross-repo rules to avoid duplication.
 
 ## Step 2: What to capture
 
 1. **Corrections (priority).** Anything the human changed, rejected, or sent back during review. Each becomes one entry. The before/after IS the lesson.
 2. **Research candidates from plan.** Read the task brief's `## Research resolved` section. Each entry is a wiki candidate produced when plan resolved a "needs-research" VOI item. Evaluate each using the write-filtering policy: actionability, reusability, evidence quality, novelty. Persist worthy ones as new wiki entries. Reject the rest and include the count in the run summary.
-3. **Stale entries** flagged by `/minime:plan` during its citation check. Fix or delete them.
+3. **Stale entries** flagged by `/minime:blueprint` during its citation check. Fix or delete them.
 4. **Episodic notes**: an approach that failed and why ("tried X, broke Y").
 5. Skip anything already covered. No duplicates.
 
 ## Step 3: How to write an entry
 
-Append to `MINIME_HOME/<org>/_<repo>/wiki.md` using the `MINIME_HOME/_TEMPLATE.md` block. Every entry MUST:
+Append to `VIRTUCON_HQ/<org>/_<repo>/wiki.md` using the `VIRTUCON_HQ/_TEMPLATE.md` block. Every entry MUST:
 
 - **Carry a code citation**: `path:line` or a stable symbol name. An entry with no citation is unsafe and must not be written: future agents re-verify entries against live code before trusting them, and an uncited entry cannot be verified.
 - **Be a generalised rule, not a task log.** Not "fixed the bug in PR 12" but "Money values use integer minor units; never use floats (see billing.py:44)."
@@ -105,11 +105,11 @@ Harvest should be invoked (not silently — the director or user triggers it) at
 3. **At session end with uncaptured lessons:** if the session produced design decisions, failed approaches, or discovered patterns that are not yet in the wiki, harvest should run. The director checks: "did this session produce corrections or learnings not yet harvested?"
 4. **After a merge or ship:** when `git push` or a PR merge completes a task, harvest captures what the full cycle taught.
 
-These are documented triggers, not automatic silent execution. The directing agent or user invokes `skill("harvest")` at these points. Harvest never runs without being called.
+These are documented triggers, not automatic silent execution. The directing agent or user invokes `skill("extract")` at these points. Harvest never runs without being called.
 
 ## Step 5: Wiki lint (Karpathy compound-knowledge health check)
 
-When invoked with a lint request (user says "lint the wiki", "wiki health check", or harvest is run periodically), perform a structured health check on `MINIME_HOME/<org>/_<repo>/wiki.md`. This is the wiki equivalent of `pnpm check:changed` — prove the wiki is healthy, don't just assume it.
+When invoked with a lint request (user says "lint the wiki", "wiki health check", or harvest is run periodically), perform a structured health check on `VIRTUCON_HQ/<org>/_<repo>/wiki.md`. This is the wiki equivalent of `pnpm check:changed` — prove the wiki is healthy, don't just assume it.
 
 ### Lint checklist
 

@@ -6,30 +6,30 @@ const FIXTURES = path.join(__dirname, '..', 'fixtures');
 
 describe('paths', () => {
   describe('resolveMinimeHome', () => {
-    const originalEnv = process.env.MINIME_HOME;
+    const originalEnv = process.env.VIRTUCON_HQ;
 
     afterEach(() => {
       if (originalEnv !== undefined) {
-        process.env.MINIME_HOME = originalEnv;
+        process.env.VIRTUCON_HQ = originalEnv;
       } else {
-        delete process.env.MINIME_HOME;
+        delete process.env.VIRTUCON_HQ;
       }
     });
 
     it('should prefer config setting over env var', () => {
-      process.env.MINIME_HOME = '/env/path';
+      process.env.VIRTUCON_HQ = '/env/path';
       const result = resolveMinimeHome({ settingHome: '/setting/path' });
       assert.strictEqual(result, '/setting/path');
     });
 
     it('should use env var when no setting', () => {
-      process.env.MINIME_HOME = '/env/path';
+      process.env.VIRTUCON_HQ = '/env/path';
       const result = resolveMinimeHome();
       assert.strictEqual(result, '/env/path');
     });
 
     it('should fall back to ~/.minime', () => {
-      delete process.env.MINIME_HOME;
+      delete process.env.VIRTUCON_HQ;
       const result = resolveMinimeHome();
       assert.ok(result.endsWith('.minime'));
     });

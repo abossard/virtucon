@@ -1,17 +1,17 @@
 ---
-name: implement
-description: Implement a planned task in a tight test-driven loop. Generate -> run -> observe REAL output -> fix. Re-injects task-brief constraints after context compaction or when switching focus. No human review gate.
-when_to_use: After /minime:plan has handed off, or whenever the user wants the implementation loop with grounded test execution.
+name: replicate
+description: Replicate a planned task in a tight test-driven loop. Generate -> run -> observe REAL output -> fix. Re-injects task-brief constraints after context compaction or when switching focus. No human review gate.
+when_to_use: After /minime:blueprint has handed off, or whenever the user wants the implementation loop with grounded test execution.
 allowed-tools: Read Edit Write Grep Glob Bash
 ---
 
-# Skill: implement
+# Skill: replicate
 
-Trigger: `/minime:plan` has handed off, or the user invoked you directly with an existing plan. **No human review gate.** Quality here comes from a tight execution-grounded loop, not from human checkpoints.
+Trigger: `/minime:blueprint` has handed off, or the user invoked you directly with an existing plan. **No human review gate.** Quality here comes from a tight execution-grounded loop, not from human checkpoints.
 
 ## Living task brief
 
-Locate the persisted task brief at `MINIME_HOME/<org>/_<repo>/tasks/<date>-<name>.task.md`. If MINIME_HOME is not in your context, fall back to the env var `MINIME_HOME`, then default to `~/.minime`. **Read the file at the start of this phase to confirm it exists.** If it does not exist, the plan phase failed to persist it; create it now before proceeding.
+Locate the persisted task brief at `VIRTUCON_HQ/<org>/_<repo>/tasks/<date>-<name>.task.md`. If VIRTUCON_HQ is not in your context, fall back to the env var `VIRTUCON_HQ`, then default to `~/.minime`. **Read the file at the start of this phase to confirm it exists.** If it does not exist, the plan phase failed to persist it; create it now before proceeding.
 
 As you complete each criterion:
 - Tick `[x]` on the criterion when its test goes green. **Do this immediately. Do not batch check-offs for later.**
@@ -74,10 +74,10 @@ Before handing off to review, re-read the persisted task brief and verify:
 3. Any decisions made during implementation are recorded in the Decisions table.
 **Do not skip this step.** The review phase relies on the task brief being accurate.
 
-## Hand off to /minime:review with
+## Hand off to /minime:inspect with
 - the diff
 - every test and its real, pasted output
 - assumptions made, and any out-of-scope work discovered
 - the path to the persisted task brief (with checkmarks updated)
 
-**Explicit next step: now invoke `skill("review")`** to get an evidence-based review.
+**Explicit next step: now invoke `skill("inspect")`** to get an evidence-based review.

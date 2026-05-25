@@ -5,7 +5,7 @@ See `ORCHESTRATION.md` for the four phases.
 The empirical basis is in `.agent/research/REFERENCES.md`.
 
 Skills are provided by the `minime` Claude Code plugin. Invoke them as
-`/minime:plan`, `/minime:implement`, `/minime:review`, `/minime:harvest`.
+`/minime:blueprint`, `/minime:replicate`, `/minime:inspect`, `/minime:extract`.
 
 ## Style rules
 

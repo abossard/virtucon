@@ -53,7 +53,7 @@
       },
       {
         "command": "minime.openMinimeHome",
-        "title": "Minime: Open MINIME_HOME Folder"
+        "title": "Minime: Open Virtucon HQ Folder"
       },
       {
         "command": "minime.openLatestTask",
@@ -80,7 +80,7 @@
         "minime.home": {
           "type": "string",
           "default": "",
-          "description": "Override MINIME_HOME path. Falls back to env MINIME_HOME, then ~/.minime."
+          "description": "Override VIRTUCON_HQ path. Falls back to env VIRTUCON_HQ, then ~/.minime."
         }
       }
     }

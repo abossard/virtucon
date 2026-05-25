@@ -1,12 +1,18 @@
 {
   "name": "minime",
-  "description": "Evidence-based agent orchestration. Four skills (plan / implement / review / harvest) collapse a brainstorm-plan-code-review pipeline into one tiered human gate, plus a director agent that drives the flow end-to-end and a read-only reviewer subagent that runs review in a fresh context to remove implementation bias. Ships an init skill that bootstraps the per-repo files into any target repo.",
-  "version": "0.2.15",
+  "description": "Evidence-based agent orchestration. Four skills (blueprint / replicate / inspect / extract) collapse a brainstorm-plan-code-review pipeline into one tiered human gate, plus a dr-evil agent that drives the flow end-to-end and a frau subagent that runs inspection with full tool access in a fresh context to remove implementation bias. Ships a lab skill that bootstraps the per-repo files into any target repo.",
+  "version": "0.2.16",
   "author": {
     "name": "abossard"
   },
   "homepage": "https://github.com/abossard/minime",
   "repository": "https://github.com/abossard/minime",
   "license": "MIT",
-  "keywords": ["orchestration", "agent-skills", "workflow", "review", "evidence-based"]
+  "keywords": [
+    "orchestration",
+    "agent-skills",
+    "workflow",
+    "inspection",
+    "evidence-based"
+  ]
 }
