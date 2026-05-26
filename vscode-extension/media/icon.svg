@@ -1,3 +1,26 @@
 <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <path fill-rule="evenodd" clip-rule="evenodd" d="M4 2h11l5 5v15H4V2zm11 1.5V7h3.5L15 3.5zM6 4v16h12V8h-4V4H6zm2 7h8v1H8v-1zm0 3h8v1H8v-1zm0 3h5v1H8v-1z" fill="#C5C5C5"/>
+  <!-- antenna stalk -->
+  <line x1="12" y1="1" x2="12" y2="5" stroke="#C5C5C5" stroke-width="1.4" stroke-linecap="round"/>
+  <!-- antenna glow -->
+  <circle cx="12" cy="1" r="1.8" fill="#00CFFF" opacity="0.35"/>
+  <circle cx="12" cy="1" r="1" fill="#00CFFF"/>
+  <!-- head -->
+  <rect x="3.5" y="5" width="17" height="13" rx="4.5" fill="none" stroke="#C5C5C5" stroke-width="1.6"/>
+  <!-- visor band -->
+  <rect x="5.5" y="9.5" width="13" height="5" rx="2.5" fill="#C5C5C5" opacity="0.12"/>
+  <!-- left eye -->
+  <circle cx="8.8" cy="12" r="2.3" fill="none" stroke="#00CFFF" stroke-width="1.3"/>
+  <circle cx="8.8" cy="12" r="1" fill="#00CFFF"/>
+  <!-- right eye -->
+  <circle cx="15.2" cy="12" r="2.3" fill="none" stroke="#00CFFF" stroke-width="1.3"/>
+  <circle cx="15.2" cy="12" r="1" fill="#00CFFF"/>
+  <!-- smirk -->
+  <path d="M9.5 16.2 Q12 18 14.5 16.2" stroke="#C5C5C5" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+  <!-- ears/bolts -->
+  <circle cx="2.2" cy="12" r="1.2" fill="#C5C5C5" opacity="0.5"/>
+  <circle cx="21.8" cy="12" r="1.2" fill="#C5C5C5" opacity="0.5"/>
+  <!-- body hint -->
+  <rect x="8" y="19.5" width="8" height="3.5" rx="1.5" fill="none" stroke="#C5C5C5" stroke-width="1.2"/>
+  <!-- body glow line -->
+  <line x1="10" y1="21.2" x2="14" y2="21.2" stroke="#00CFFF" stroke-width="0.8" stroke-linecap="round" opacity="0.6"/>
 </svg>
