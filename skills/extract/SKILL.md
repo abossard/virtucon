@@ -17,9 +17,9 @@ Session-based harvest: when invoked without a recent merge, harvest should look 
 - Patterns discovered during implementation that are reusable.
 These still require code citations to be persisted. If a lesson references code, cite it; if it's purely process knowledge, note it as a candidate for the director's project memory instead.
 
-## Learn from the task brief's evolution
+## Learn from the blueprint's evolution
 
-Read the persisted task brief at `VIRTUCON_HQ/<org>/_<repo>/tasks/<date>-<name>.task.md`. It contains:
+Read the persisted blueprint at `VIRTUCON_HQ/<org>/_<repo>/blueprints/<date>-<name>.blueprint.md`. It contains:
 - **Decisions table**: how unknowns were resolved and at what VOI level.
 - **Discovered during review**: criteria that were missing from the original EARS.
 - **User feedback**: verbatim user corrections and steering.
@@ -68,7 +68,7 @@ Derive `<org>` and `<repo>` from `git remote get-url origin`. Use VIRTUCON_HQ fr
 ## Step 2: What to capture
 
 1. **Corrections (priority).** Anything the human changed, rejected, or sent back during review. Each becomes one entry. The before/after IS the lesson.
-2. **Research candidates from plan.** Read the task brief's `## Research resolved` section. Each entry is a wiki candidate produced when plan resolved a "needs-research" VOI item. Evaluate each using the write-filtering policy: actionability, reusability, evidence quality, novelty. Persist worthy ones as new wiki entries. Reject the rest and include the count in the run summary.
+2. **Research candidates from blueprint.** Read the blueprint's `## Research resolved` section. Each entry is a wiki candidate produced when the blueprint skill resolved a "needs-research" VOI item. Evaluate each using the write-filtering policy: actionability, reusability, evidence quality, novelty. Persist worthy ones as new wiki entries. Reject the rest and include the count in the run summary.
 3. **Stale entries** flagged by `/minime:blueprint` during its citation check. Fix or delete them.
 4. **Episodic notes**: an approach that failed and why ("tried X, broke Y").
 5. Skip anything already covered. No duplicates.
@@ -114,8 +114,10 @@ When invoked with a lint request, perform a health check on `VIRTUCON_HQ/<org>/_
 3. **Orphan entries.** Scope globs matching zero files, or cited files that no longer exist. Check `git log --name-status --diff-filter=R` for renames before marking stale.
 4. **Duplicates.** Overlapping triggers and similar rules. Candidates for merge.
 5. **Coverage gaps.** Directories touched in recent commits with no scoped wiki entries.
-6. **Research candidates.** Evaluate task brief's `## Research resolved` entries using write-filtering policy.
+6. **Research candidates.** Evaluate blueprint's `## Research resolved` entries using write-filtering policy.
 
 Produce a lint report with counts per category and actions taken. Split actions:
 - **Auto-fix:** mark stale, update LastVerified, flag orphan scopes.
 - **Report-only:** merge duplicates, delete entries, supersede contradictions, create from research candidates.
+
+Follow context-engineering guidance in `assets/ORCHESTRATION.md` § Context engineering.

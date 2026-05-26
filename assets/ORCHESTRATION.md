@@ -48,3 +48,11 @@ Full citations: `.agent/research/REFERENCES.md`.
 ```
 
 Blueprint accepts inline conversation context directly. Each skill explicitly tells the agent which skill to invoke next (explicit chaining).
+
+## Context engineering (applies to all phases)
+
+Context accumulates linearly; cumulative input processed over turns grows quadratically. Keep it lean:
+- **Phase isolation**: dr-evil dispatches each phase in a fresh subagent. The blueprint on disk is the sole cross-phase state bus.
+- **Targeted reads**: prefer `view_range` over full file views for known-large files. Use `grep` with `output_mode: "files_with_matches"` before `"content"`.
+- **Research delegation**: dispatch `general-purpose` subagents. Return contracts: evidence first (raw proof, URLs, exact quotes, code paths), then citations, then ≤5 bullets of conclusions. No statements without backing evidence.
+- **Persist evidence to disk**: write test outputs, plans, and resolved unknowns into the blueprint — not just into chat context.

@@ -17,15 +17,15 @@ Browse and search [minime](https://github.com/abossard/virtucon) agent orchestra
 MINIME
 +-- [org] abossard
 |   +-- [repo] well-architected-pr
-|   |   +-- Tasks (3)
+|   |   +-- Blueprints (3)
 |   |   |   +-- [done] pr3194-review-comments  2026-05-20 | 20/20
 |   |   +-- Wiki (5)
 |   |       +-- [verified] VdjDeckModel signals...
 |   +-- [repo] minime
-|       +-- Tasks (1)
+|       +-- Blueprints (1)
 |       +-- Wiki (0)
 +-- Templates
-    +-- task.template.md
+    +-- blueprint.template.md
 ```
 
 ## Commands

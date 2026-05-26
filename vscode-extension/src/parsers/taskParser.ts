@@ -17,7 +17,7 @@ export function parseTaskFile(filePath: string): MinimeTask | undefined {
 }
 
 export function parseTaskContent(content: string, filePath: string): MinimeTask | undefined {
-  const ext = filePath.endsWith('.task.md') ? '.task.md' : '.md';
+  const ext = filePath.endsWith('.blueprint.md') ? '.blueprint.md' : filePath.endsWith('.task.md') ? '.task.md' : '.md';
   const fileName = path.basename(filePath, ext);
   const dateMatch = fileName.match(/^(\d{4}-\d{2}-\d{2})-(.+)$/);
 

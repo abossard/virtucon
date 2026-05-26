@@ -22,17 +22,18 @@ If the harness supports explicit model selection, prefer the strongest available
 - LLM critics using evidence-anchored format outperform human reviewers in hybrid teams (CriticGPT, arXiv:2407.00215).
 - OneFlow (arXiv:2601.12307) shows homogeneous multi-agent can be collapsed into single-agent multi-turn without accuracy loss. The frau fork is kept because it serves bias removal (fresh context eliminates sunk-cost blindness), not role specialization. The DeepMind 2025 finding that biased assistance hurts skilled reviewers is the stronger argument.
 
-## Step 1: Validate task brief integrity
+## Step 1: Validate blueprint integrity
 
-Read the persisted task brief. Before verifying criteria, check:
+Read the persisted blueprint. Before verifying criteria, check:
 - Does every criterion with passing test evidence have `[x]`? If not, flag it as a process gap.
 - Is the `Status:` field consistent with the actual state? (e.g., all criteria done but status still says `planning`)
 - Are the Decisions table entries filled in?
+- Does the blueprint have an `## Evidence collected` section from replicate? If yes, use it as a starting point — but always re-verify independently.
 Report any mismatches in the evidence package under "Process gaps".
 
 ## Step 2: Verify each EARS criterion against evidence
 
-Read the persisted task brief (`VIRTUCON_HQ/<org>/_<repo>/tasks/<date>-<name>.task.md`).
+Read the persisted blueprint (`VIRTUCON_HQ/<org>/_<repo>/blueprints/<date>-<name>.blueprint.md`).
 
 ### Review contract (adapted from openclaw's autoreview)
 
@@ -55,7 +56,7 @@ This is the Fagan exit-criteria approach: verify the low-level artifact (code) a
 ## Step 3: Backfill discovered criteria into the EARS
 
 If the review surfaces requirements that should have been in the original EARS:
-- Append to the "Discovered during review" section of the task brief with `- [ ]` checkbox and VOI level.
+- Append to the "Discovered during review" section of the blueprint with `- [ ]` checkbox and VOI level.
 - If the human provides feedback, append their exact words verbatim to "User feedback". Do NOT paraphrase.
 
 ## Step 4: Gather the full change set
@@ -98,7 +99,7 @@ The package contains ONLY:
 4. **Assumptions made** plain list.
 5. **Least-sure points** 2-3 specific lines/decisions as questions. State uncertainty, do NOT resolve it.
 6. **Out-of-scope work discovered** if any.
-7. **Process gaps** any task brief integrity issues found in Step 1.
+7. **Process gaps** any blueprint integrity issues found in Step 1.
 
 **Evidence-first principle.** Present raw data (test output, command output, diff) FIRST. Label any analysis or interpretation separately and after the raw evidence. Data outranks interpretation. If they conflict, the data wins.
 
@@ -111,3 +112,5 @@ FORBIDDEN: "this looks correct / LGTM / safe to merge / I'm confident", any verd
 
 ## Step 8
 After the human decides, **invoke `skill("extract")`** to capture lessons from this task.
+
+Follow context-engineering guidance in `assets/ORCHESTRATION.md` § Context engineering.

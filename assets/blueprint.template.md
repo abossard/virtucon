@@ -1,4 +1,4 @@
-# Task: <short-name>
+# Blueprint: <short-name>
 
 Created: <date>  |  Status: planning  |  Repo: <org/repo>
 
@@ -51,6 +51,6 @@ re-injects these mid-implementation, so be concrete.>
 
 ---
 **Principles**: preserve raw user words, derive actions separately, assess with evidence.
-This file lives at `VIRTUCON_HQ/<org>/_<repo>/tasks/<date>-<short-name>.task.md` and
-evolves through plan -> implement -> review -> harvest. Checkmarks track progress;
+This file lives at `VIRTUCON_HQ/<org>/_<repo>/blueprints/<date>-<short-name>.blueprint.md` and
+evolves through blueprint -> replicate -> inspect -> extract. Checkmarks track progress;
 VOI levels track how each unknown was resolved.

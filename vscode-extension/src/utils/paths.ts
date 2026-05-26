@@ -59,7 +59,7 @@ function getOrCreateRepo(org: MinimeOrg, repoName: string, repoPath: string): Mi
 }
 
 /**
- * Scan new convention: <org>/_<repo>/tasks/ and <org>/_<repo>/wiki.md
+ * Scan new convention: <org>/_<repo>/blueprints/ (and legacy tasks/) and <org>/_<repo>/wiki.md
  */
 function scanNewConvention(minimeHome: string, orgMap: Map<string, MinimeOrg>): void {
   const entries = safeReaddir(minimeHome);
@@ -83,15 +83,17 @@ function scanNewConvention(minimeHome: string, orgMap: Map<string, MinimeOrg>): 
       const org = getOrCreateOrg(orgMap, orgName, orgPath);
       const repo = getOrCreateRepo(org, repoName, repoPath);
 
-      // Scan tasks
-      const tasksDir = path.join(repoPath, 'tasks');
-      if (isDirectory(tasksDir)) {
-        const taskFiles = safeReaddir(tasksDir).filter(f => f.endsWith('.md'));
-        for (const taskFile of taskFiles) {
-          const taskPath = path.join(tasksDir, taskFile);
-          const task = parseTaskFile(taskPath);
-          if (task && !repo.tasks.find(t => t.shortName === task.shortName)) {
-            repo.tasks.push(task);
+      // Scan blueprints (new convention) and tasks (backward compat)
+      for (const dirName of ['blueprints', 'tasks']) {
+        const bpDir = path.join(repoPath, dirName);
+        if (isDirectory(bpDir)) {
+          const bpFiles = safeReaddir(bpDir).filter(f => f.endsWith('.md'));
+          for (const bpFile of bpFiles) {
+            const bpPath = path.join(bpDir, bpFile);
+            const task = parseTaskFile(bpPath);
+            if (task && !repo.tasks.find(t => t.shortName === task.shortName)) {
+              repo.tasks.push(task);
+            }
           }
         }
       }
@@ -201,5 +203,5 @@ function isDirectory(p: string): boolean {
 }
 
 function isSpecialDir(name: string): boolean {
-  return ['templates', 'tasks', 'wiki'].includes(name);
+  return ['templates', 'tasks', 'blueprints', 'wiki'].includes(name);
 }

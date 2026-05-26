@@ -88,7 +88,7 @@ describe('paths', () => {
       const orgs = scanMinimeHome(FIXTURES);
       const latest = findLatestTask(orgs);
       assert.ok(latest);
-      assert.strictEqual(latest.date, '2026-05-20');
+      assert.strictEqual(latest.date, '2026-05-26');
     });
   });
 });

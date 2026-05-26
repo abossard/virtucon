@@ -1,6 +1,6 @@
 ---
 name: lab
-description: Bootstrap minime user-home state only (no repository writes). Creates task template and wiki files under VIRTUCON_HQ (defaults to $HOME/.minime) for plugin-only operation.
+description: Bootstrap minime user-home state only (no repository writes). Creates blueprint template and wiki files under VIRTUCON_HQ (defaults to $HOME/.minime) for plugin-only operation.
 when_to_use: First-time setup of the minime flow. Run once per machine/profile. Idempotent. Safe to re-run.
 disable-model-invocation: true
 allowed-tools: Bash(git remote get-url *) Bash(cp *) Bash(mkdir *) Bash(ls *) Bash(test *) Bash(sed *) Bash(cat *)
@@ -13,11 +13,11 @@ Bootstrap minime in plugin-only mode. The session-start hook now auto-bootstraps
 ## What gets created in user home
 
 ```
-VIRTUCON_HQ/templates/task.template.md   (per-task EARS task brief template)
+VIRTUCON_HQ/templates/blueprint.template.md   (per-task EARS blueprint template)
 VIRTUCON_HQ/_TEMPLATE.md                 (wiki entry template)
 VIRTUCON_HQ/<org>/wiki.md                (org-level wiki)
 VIRTUCON_HQ/<org>/_<repo>/wiki.md        (repo wiki)
-VIRTUCON_HQ/<org>/_<repo>/tasks/         (persisted living task briefs)
+VIRTUCON_HQ/<org>/_<repo>/blueprints/    (persisted living blueprints)
 ```
 
 ## Bootstrap
@@ -55,11 +55,11 @@ copy_if_missing() {
   fi
 }
 
-copy_if_missing "$ASSETS/task.template.md"         "$VIRTUCON_HQ/templates/task.template.md"
+copy_if_missing "$ASSETS/blueprint.template.md"         "$VIRTUCON_HQ/templates/blueprint.template.md"
 copy_if_missing "$ASSETS/.agent/wiki/_TEMPLATE.md" "$VIRTUCON_HQ/_TEMPLATE.md"
 
 if [ -n "$ORG" ] && [ -n "$REPO" ]; then
-  mkdir -p "$VIRTUCON_HQ/$ORG/_$REPO/tasks"
+  mkdir -p "$VIRTUCON_HQ/$ORG/_$REPO/blueprints"
 
   REPO_WIKI="$VIRTUCON_HQ/$ORG/_$REPO/wiki.md"
   ORG_WIKI="$VIRTUCON_HQ/$ORG/wiki.md"

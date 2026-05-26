@@ -49,11 +49,11 @@ function ensureBootstrap(orgRepo) {
     }
   };
 
-  copyIfMissing(path.join(assets, 'task.template.md'), path.join(templateDir, 'task.template.md'));
+  copyIfMissing(path.join(assets, 'blueprint.template.md'), path.join(templateDir, 'blueprint.template.md'));
   copyIfMissing(path.join(assets, '.agent', 'wiki', '_TEMPLATE.md'), path.join(VIRTUCON_HQ, '_TEMPLATE.md'));
 
   if (orgRepo) {
-    const repoDir = path.join(VIRTUCON_HQ, orgRepo.org, `_${orgRepo.repo}`, 'tasks');
+    const repoDir = path.join(VIRTUCON_HQ, orgRepo.org, `_${orgRepo.repo}`, 'blueprints');
     fs.mkdirSync(repoDir, { recursive: true });
     const repoWiki = path.join(VIRTUCON_HQ, orgRepo.org, `_${orgRepo.repo}`, 'wiki.md');
     const orgWiki = path.join(VIRTUCON_HQ, orgRepo.org, 'wiki.md');
@@ -99,7 +99,7 @@ function buildNudge(orgRepo) {
     '**Minime paths (single source of truth. Do not hardcode; use these):**',
     `  VIRTUCON_HQ=${VIRTUCON_HQ}`,
     `  Templates: ${VIRTUCON_HQ}/templates/`,
-    `  Tasks:     ${VIRTUCON_HQ}/${org}/_${repo}/tasks/`,
+    `  Blueprints: ${VIRTUCON_HQ}/${org}/_${repo}/blueprints/`,
     `  Repo wiki: ${VIRTUCON_HQ}/${org}/_${repo}/wiki.md`,
     `  Org wiki:  ${VIRTUCON_HQ}/${org}/wiki.md`,
     `  Template:  ${VIRTUCON_HQ}/_TEMPLATE.md`,
@@ -112,9 +112,9 @@ function buildNudge(orgRepo) {
     '- After implementation, invoke skill("inspect") to get an evidence-based review.',
     '- After merge or session end, invoke skill("extract") to capture lessons.',
     '- For the full autopilot flow, use the minime:dr-evil agent.',
-    '- plan accepts inline task descriptions. No task.md file is required.',
+    '- blueprint accepts inline context. No separate task file is required.',
     '',
-    'Skill chaining: plan -> implement -> review -> harvest.',
+    'Skill chaining: blueprint -> replicate -> inspect -> extract.',
     'Each skill will tell you which skill to invoke next.',
     '</minime-workflow-nudge>',
   ].join('\n');

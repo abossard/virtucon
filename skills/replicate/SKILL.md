@@ -1,6 +1,6 @@
 ---
 name: replicate
-description: Replicate a planned task in a tight test-driven loop. Generate -> run -> observe REAL output -> fix. Re-injects task-brief constraints after context compaction or when switching focus. No human review gate.
+description: Replicate a planned task in a tight test-driven loop. Generate -> run -> observe REAL output -> fix. Re-injects blueprint constraints after context compaction or when switching focus. No human review gate.
 when_to_use: After /minime:blueprint has handed off, or whenever the user wants the implementation loop with grounded test execution.
 allowed-tools: Read Edit Write Grep Glob Bash
 ---
@@ -9,15 +9,17 @@ allowed-tools: Read Edit Write Grep Glob Bash
 
 Trigger: `/minime:blueprint` has handed off, or the user invoked you directly with an existing plan. **No human review gate.** Quality here comes from a tight execution-grounded loop, not from human checkpoints.
 
-## Living task brief
+## Living blueprint
 
-Locate the persisted task brief at `VIRTUCON_HQ/<org>/_<repo>/tasks/<date>-<name>.task.md` (VIRTUCON_HQ is in the session nudge). **Read the file at the start of this phase to confirm it exists.** If it does not exist, the plan phase failed to persist it; create it now before proceeding.
+Locate the persisted blueprint at `VIRTUCON_HQ/<org>/_<repo>/blueprints/<date>-<name>.blueprint.md` (VIRTUCON_HQ is in the session nudge). **Read the file at the start of this phase to confirm it exists.** If it does not exist, the blueprint phase failed to persist it; create it now before proceeding.
 
 As you complete each criterion:
 - Tick `[x]` on the criterion when its test goes green. **Do this immediately. Do not batch check-offs for later.**
-- Add a reference to the test or the verbatim output or links to it with current date and time.
+- Paste raw shortened evidence (command output, test result, key lines) directly under the criterion line. Every `[x]` must have its proof inline — a checkmark without evidence is not a checkmark.
 - If you resolve an unknown during implementation, add it to the Decisions table with its VOI level and source.
 - If you discover a requirement not in the original EARS, note it but do NOT add it to the criteria. That's review's job.
+
+Follow context-engineering guidance in `assets/ORCHESTRATION.md` § Context engineering.
 
 ## What counts as evidence
 
@@ -59,29 +61,29 @@ Repeat per acceptance criterion:
 
 ## Constraint re-injection
 
-Re-read the "Constraints / non-negotiables" and "Out of scope" sections of the task brief:
+Re-read the "Constraints / non-negotiables" and "Out of scope" sections of the blueprint:
 - **(a)** after every context compaction event,
 - **(b)** when switching to a new acceptance criterion,
 - **(c)** when entering a directory for the first time.
 If in doubt, re-read. Rules decay across long loops unless refreshed.
 
 ## Scope discipline
-- Touch only what the task brief and plan require. If you discover necessary work outside scope, note it for the evidence package. Do not silently expand.
-- Keep the diff as small as the task brief allows. Small diffs are cheap to verify; large diffs force the reviewer to re-solve instead of check.
+- Touch only what the blueprint and plan require. If you discover necessary work outside scope, note it for the evidence package. Do not silently expand.
+- Keep the diff as small as the blueprint allows. Small diffs are cheap to verify; large diffs force the reviewer to re-solve instead of check.
 - **Evidence over interpretation.** Paste raw test output, command output, and observable data. Label any interpretation separately. Never summarize evidence without showing it first.
 
 ## Pre-handoff checkpoint (mandatory)
 
-Before handing off to review, re-read the persisted task brief and verify:
+Before handing off to review, re-read the persisted blueprint and verify:
 1. Every criterion whose test is green has `[x]` in the file. If any are missing, edit the file now.
 2. The `Status:` field reflects the current state (e.g., `implementing` -> `implemented`).
 3. Any decisions made during implementation are recorded in the Decisions table.
-**Do not skip this step.** The review phase relies on the task brief being accurate.
+4. Write a `## Evidence collected` section to the blueprint referencing: all test commands run (with raw shortened output — not summaries), files changed, and assumptions made. This collects evidence in one place ON TOP of the inline proof under each criterion. This ensures inspect can evaluate from disk without needing chat context from this phase.
+**Do not skip this step.** The review phase relies on the blueprint being accurate.
 
 ## Hand off to /minime:inspect with
+- the path to the persisted blueprint (with checkmarks and evidence updated)
 - the diff
-- every test and its real, pasted output
 - assumptions made, and any out-of-scope work discovered
-- the path to the persisted task brief (with checkmarks updated)
 
 **Explicit next step: now invoke `skill("inspect")`** to get an evidence-based review.

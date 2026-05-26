@@ -105,6 +105,16 @@ A test task still in planning phase.
       assert.strictEqual(task.goal, 'Three bugs discovered.');
     });
 
+    it('should parse .blueprint.md extension correctly', () => {
+      const content = `# Blueprint: fixture-blueprint\n\nCreated: 2026-05-26  |  Status: planning  |  Repo: test-org/test-repo\n\n## Goal\nA test blueprint.\n\n## Acceptance criteria\n\n- [ ] C1\n- [x] C2`;
+      const task = parseTaskContent(content, '/fake/2026-05-26-fixture-blueprint.blueprint.md');
+      assert.ok(task);
+      assert.strictEqual(task.shortName, 'fixture-blueprint');
+      assert.strictEqual(task.date, '2026-05-26');
+      assert.strictEqual(task.totalCriteria, 2);
+      assert.strictEqual(task.checkedCriteria, 1);
+    });
+
     it('should extract status from ## Status: header', () => {
       const content = `# Task\n\n## Status: implemented\n\n## EARS Criteria\n\n- [x] Done`;
       const task = parseTaskContent(content, '/fake/data-persistence.md');

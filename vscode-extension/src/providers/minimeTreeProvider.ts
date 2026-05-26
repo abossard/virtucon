@@ -185,7 +185,7 @@ export class MinimeTreeProvider implements vscode.TreeDataProvider<TreeNodeData>
     const taskCount = repo.tasks.length;
     children.push({
       type: 'tasksFolder',
-      label: `Tasks (${taskCount})`,
+      label: `Blueprints (${taskCount})`,
       repo,
     });
 
