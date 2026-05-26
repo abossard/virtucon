@@ -63,7 +63,7 @@ Use this to harvest process-level lessons:
    - If many candidates are rejected for low value or stale evidence, tighten future write filtering.
 
 ## Step 1: Locate the wikis
-Run `git remote get-url origin`, derive `<org>` and `<repo>`. Supported remote formats: GitHub, GitLab, Bitbucket, Azure DevOps (visualstudio.com, dev.azure.com, ssh.dev.azure.com). For Azure DevOps, org is the subdomain or first path segment; repo is the segment after `_git/`. Open `VIRTUCON_HQ/<org>/_<repo>/wiki.md`. Also check `VIRTUCON_HQ/<org>/wiki.md` for cross-repo rules to avoid duplication.
+Derive `<org>` and `<repo>` from `git remote get-url origin`. Use VIRTUCON_HQ from the session nudge. Open `VIRTUCON_HQ/<org>/_<repo>/wiki.md`. Also check `VIRTUCON_HQ/<org>/wiki.md` for cross-repo rules to avoid duplication.
 
 ## Step 2: What to capture
 
@@ -95,58 +95,27 @@ Do not let the wiki grow unbounded. A bloated wiki buries the useful entry and s
 - Keep repo-specific rules in the repo wiki and cross-repo conventions in the org wiki.
 - Never store secrets, tokens, credentials, or customer data.
 - The wiki holds engineering knowledge, not a changelog.
+- **Platform-native memory bridge:** when the host platform supports `store_memory` (e.g. GitHub Copilot, Claude Code), also store high-value entries (ValueScore >= 6, Confidence: high) into platform-native memory so non-minime sessions benefit from accumulated knowledge. The wiki remains the authoritative source; platform memory is a read-optimized replica.
 
 ## Auto-harvest triggers
 
-Harvest should be invoked (not silently — the director or user triggers it) at these moments:
+Invoke `skill("extract")` at these moments (not silently):
+1. **After LOW-risk review + green tests** (primary trigger).
+2. **After human corrections** during any phase.
+3. **At session end** with uncaptured design decisions or failed approaches.
+4. **After merge/ship.**
 
-1. **After review completes (LOW risk + green):** the review skill hands off to harvest. This is the primary trigger.
-2. **After human corrections:** when the user rejects, corrects, or steers the agent's approach during any phase, the correction is the highest-value signal. The directing agent should invoke harvest before the session ends.
-3. **At session end with uncaptured lessons:** if the session produced design decisions, failed approaches, or discovered patterns that are not yet in the wiki, harvest should run. The director checks: "did this session produce corrections or learnings not yet harvested?"
-4. **After a merge or ship:** when `git push` or a PR merge completes a task, harvest captures what the full cycle taught.
+## Step 5: Wiki lint
 
-These are documented triggers, not automatic silent execution. The directing agent or user invokes `skill("extract")` at these points. Harvest never runs without being called.
+When invoked with a lint request, perform a health check on `VIRTUCON_HQ/<org>/_<repo>/wiki.md`:
 
-## Step 5: Wiki lint (Karpathy compound-knowledge health check)
+1. **Stale citations.** Open cited code locations. If gone or mismatched, mark `Status: stale`.
+2. **Contradictions.** Flag pairs of active entries with conflicting rules.
+3. **Orphan entries.** Scope globs matching zero files, or cited files that no longer exist. Check `git log --name-status --diff-filter=R` for renames before marking stale.
+4. **Duplicates.** Overlapping triggers and similar rules. Candidates for merge.
+5. **Coverage gaps.** Directories touched in recent commits with no scoped wiki entries.
+6. **Research candidates.** Evaluate task brief's `## Research resolved` entries using write-filtering policy.
 
-When invoked with a lint request (user says "lint the wiki", "wiki health check", or harvest is run periodically), perform a structured health check on `VIRTUCON_HQ/<org>/_<repo>/wiki.md`. This is the wiki equivalent of `pnpm check:changed` — prove the wiki is healthy, don't just assume it.
-
-### Lint checklist
-
-Run each check and record findings:
-
-1. **Stale citations.** For every active entry, open the cited code location. If the file/line/symbol no longer exists or the code no longer matches the rule, mark the entry `Status: stale` with today's date.
-2. **Contradictions.** Scan for pairs of active entries whose rules conflict (e.g., one says "use floats", another says "use integers for money"). Flag contradictions with both entry names and the conflicting statements.
-3. **Orphan entries.** Two kinds: (a) *Scope orphans*: entries whose `Scope` glob matches zero current files or directories. (b) *Evidence orphans*: entries whose cited file or symbol no longer exists, even if the scope still matches. For renamed/moved files, check `git log --name-status --diff-filter=R` to suggest the likely new path before marking stale.
-4. **Duplicate / near-duplicate entries.** Entries with overlapping triggers and similar rules. Candidates for consolidation.
-5. **Missing coverage gaps.** Directories with significant code that have no scoped wiki entries. Not every directory needs one, but flag directories that have been touched in recent tasks (check `git log --name-only` for last 10 commits) and have no wiki guidance.
-6. **Research candidates.** Check the task brief's `## Research resolved` section (written by plan). Evaluate each candidate using the write-filtering policy. Persist worthy ones as new wiki entries.
-
-### Lint report
-
-After running all checks, produce a lint report:
-
-```
-Wiki lint: <repo> (<date>)
-- Entries scanned: <N>
-- Stale: <N> (list names)
-- Contradictions: <N> (list pairs)
-- Orphans: <N> (list names)
-- Duplicates: <N> (list candidates for merge)
-- Coverage gaps: <N> (list directories)
-- Research candidates filed: <N> (list)
-- Actions taken: <list of status changes, merges, new entries>
-```
-
-Act on findings using the existing write-filtering, conflict, decay, and consolidation policies. Lint is an enforcement mode, not a parallel policy. Split actions by safety:
-
-**Auto-fix (safe, objective):**
-- Mark entries `Status: stale` when cited file/symbol no longer exists
-- Update `LastVerified` when citation still matches
-- Flag orphan scopes
-
-**Report-only (requires judgment or human input):**
-- Merge duplicate entries (may lose unique trigger context)
-- Delete entries (irreversible)
-- Supersede contradictions (unless newer better-cited rule is obvious)
-- Create new entries from research candidates (must pass write-filtering policy)
+Produce a lint report with counts per category and actions taken. Split actions:
+- **Auto-fix:** mark stale, update LastVerified, flag orphan scopes.
+- **Report-only:** merge duplicates, delete entries, supersede contradictions, create from research candidates.

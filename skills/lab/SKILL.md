@@ -8,11 +8,7 @@ allowed-tools: Bash(git remote get-url *) Bash(cp *) Bash(mkdir *) Bash(ls *) Ba
 
 # Skill: lab
 
-Bootstrap minime in plugin-only mode.
-
-Run this once after installing the plugin. It initializes state under
-`VIRTUCON_HQ` (defaults to `$HOME/.minime`). It does **not** create, modify, or stage files in the
-current working repository.
+Bootstrap minime in plugin-only mode. The session-start hook now auto-bootstraps on every session, so this skill is rarely needed manually. Use it to force a re-bootstrap or verify state.
 
 ## What gets created in user home
 
@@ -20,7 +16,7 @@ current working repository.
 VIRTUCON_HQ/templates/task.template.md   (per-task EARS task brief template)
 VIRTUCON_HQ/_TEMPLATE.md                 (wiki entry template)
 VIRTUCON_HQ/<org>/wiki.md                (org-level wiki)
-VIRTUCON_HQ/<org>/_<repo>/wiki.md        (repo wiki, created for current repo when detectable)
+VIRTUCON_HQ/<org>/_<repo>/wiki.md        (repo wiki)
 VIRTUCON_HQ/<org>/_<repo>/tasks/         (persisted living task briefs)
 ```
 
@@ -92,8 +88,3 @@ echo
 echo "Initialized plugin-only minime state in $VIRTUCON_HQ"
 echo "No files were written to the working repository."
 ```
-
-## After running
-
-1. Create `task.md` from `VIRTUCON_HQ/templates/task.template.md` (or your own format with EARS-style criteria).
-2. Start the workflow with `/minime:blueprint`.

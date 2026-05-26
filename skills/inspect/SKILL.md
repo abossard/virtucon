@@ -20,6 +20,7 @@ If the harness supports explicit model selection, prefer the strongest available
 - Structured exit-criteria verification outperforms ad-hoc review (Fagan 1976; Porter et al. 1995).
 - Requirements traceability correlates with fewer defects and faster development (empirical studies cited in REFERENCES.md).
 - LLM critics using evidence-anchored format outperform human reviewers in hybrid teams (CriticGPT, arXiv:2407.00215).
+- OneFlow (arXiv:2601.12307) shows homogeneous multi-agent can be collapsed into single-agent multi-turn without accuracy loss. The frau fork is kept because it serves bias removal (fresh context eliminates sunk-cost blindness), not role specialization. The DeepMind 2025 finding that biased assistance hurts skilled reviewers is the stronger argument.
 
 ## Step 1: Validate task brief integrity
 

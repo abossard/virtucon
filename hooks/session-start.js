@@ -2,11 +2,13 @@
 // SessionStart hook for minime plugin.
 // Injects a nudge + canonical paths into the session context so the agent
 // knows minime skills are available and where state lives.
+// Auto-bootstraps VIRTUCON_HQ if paths are missing (absorbs lab skill).
 // Must NEVER fail. Always exits 0 with valid JSON.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = process.env.PLUGIN_ROOT
@@ -15,7 +17,54 @@ const PLUGIN_ROOT = process.env.PLUGIN_ROOT
   || path.resolve(__dirname, '..');
 const VIRTUCON_HQ = process.env.VIRTUCON_HQ || path.join(process.env.HOME || '~', '.minime');
 
-function buildNudge() {
+function deriveOrgRepo() {
+  try {
+    const origin = execSync('git remote get-url origin 2>/dev/null', { encoding: 'utf8' }).trim();
+    if (!origin) return null;
+    const cleaned = origin
+      .replace(/^https?:\/\/([^.]+)\.visualstudio\.com\/.+\/_git\/(.+)$/, '$1/$2')
+      .replace(/^https?:\/\/dev\.azure\.com\/([^/]+)\/.+\/_git\/(.+)$/, '$1/$2')
+      .replace(/^git@ssh\.dev\.azure\.com:v3\/([^/]+)\/[^/]+\/(.+)$/, '$1/$2')
+      .replace(/^.*github\.com[:/]/, '')
+      .replace(/^.*gitlab\.com[:/]/, '')
+      .replace(/^.*bitbucket\.org[:/]/, '')
+      .replace(/\.git$/, '');
+    const parts = cleaned.split('/');
+    const org = parts[0] || 'local';
+    const repo = parts[1] || org;
+    return { org, repo };
+  } catch {
+    return null;
+  }
+}
+
+function ensureBootstrap(orgRepo) {
+  const assets = path.join(PLUGIN_ROOT, 'assets');
+  const templateDir = path.join(VIRTUCON_HQ, 'templates');
+  fs.mkdirSync(templateDir, { recursive: true });
+
+  const copyIfMissing = (src, dst) => {
+    if (!fs.existsSync(dst) && fs.existsSync(src)) {
+      fs.copyFileSync(src, dst);
+    }
+  };
+
+  copyIfMissing(path.join(assets, 'task.template.md'), path.join(templateDir, 'task.template.md'));
+  copyIfMissing(path.join(assets, '.agent', 'wiki', '_TEMPLATE.md'), path.join(VIRTUCON_HQ, '_TEMPLATE.md'));
+
+  if (orgRepo) {
+    const repoDir = path.join(VIRTUCON_HQ, orgRepo.org, `_${orgRepo.repo}`, 'tasks');
+    fs.mkdirSync(repoDir, { recursive: true });
+    const repoWiki = path.join(VIRTUCON_HQ, orgRepo.org, `_${orgRepo.repo}`, 'wiki.md');
+    const orgWiki = path.join(VIRTUCON_HQ, orgRepo.org, 'wiki.md');
+    copyIfMissing(path.join(assets, '.agent', 'wiki', '_TEMPLATE.md'), repoWiki);
+    if (!fs.existsSync(orgWiki)) {
+      fs.writeFileSync(orgWiki, `# Wiki: ${orgRepo.org} (org-level)\n\nShared cross-repo lessons for org "${orgRepo.org}".\n`);
+    }
+  }
+}
+
+function buildNudge(orgRepo) {
   const skills = [];
   const skillsDir = path.join(PLUGIN_ROOT, 'skills');
   try {
@@ -40,6 +89,9 @@ function buildNudge() {
     .map((s) => `  - **minime:${s.name}**: ${s.desc}`)
     .join('\n');
 
+  const org = orgRepo ? orgRepo.org : '<org>';
+  const repo = orgRepo ? orgRepo.repo : '<repo>';
+
   return [
     '<minime-workflow-nudge>',
     'You have **minime** orchestration skills installed.',
@@ -47,9 +99,9 @@ function buildNudge() {
     '**Minime paths (single source of truth. Do not hardcode; use these):**',
     `  VIRTUCON_HQ=${VIRTUCON_HQ}`,
     `  Templates: ${VIRTUCON_HQ}/templates/`,
-    `  Tasks:     ${VIRTUCON_HQ}/<org>/_<repo>/tasks/`,
-    `  Repo wiki: ${VIRTUCON_HQ}/<org>/_<repo>/wiki.md`,
-    `  Org wiki:  ${VIRTUCON_HQ}/<org>/wiki.md`,
+    `  Tasks:     ${VIRTUCON_HQ}/${org}/_${repo}/tasks/`,
+    `  Repo wiki: ${VIRTUCON_HQ}/${org}/_${repo}/wiki.md`,
+    `  Org wiki:  ${VIRTUCON_HQ}/${org}/wiki.md`,
     `  Template:  ${VIRTUCON_HQ}/_TEMPLATE.md`,
     '',
     'Available skills:',
@@ -69,14 +121,16 @@ function buildNudge() {
 }
 
 function main() {
-  const nudge = buildNudge();
+  // Auto-bootstrap VIRTUCON_HQ if needed
+  const orgRepo = deriveOrgRepo();
+  try {
+    ensureBootstrap(orgRepo);
+  } catch {
+    // non-fatal: bootstrap failure should never block session start
+  }
 
-  // Output format varies by platform:
-  // - Copilot CLI: reads `additionalContext` at top level
-  // - Claude Code: reads `hookSpecificOutput.additionalContext`
-  // - Cursor: reads `additional_context`
-  // - VS Code Copilot: reads `additionalContext` at top level
-  // We emit all formats so the nudge works everywhere.
+  const nudge = buildNudge(orgRepo);
+
   const output = {
     additionalContext: nudge,
     additional_context: nudge,

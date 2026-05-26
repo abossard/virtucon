@@ -1,11 +1,7 @@
 # Claude Code instructions
 
-This repo uses the **minime** agent orchestration flow.
-See `ORCHESTRATION.md` for the four phases.
-The empirical basis is in `.agent/research/REFERENCES.md`.
-
-Skills are provided by the `minime` Claude Code plugin. Invoke them as
-`/minime:blueprint`, `/minime:replicate`, `/minime:inspect`, `/minime:extract`.
+This repo is the **minime** agent orchestration plugin.
+See `assets/ORCHESTRATION.md` for the flow and `assets/.agent/research/REFERENCES.md` for citations.
 
 ## Style rules
 

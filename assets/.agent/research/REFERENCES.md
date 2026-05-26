@@ -36,6 +36,14 @@ Findings used by this flow:
 - McAleese et al., "LLM Critics Help Catch LLM Bugs" (2024), arXiv:2407.00215. Evidence-anchored critique format outperforms human review in hybrid teams. -> evidence package format.
 - Porter, Votta & Basili, "Comparing Detection Methods" (IEEE TSE, 1995). Checklist-based review outperforms ad-hoc. -> structured review process.
 
+## 2026 harness and oversight research
+
+- Agent Scaffolding Beats Model Upgrades (Particula, April 2026). Same LLM scored 42% and 78% on SWE-bench depending solely on agent scaffolding; swapping models produced <1.3 point deltas. Harness optimization is 10-20x more impactful than model upgrades. -> validates the four-phase flow as the high-leverage artifact.
+- APA study on AI over-reliance (April 2026). Passive acceptance of AI recommendations diminishes confidence and ownership; active review of evidence maintained both. -> independent validation of evidence-only review.
+- International AI Safety Report 2026 (Bengio et al.). Recommends mandatory evidence review steps in AI-assisted workflows. -> converges with our inspect design.
+- OneFlow: Rethinking Multi-Agent Workflow (Xu et al., arXiv:2601.12307, Jan 2026). Single iteratively-prompted LLM matches homogeneous multi-agent pipelines. Multi-agent overhead justified only when agents use different models/tools/permissions. -> frau fork kept for bias removal (fresh context), not role specialization.
+- AlphaEvolve (DeepMind, May 2026). Uses evidence-based filtering internally for code generation. -> further validation of evidence-anchored review.
+
 ## Decision theory references
 
 - Howard, R. A. (1966), *Information Value Theory*, IEEE SSC-2(1), 22–26. -> VOI gating.

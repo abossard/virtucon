@@ -40,20 +40,20 @@ Five skills + two agents, distributed as a plugin:
 | ![2](https://img.shields.io/badge/-2-E91E63?style=flat-square) | `/minime:replicate` | Test-driven generate → run → observe → fix loop | ✅ |
 | ![3](https://img.shields.io/badge/-3-E91E63?style=flat-square) | `/minime:inspect` | Verify criteria against evidence; route by uncertainty tier | ✅ |
 | ![4](https://img.shields.io/badge/-4-E91E63?style=flat-square) | `/minime:extract` | Capture corrections into the per-repo wiki as cited rules | ✅ |
-| ![⚗️](https://img.shields.io/badge/-⚗️-silver?style=flat-square) | `/minime:lab` | One-time bootstrap of Virtucon HQ (no repo writes) | 🔧 |
+| ![⚗️](https://img.shields.io/badge/-⚗️-silver?style=flat-square) | `/minime:lab` | Bootstrap Virtucon HQ (auto-runs via session-start hook) | 🔧 |
 
 | Agent | Role |
 |---|---|
-| `minime:dr-evil` | 🦹 **Dr. Evil** — Runs the flow end-to-end. Invokes skills in sequence, enforces phase transitions. `claude --agent minime:dr-evil` |
-| `minime:frau` | 👓 **Frau Inspector** — Evidence-gathering inspector. Full tool access for investigation — can run tests, write probes, execute commands. Must not modify implementation code. Forks from `inspect` in a fresh context. |
+| `minime:dr-evil` | 🦹 Runs the flow end-to-end. `claude --agent minime:dr-evil` |
+| `minime:frau` | 👓 Evidence-gathering inspector in fresh context. Full tool access, no implementation writes. |
 
 Runtime state lives in `VIRTUCON_HQ` (defaults to `$HOME/.minime`, overridable via env var).
-The SessionStart hook resolves and injects the canonical paths into every session.
+The SessionStart hook resolves paths, injects them into every session, and auto-bootstraps if needed.
 
 ### 🔐 Subagent policy
 
-- For high-risk or cross-cutting reasoning, prefer stronger models. Fast models are acceptable for mechanical lookups.
-- Give subagents enough tools for the task. `minime:frau` has full tool access for investigation but must not modify the implementation under review.
+- Always use strong, high-reasoning models for subagents. 
+- Give subagents all tools.
 
 ### 📊 Formal VOI policy (decision hygiene)
 
@@ -62,18 +62,10 @@ The SessionStart hook resolves and injects the canonical paths into every sessio
 - When a decision is still needed, present a compact decision packet (options, tradeoffs, risks, default recommendation).
 
 ---
-`/minime:lab` is the only required initialization step.
 
-This initializes `VIRTUCON_HQ` only and does not create or stage files in your repo.
-
-After that, the orchestration is live: describe your task inline or into a file and invoke
-`/minime:blueprint` pointing to it and follow the flow.
-
-### SessionStart hook (auto-nudge)
-
-The plugin ships a `hooks/hooks.json` that injects a nudge into every new session, reminding the
-agent that minime skills are available and should be used for non-trivial tasks. This works
-automatically. No repo-level custom instructions are needed.
+The session-start hook auto-bootstraps `VIRTUCON_HQ` and injects a nudge into every session.
+No repo-level custom instructions are needed. Describe your task inline and invoke
+`/minime:blueprint` to start the flow.
 
 ---
 
@@ -108,16 +100,12 @@ copilot plugin update minime
 
 ### ⚗️ Initialize Virtucon HQ
 
-After plugin install:
+The session-start hook auto-bootstraps `VIRTUCON_HQ` on every session.
+Manual bootstrap is rarely needed:
 
 ```text
 /minime:lab
 ```
-
-The lab skill creates user-home state only:
-- `VIRTUCON_HQ/templates/task.template.md`
-- `VIRTUCON_HQ/<org>/_<repo>/wiki.md`
-- `VIRTUCON_HQ/<org>/wiki.md`
 
 ---
 
@@ -125,45 +113,22 @@ The lab skill creates user-home state only:
 
 Two modes: pick the one that fits the task.
 
-### 🔧 Manual mode (explicit, step-by-step)
+### 🔧 Manual mode (step-by-step)
 
-1. **Per task**: describe your task inline to the agent, it will fill in EARS-style
-   acceptance criteria. **No file required.** Blueprint accepts conversation context directly.
-2. **Start the flow**: `skill("blueprint")`. Reads your task brief (inline or file) and the
-   per-repo wiki, discovers other installed skills, nudges EARS quality when needed,
-   then plans silently and tells you to invoke `skill("replicate")`.
-3. **Replicate**: `skill("replicate")`. Test-first loop, real output observed.
-   Hands off with explicit instruction to invoke `skill("inspect")`.
-4. **Inspect**: `skill("inspect")`. Forks into `minime:frau`
-   (fresh context, full tool access). Checks staged, unstaged, and untracked files.
-   Stages if LOW risk and tests green; otherwise surfaces an evidence package for you.
-5. **Extract**: `skill("extract")` after merge or at session end. Captures lessons
-   from any corrections you made into the wiki, with code citations. Works even
-   without a merge. Session lessons are extractable too.
+1. Describe your task inline. Blueprint accepts conversation context directly.
+2. `skill("blueprint")` -> reads wiki, nudges EARS, plans, hands off to replicate.
+3. `skill("replicate")` -> test-first loop, hands off to inspect.
+4. `skill("inspect")` -> forks into `minime:frau` (fresh context). LOW risk = stage; HIGH = evidence package for you.
+5. `skill("extract")` -> captures lessons into the wiki with code citations.
 
-### 🦹 Autopilot mode (Dr. Evil runs the operation)
-
-Start a session as Dr. Evil:
+### 🦹 Autopilot mode
 
 ```bash
 copilot --agent minime:dr-evil
 ```
 
-Or use /agent to select Dr. Evil:
-
-```text
-/agent
-```
-
-Dr. Evil reads accepts a task description and runs all four phases,
-and stops only when it needs you. This happens either because the inspection came back HIGH-risk (you see the
-evidence package) or because something destructive needs your authorization.
-
-Dr. Evil uses your `project` agent memory to accumulate META-learnings
-about how the flow goes in this repo over time (separate from the per-repo
-corrections wiki, which captures engineering rules).
-
-The full one-page overview is in this repository's `assets/ORCHESTRATION.md`.
+Dr. Evil runs all four phases and stops only for HIGH-risk evidence packages or destructive actions.
+See `assets/ORCHESTRATION.md` for the full flow.
 
 ---
 
@@ -175,8 +140,10 @@ The full one-page overview is in this repository's `assets/ORCHESTRATION.md`.
 |---|---|
 | One human gate, not three | Over-structured multi-agent pipelines did not improve correctness (ClassEval Waterfall ablation). |
 | Tier inspection by uncertainty | Confidence-based hybridization outperformed uniform review (DeepMind 2025). |
-| Inspector surfaces evidence, never a verdict | Showing verdicts caused over-reliance; evidence alone did not (DeepMind 2025). |
+| Inspector surfaces evidence, never a verdict | Showing verdicts caused over-reliance; evidence alone did not (DeepMind 2025, APA 2026). |
 | Per-repo wiki with cited entries | Repo-scoped, citation-verified memories (GitHub Copilot agentic memory 2026). |
+| Harness over model | Same LLM: 42% to 78% on SWE-bench from scaffolding alone (Particula 2026). |
+| Frau fork for bias removal | Homogeneous multi-agent can be collapsed (OneFlow 2026), but fresh context removes sunk-cost blindness. |
 
 **Inspection routes** (matching the image's uncertainty tier):
 

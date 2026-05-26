@@ -11,7 +11,7 @@ Trigger: `/minime:blueprint` has handed off, or the user invoked you directly wi
 
 ## Living task brief
 
-Locate the persisted task brief at `VIRTUCON_HQ/<org>/_<repo>/tasks/<date>-<name>.task.md`. If VIRTUCON_HQ is not in your context, fall back to the env var `VIRTUCON_HQ`, then default to `~/.minime`. **Read the file at the start of this phase to confirm it exists.** If it does not exist, the plan phase failed to persist it; create it now before proceeding.
+Locate the persisted task brief at `VIRTUCON_HQ/<org>/_<repo>/tasks/<date>-<name>.task.md` (VIRTUCON_HQ is in the session nudge). **Read the file at the start of this phase to confirm it exists.** If it does not exist, the plan phase failed to persist it; create it now before proceeding.
 
 As you complete each criterion:
 - Tick `[x]` on the criterion when its test goes green. **Do this immediately. Do not batch check-offs for later.**
@@ -59,7 +59,11 @@ Repeat per acceptance criterion:
 
 ## Constraint re-injection
 
-After context compaction, long pauses, or when switching to a new criterion/file, re-read the "Constraints / non-negotiables" and "Out of scope" sections of the task brief. Rules decay across long loops unless refreshed.
+Re-read the "Constraints / non-negotiables" and "Out of scope" sections of the task brief:
+- **(a)** after every context compaction event,
+- **(b)** when switching to a new acceptance criterion,
+- **(c)** when entering a directory for the first time.
+If in doubt, re-read. Rules decay across long loops unless refreshed.
 
 ## Scope discipline
 - Touch only what the task brief and plan require. If you discover necessary work outside scope, note it for the evidence package. Do not silently expand.
