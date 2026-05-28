@@ -19,7 +19,7 @@ Runs first in the four-phase flow. **No human review gate.** Your plan is an inp
    Use the template from `VIRTUCON_HQ/templates/blueprint.template.md`. Set all criteria as `- [ ]` (unchecked) and assign a VOI level to each:
    - **decided-by-data**: resolvable from code/docs/tests/specs
    - **needs-research**: resolvable but needs evidence gathering
-   - **undecidable-now**: value tradeoff/policy, needs human decision
+   - **undecidable-now**: value tradeoff/policy, needs a human decision through `ask_user`
    This file evolves through all phases and is the cross-phase record.
    If the file already exists (re-planning), edit it in place. Do not create a duplicate.
    **STOP and verify**: read the file back from disk to confirm it was written. If it wasn't, fix the path and retry before proceeding.
@@ -27,9 +27,9 @@ Runs first in the four-phase flow. **No human review gate.** Your plan is an inp
 2. **Accept the blueprint from wherever it lives.**
    - If a blueprint file exists in the working directory, use it.
    - If no blueprint exists but the user gave inline context (conversation text, a pasted description, a table of requirements), use that directly. Do NOT block on a missing file.
-   - If neither exists, ask the user to describe the task or point to a file.
+   - If neither exists, use `ask_user` to request either an inline task description or a file path. Include `evidence` that no usable task source exists yet, `suggestions` with confidence and reasoning, and a `free_text` override.
    **Preserve user words verbatim.** Copy the user's exact original request into the "User's original request" section of the blueprint. Do not paraphrase, reword, or interpret. The raw signal is the ground truth.
-   Then nudge for EARS completeness: if acceptance criteria are vague or non-EARS, ask for a concise refinement using EARS patterns. Nudge, don't block on perfection: ask for the minimum edits needed to make criteria independently testable.
+   Then nudge for EARS completeness: if acceptance criteria are vague or non-EARS, use `ask_user` for the minimum refinement needed. Show the evidence, provide concise suggestions with confidence and reasoning, and include a `free_text` override. Nudge, do not block on perfection.
    **Evidence method (mandatory).** Each criterion MUST include an evidence method, for example: `| Evidence: <how this will be verified>`. The evidence method specifies: (1) what tool or framework, (2) at what boundary (API, CLI, UI accessibility attributes, public interface), (3) what constitutes pass vs fail. If a criterion has no evidence method, BLOCK. Do not proceed until one is defined. Tests must target the user-facing or API boundary, not internal implementation details.
 
 3. **Locate wiki sources (user-home only).** Open `VIRTUCON_HQ/<org>/_<repo>/wiki.md` directly. Also load `VIRTUCON_HQ/<org>/wiki.md` when present. If the repo wiki file is absent, the session-start hook should have created it; tell the user to check their plugin installation.
@@ -44,7 +44,7 @@ Runs first in the four-phase flow. **No human review gate.** Your plan is an inp
    For each open unknown in the blueprint:
    - If it is **decidable-by-data**, resolve it with evidence and record it in the Decisions table.
    - If it is **needs-research**, dispatch `general-purpose` subagents with strict return contracts: evidence first, interpretation second. Return: (1) raw proof — URLs, exact quotes, code paths, command outputs, (2) citations with page/section, (3) then ≤5 bullets of conclusions. No statements without backing evidence. No summaries without raw output. Then record the resolution.
-   - If it is **undecidable-now**, prepare one explicit user decision with options and tradeoffs, then record the outcome.
+   - If it is **undecidable-now**, call `ask_user` as described in `assets/ORCHESTRATION.md` § Ask_user rule. Show the evidence, present options with tradeoffs plus confidence and reasoning, include a `free_text` override, then record the outcome.
    Update the VOI level on each criterion in the persisted blueprint as you resolve unknowns.
 
    **File research answers into the wiki (Karpathy compound-knowledge principle).**

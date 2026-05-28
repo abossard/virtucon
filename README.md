@@ -23,7 +23,7 @@
 **Evidence-based agent orchestration for GitHub Copilot.**
 
 Four phases. One tiered human gate. The gate stays cheap by handing the inspector
-an evidence package instead of a verdict.
+an evidence package instead of a verdict, then using `ask_user` only when human input is truly required.
 
 The core workflow is informed by empirical work (DeepMind 2025, Springer 2026,
 ClassEval). See [`REFERENCES.md`](assets/.agent/research/REFERENCES.md).
@@ -59,7 +59,7 @@ The SessionStart hook resolves paths, injects them into every session, and auto-
 
 - Treat unknowns as **decidable-by-data** first; only escalate true **undecidable-now** tradeoffs to user decisions.
 - Apply a Value-of-Information gate: run additional research only if it is likely to materially change the choice.
-- When a decision is still needed, present a compact decision packet (options, tradeoffs, risks, default recommendation).
+- When a decision is still needed, use `ask_user` with evidence, suggestions, confidence, reasoning, and a free-text override.
 
 ---
 
@@ -118,7 +118,7 @@ Two modes: pick the one that fits the task.
 1. Describe your task inline. Blueprint accepts conversation context directly.
 2. `skill("blueprint")` -> reads wiki, nudges EARS, plans, hands off to replicate.
 3. `skill("replicate")` -> test-first loop, hands off to inspect.
-4. `skill("inspect")` -> forks into `minime:frau` (fresh context). LOW risk = stage; HIGH = evidence package for you.
+4. `skill("inspect")` -> forks into `minime:frau` (fresh context). LOW risk = stage; HIGH = `ask_user` with an evidence package.
 5. `skill("extract")` -> captures lessons into the wiki with code citations.
 
 ### 🦹 Autopilot mode
@@ -127,7 +127,7 @@ Two modes: pick the one that fits the task.
 copilot --agent minime:dr-evil
 ```
 
-Dr. Evil runs all four phases and stops only for HIGH-risk evidence packages or destructive actions.
+Dr. Evil runs all four phases and uses `ask_user` only for HIGH-risk evidence packages or destructive actions.
 See `assets/ORCHESTRATION.md` for the full flow.
 
 ---
@@ -151,7 +151,7 @@ See `assets/ORCHESTRATION.md` for the full flow.
 |---|---|
 | ![LOW](https://img.shields.io/badge/LOW-4CAF50?style=flat-square) | Auto-stage |
 | ![MEDIUM](https://img.shields.io/badge/MEDIUM-FFC107?style=flat-square) | Evidence package |
-| ![HIGH](https://img.shields.io/badge/HIGH-E91E63?style=flat-square) | **You decide** |
+| ![HIGH](https://img.shields.io/badge/HIGH-E91E63?style=flat-square) | `ask_user` evidence package |
 
 Full citations in [`assets/.agent/research/REFERENCES.md`](assets/.agent/research/REFERENCES.md).
 

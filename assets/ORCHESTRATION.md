@@ -40,7 +40,7 @@ Full citations: `.agent/research/REFERENCES.md`.
         │
         ├── risk = LOW  + tests green ─────────────► stage (user commits when ready)
         │
-        └── risk = HIGH ──► YOU review the evidence package only ──► merge / send back
+        └── risk = HIGH  ──► ask_user with evidence package ──► resume
         │
         ▼
   skill("extract")   on every correction you make, writes a cited wiki entry.
@@ -48,6 +48,23 @@ Full citations: `.agent/research/REFERENCES.md`.
 ```
 
 Blueprint accepts inline conversation context directly. Each skill explicitly tells the agent which skill to invoke next (explicit chaining).
+
+## Ask_user rule (applies to all phases)
+
+The session never idles. It either keeps working or calls `ask_user` when input is truly required.
+
+Use `ask_user` only for:
+- genuinely blocking ambiguity after decidable-by-data checks
+- missing sources after research
+- HIGH-risk inspect routing
+- destructive or irreversible actions
+
+Every `ask_user` call must include:
+- `evidence`: raw proof or observations that show why input is needed
+- `suggestions`: options with confidence and reasoning
+- `free_text`: a way for the user to override the listed options
+
+After the response, resume the flow from the current phase or the next required step.
 
 ## Context engineering (applies to all phases)
 

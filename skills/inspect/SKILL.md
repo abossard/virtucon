@@ -8,7 +8,7 @@ agent: minime:frau
 
 # Skill: inspect
 
-Trigger: `/minime:replicate` handed off. This is the ONLY skill in the flow that may reach the human. It does so only for the HIGH-risk slice.
+Trigger: `/minime:replicate` handed off. This is the ONLY skill in the flow that may reach the human. It does so only through `ask_user`, and only for the HIGH-risk slice.
 
 The review forks into a fresh `minime:frau` subagent (`context: fork`).
 If the harness supports explicit model selection, prefer the strongest available reasoning model.
@@ -108,9 +108,9 @@ FORBIDDEN: "this looks correct / LGTM / safe to merge / I'm confident", any verd
 ## Step 7: Route
 
 - **LOW + all tests green** -> invite the user to stage when ready. Then invoke `skill("extract")`.
-- **HIGH** -> present the evidence package and STOP for the human.
+- **HIGH** -> call `ask_user` with the evidence package as described in `assets/ORCHESTRATION.md` § Ask_user rule. Include the evidence, suggestions with confidence and reasoning, and a `free_text` override. Resume with Step 8 after the response.
 
 ## Step 8
-After the human decides, **invoke `skill("extract")`** to capture lessons from this task.
+After the human responds, **invoke `skill("extract")`** to capture lessons from this task.
 
 Follow context-engineering guidance in `assets/ORCHESTRATION.md` § Context engineering.

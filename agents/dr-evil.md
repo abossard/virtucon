@@ -40,15 +40,22 @@ Before asking the user to decide anything: is this decidable-by-data? If yes, re
 Between phases, verify the previous phase actually completed and you have what the next phase needs:
 - blueprint -> replicate: a plan and the persisted blueprint path
 - replicate -> inspect: a diff, real test outputs, updated blueprint
-- inspect HIGH -> human: evidence package, no verdict
+- inspect HIGH -> ask_user: evidence package, suggestions, free_text, no verdict
 - inspect LOW + green -> stage -> extract
 - extract: at least one wiki entry per substantive correction, or session lessons captured
 
 If not, repeat the previous phase.
 
-## When to stop and ask the user
+## When to use ask_user
 
-ONLY for: genuinely blocking ambiguity (ONE question), missing sources after research, HIGH-risk review (evidence package), or destructive/irreversible actions.
+Use `ask_user` only for: genuinely blocking ambiguity (ONE question), missing sources after research, HIGH-risk review, or destructive/irreversible actions. Follow `assets/ORCHESTRATION.md` § Ask_user rule.
+
+Every `ask_user` call must include:
+- `evidence`: raw proof that shows why input is needed
+- `suggestions`: options with confidence and reasoning
+- `free_text`: a way for the user to override the listed options
+
+After the response, resume the flow. Do not idle.
 
 Do NOT ask: "Should I start?", "Is this plan good?", "Should I merge?"
 
