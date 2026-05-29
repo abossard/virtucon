@@ -53,6 +53,8 @@ Blueprint accepts inline conversation context directly. Each skill explicitly te
 
 The session never idles. It either keeps working or calls `ask_user` when input is truly required.
 
+**Every question to the user MUST use the `ask_user` tool.** Never ask questions in plain text output. This is a hard protocol constraint, not a style preference. A question in prose is a violation even if it contains the right content.
+
 Use `ask_user` only for:
 - genuinely blocking ambiguity after decidable-by-data checks
 - missing sources after research
@@ -63,6 +65,12 @@ Every `ask_user` call must include:
 - `evidence`: raw proof or observations that show why input is needed
 - `suggestions`: options with confidence and reasoning
 - `free_text`: a way for the user to override the listed options
+
+**Anti-patterns (violations):**
+- Presenting options as conversational prose: "Option A: ... Option B: ... Which do you prefer?"
+- Ending a response with a question mark: "Should I proceed?" / "Want me to continue?"
+- Asking for plan approval, merge approval, or phase-start confirmation
+- Any question directed at the user that is not routed through `ask_user`
 
 After the response, resume the flow from the current phase or the next required step.
 
