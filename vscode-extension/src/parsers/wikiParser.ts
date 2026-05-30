@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import { WikiEntry } from '../models/types';
 
 export function parseWikiFile(filePath: string): WikiEntry[] {
@@ -7,6 +8,16 @@ export function parseWikiFile(filePath: string): WikiEntry[] {
     return parseWikiContent(content, filePath);
   } catch {
     return [];
+  }
+}
+
+export function parseWikiPageFile(filePath: string): WikiEntry | undefined {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const lastVerified = fs.statSync(filePath).mtime.toISOString().slice(0, 10);
+    return parseWikiPageContent(content, filePath, lastVerified);
+  } catch {
+    return undefined;
   }
 }
 
@@ -73,6 +84,32 @@ function parseEntryBlock(
     confidence: extractBulletField(block, 'Confidence') || 'unknown',
     status: extractBulletField(block, 'Status') || 'unknown',
     lastVerified: extractBulletField(block, 'LastVerified') || '',
+    kind: 'entry',
+  };
+}
+
+export function parseWikiPageContent(
+  content: string,
+  filePath: string,
+  lastVerified = ''
+): WikiEntry {
+  const lines = content.split('\n').map(line => line.trim());
+  const titleLine = lines.find(line => line.startsWith('# '));
+  const summaryLine = lines.find(line => line && !line.startsWith('#') && !line.startsWith('- ') && !line.startsWith('* '));
+
+  return {
+    filePath,
+    lineNumber: 1,
+    name: titleLine ? titleLine.replace(/^#\s+/, '').trim() : path.basename(filePath, path.extname(filePath)),
+    rule: summaryLine || '',
+    trigger: '',
+    evidence: '',
+    origin: 'wiki-page',
+    valueScore: 0,
+    confidence: 'page',
+    status: 'active',
+    lastVerified,
+    kind: 'page',
   };
 }
 

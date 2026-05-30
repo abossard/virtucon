@@ -1,3 +1,4 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { MinimeTreeProvider } from './providers/minimeTreeProvider';
 import { findLatestTask, resolveMinimeHome } from './utils/paths';
@@ -38,19 +39,21 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('minime.search', async () => {
       const entries = treeProvider.getAllWikiEntries();
       if (entries.length === 0) {
-        vscode.window.showInformationMessage('No wiki entries found.');
+        vscode.window.showInformationMessage('No wiki pages found.');
         return;
       }
 
       const items = entries.map(entry => ({
         label: entry.name,
-        description: `${entry.confidence} | score: ${entry.valueScore}`,
+        description: entry.kind === 'page'
+          ? `page | ${path.basename(entry.filePath)}`
+          : `${entry.confidence} | score: ${entry.valueScore}`,
         detail: entry.rule || entry.trigger,
         entry,
       }));
 
       const picked = await vscode.window.showQuickPick(items, {
-        placeHolder: 'Search wiki entries by name, rule, or trigger...',
+        placeHolder: 'Search wiki pages and entries by name or summary...',
         matchOnDescription: true,
         matchOnDetail: true,
       });

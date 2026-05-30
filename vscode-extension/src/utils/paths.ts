@@ -1,9 +1,9 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { MinimeOrg, MinimeRepo, MinimeTask } from '../models/types';
+import { MinimeOrg, MinimeRepo, MinimeTask, WikiEntry } from '../models/types';
 import { parseTaskFile } from '../parsers/taskParser';
-import { parseWikiFile } from '../parsers/wikiParser';
+import { parseWikiFile, parseWikiPageFile } from '../parsers/wikiParser';
 
 export interface MinimeConfig {
   settingHome?: string;
@@ -59,7 +59,7 @@ function getOrCreateRepo(org: MinimeOrg, repoName: string, repoPath: string): Mi
 }
 
 /**
- * Scan new convention: <org>/_<repo>/blueprints/ (and legacy tasks/) and <org>/_<repo>/wiki.md
+ * Scan new convention: <org>/_<repo>/blueprints/ (and legacy tasks/) plus wiki/ directories.
  */
 function scanNewConvention(minimeHome: string, orgMap: Map<string, MinimeOrg>): void {
   const entries = safeReaddir(minimeHome);
@@ -71,8 +71,7 @@ function scanNewConvention(minimeHome: string, orgMap: Map<string, MinimeOrg>): 
     const orgName = entry;
     const orgEntries = safeReaddir(orgPath);
 
-    // Check for org-level wiki
-    const orgWikiPath = path.join(orgPath, 'wiki.md');
+    const orgWiki = scanWikiLocation(orgPath);
 
     for (const repoEntry of orgEntries) {
       if (!repoEntry.startsWith('_')) continue;
@@ -98,20 +97,18 @@ function scanNewConvention(minimeHome: string, orgMap: Map<string, MinimeOrg>): 
         }
       }
 
-      // Scan wiki
-      const wikiPath = path.join(repoPath, 'wiki.md');
-      if (fs.existsSync(wikiPath)) {
-        repo.wikiPath = wikiPath;
-        repo.wikiEntries = parseWikiFile(wikiPath);
+      const wiki = scanWikiLocation(repoPath);
+      if (wiki) {
+        repo.wikiPath = wiki.wikiPath;
+        repo.wikiEntries = wiki.entries;
       }
     }
 
-    // Org-level wiki as a synthetic repo node
-    if (fs.existsSync(orgWikiPath)) {
+    if (orgWiki) {
       const org = getOrCreateOrg(orgMap, orgName, orgPath);
       const orgWikiRepo = getOrCreateRepo(org, '(org wiki)', orgPath);
-      orgWikiRepo.wikiPath = orgWikiPath;
-      orgWikiRepo.wikiEntries = parseWikiFile(orgWikiPath);
+      orgWikiRepo.wikiPath = orgWiki.wikiPath;
+      orgWikiRepo.wikiEntries = orgWiki.entries;
     }
   }
 }
@@ -200,6 +197,24 @@ function isDirectory(p: string): boolean {
   } catch {
     return false;
   }
+}
+
+function scanWikiLocation(basePath: string): { wikiPath: string; entries: WikiEntry[] } | undefined {
+  const wikiDir = path.join(basePath, 'wiki');
+  if (isDirectory(wikiDir)) {
+    const entries = safeReaddir(wikiDir)
+      .filter(file => file.endsWith('.md'))
+      .map(file => parseWikiPageFile(path.join(wikiDir, file)))
+      .filter((entry): entry is WikiEntry => Boolean(entry));
+    return { wikiPath: wikiDir, entries };
+  }
+
+  const wikiFile = path.join(basePath, 'wiki.md');
+  if (fs.existsSync(wikiFile)) {
+    return { wikiPath: wikiFile, entries: parseWikiFile(wikiFile) };
+  }
+
+  return undefined;
 }
 
 function isSpecialDir(name: string): boolean {

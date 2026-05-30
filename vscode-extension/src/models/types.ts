@@ -37,6 +37,7 @@ export interface WikiEntry {
   confidence: string;
   status: string;
   lastVerified: string;
+  kind: 'entry' | 'page';
 }
 
 export type TreeNodeType =

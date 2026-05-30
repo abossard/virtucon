@@ -1,123 +1,102 @@
 ---
 name: extract
-description: Extract lessons from a just-merged task or current session into the per-repo corrections wiki. Human corrections are the highest-value signal. Every entry must cite live code and be a generalised rule, not a task log.
+description: Extract lessons from a just-merged task or current session into the repo and org raw/wiki knowledge roots. Human corrections are the highest-value signal. Every durable claim must cite live code.
 when_to_use: Right after a task is merged or staged, after a significant session with learnings worth preserving, or when the user explicitly asks to extract lessons from recent work.
 allowed-tools: Read Edit Write Grep Glob Bash(git log *) Bash(git diff *) Bash(git show *) Bash(git remote get-url *) Bash(git status)
 ---
 
 # Skill: extract
 
-Trigger: a task is merged OR a session produced lessons worth capturing (even without a merge). It turns raw outcomes, especially human corrections, into durable, cited wiki entries for future tasks.
+Trigger: a task is merged or a session produced lessons worth preserving. It turns raw outcomes into durable knowledge under `raw/`, `wiki/`, and `schema.md`.
 
-Human corrections are the highest-value signal in the system: they passed through a human and survived. Capture them first.
+Human corrections are the highest-value signal. Capture them first.
 
-Session-based harvest: when invoked without a recent merge, harvest should look at the current session's conversation for:
-- Corrections the user made to the agent's approach or output.
-- Design decisions with rationale that future tasks should follow.
-- Patterns discovered during implementation that are reusable.
-These still require code citations to be persisted. If a lesson references code, cite it; if it's purely process knowledge, note it as a candidate for the director's project memory instead.
+## Learn from the blueprint
 
-## Learn from the blueprint's evolution
+Read the persisted blueprint at `VIRTUCON_HQ/<org>/_<repo>/blueprints/<date>-<name>.blueprint.md`.
+Harvest from the Decisions table, review discoveries, and verbatim user feedback.
 
-Read the persisted blueprint at `VIRTUCON_HQ/<org>/_<repo>/blueprints/<date>-<name>.blueprint.md`. It contains:
-- **Decisions table**: how unknowns were resolved and at what VOI level.
-- **Discovered during review**: criteria that were missing from the original EARS.
-- **User feedback**: verbatim user corrections and steering.
+## Research-grounded memory policies
 
-Use this to harvest process-level lessons:
-- If "Discovered during review" has entries, that's a signal the EARS was incomplete. Write a wiki entry about what category of criteria this repo's tasks tend to miss (e.g., "error handling", "auth edge cases").
-- If the Decisions table shows many "undecidable-now" items, note which domains need early user input.
-- User feedback sections are raw signal. Never reinterpret them. Extract generalizable rules but cite the user's exact words as the source.
+1. **Write filtering**
+   - Store only lessons that are actionable, reusable, cited, and novel.
+2. **Conflict handling**
+   - Prefer the newer, better-cited guidance.
+   - Mark old guidance stale or superseded instead of keeping two active contradictions.
+3. **Retrieval quality**
+   - Keep page summaries, scopes, and citations crisp so blueprint can rank them.
+4. **Decay**
+   - Re-verify recently touched guidance.
+   - Mark stale guidance when citations no longer match live code.
+5. **Quality loop**
+   - Record candidates considered, pages updated, and stale items handled in the final response.
 
-## Research-grounded memory policies (apply all 5)
+## Step 1: Locate the knowledge roots
 
-1. **Write filtering policy** (heuristic; tune based on results)
-   - Do not store everything. Evaluate each candidate entry for:
-     - Actionability for future tasks
-     - Reusability across files/tasks
-     - Evidence quality (clear code citation)
-     - Novelty (not duplicate of existing active rule)
-   - Persist only entries that score well on most of these dimensions.
-
-2. **Conflict handling policy**
-   - If a new rule conflicts with an existing one, do not keep both as active.
-   - Keep the newer, better-cited rule as `Status: active`.
-   - Mark old rule `Status: superseded`, set `SupersededBy: <new rule name>`, and update `LastVerified`.
-
-3. **Retrieval prioritization policy**
-   - Ensure each entry has a concrete `Trigger` and `Confidence`.
-   - Prefer entries that are: trigger-matched, active, recently verified, and high-confidence.
-   - Keep entry wording short and specific to improve top-k selection quality in `/minime:blueprint`.
-
-4. **Decay / forgetting policy**
-   - Every harvest pass: re-verify citations for recently touched areas.
-   - If evidence no longer matches code, mark entry `Status: stale`.
-   - Remove stale entries when superseded or unhelpful; keep only if still useful as historical cautionary context.
-
-5. **Quality loop policy**
-   - Record a quick run summary in the commit or response:
-     - candidates considered
-     - entries written
-     - entries superseded
-     - entries marked stale/removed
-   - If many candidates are rejected for low value or stale evidence, tighten future write filtering.
-
-## Step 1: Locate the wikis
-Derive `<org>` and `<repo>` from `git remote get-url origin`. Use VIRTUCON_HQ from the session nudge. Open `VIRTUCON_HQ/<org>/_<repo>/wiki.md`. Also check `VIRTUCON_HQ/<org>/wiki.md` for cross-repo rules to avoid duplication.
+Derive `<org>` and `<repo>` from `git remote get-url origin`.
+Open these repo-level paths when present:
+- `VIRTUCON_HQ/<org>/_<repo>/schema.md`
+- `VIRTUCON_HQ/<org>/_<repo>/wiki/index.md`
+- `VIRTUCON_HQ/<org>/_<repo>/wiki/log.md`
+- relevant topic pages under `VIRTUCON_HQ/<org>/_<repo>/wiki/`
+- related raw documents under `VIRTUCON_HQ/<org>/_<repo>/raw/`
+Also check the org-level equivalents under `VIRTUCON_HQ/<org>/` to avoid duplicating cross-repo guidance.
 
 ## Step 2: What to capture
 
-1. **Corrections (priority).** Anything the human changed, rejected, or sent back during review. Each becomes one entry. The before/after IS the lesson.
-2. **Research candidates from blueprint.** Read the blueprint's `## Research resolved` section. Each entry is a wiki candidate produced when the blueprint skill resolved a "needs-research" VOI item. Evaluate each using the write-filtering policy: actionability, reusability, evidence quality, novelty. Persist worthy ones as new wiki entries. Reject the rest and include the count in the run summary.
-3. **Stale entries** flagged by `/minime:blueprint` during its citation check. Fix or delete them.
-4. **Episodic notes**: an approach that failed and why ("tried X, broke Y").
-5. Skip anything already covered. No duplicates.
+1. Corrections the human made to the agent's work.
+2. Reusable design decisions with rationale.
+3. Worthy research answers recorded in the blueprint.
+4. Failed approaches that future tasks should avoid.
+5. Stale or conflicting guidance that needs repair.
 
-## Step 3: How to write an entry
+## Step 3: How to write durable knowledge
 
-Append to `VIRTUCON_HQ/<org>/_<repo>/wiki.md` using the `VIRTUCON_HQ/_TEMPLATE.md` block. Every entry MUST:
+### Raw layer
 
-- **Carry a code citation**: `path:line` or a stable symbol name. An entry with no citation is unsafe and must not be written: future agents re-verify entries against live code before trusting them, and an uncited entry cannot be verified.
-- **Be a generalised rule, not a task log.** Not "fixed the bug in PR 12" but "Money values use integer minor units; never use floats (see billing.py:44)."
-- **State the trigger**: when this applies, so it can be relevance-scored.
-- **Set `Scope` when the rule is directory-specific.** Use directory globs (e.g. `src/billing/**`, `extensions/*`). This is the substitute for in-repo AGENTS.md files: scoped guidance lives in the wiki, keyed to directories. Omit `Scope` for repo-wide rules. A single entry may list multiple globs separated by commas.
-- **Set ValueScore, Confidence, Status, and LastVerified** for ranking and decay policies.
-- **Be dated**, so consolidation can prune the old.
+Write compact curated source documents into `raw/`.
+Good raw documents include findings, distilled results, user messages, general knowledge, and hard-won discoveries.
+Do not store logs or large command outputs in `raw/`.
+Name raw documents for the source, for example `raw/review-feedback-2026-05-30.md` or `raw/legacy-wiki.md`.
 
-## Step 4: Consolidation (when retrieval starts surfacing duplicates or stale entries)
+### Wiki layer
 
-Do not let the wiki grow unbounded. A bloated wiki buries the useful entry and slows every future task.
-- Merge several specific entries into one general rule where a pattern is visible (simple notes should mature into preventative rules over time).
-- Delete entries whose cited code no longer exists.
-- Keep the file scannable. Quality and recall beat volume.
+Maintain the wiki as linked markdown pages under `wiki/`.
+
+- `index.md` catalogs topic pages and points at key raw sources.
+- `log.md` records dated ingest, query, and lint updates.
+- Topic pages hold durable guidance. Create or update them with `VIRTUCON_HQ/_TEMPLATE.md`.
+
+Every topic page should keep these elements when they help retrieval:
+- a concise summary near the top
+- `Scope` for directory-specific guidance
+- links to raw source documents
+- code citations that can be re-verified
+- `LastVerified`
+
+## Step 4: Consolidation
+
+- Merge overlapping pages when a stronger general rule is visible.
+- Remove or mark stale pages whose citations no longer match code.
+- Keep `index.md` scannable and current.
+- Keep `log.md` chronological and compact.
 
 ## Boundaries
-- Keep repo-specific rules in the repo wiki and cross-repo conventions in the org wiki.
+
+- Repo-specific guidance stays in the repo wiki.
+- Cross-repo guidance stays in the org wiki.
 - Never store secrets, tokens, credentials, or customer data.
-- The wiki holds engineering knowledge, not a changelog.
-- **Platform-native memory bridge:** when the host platform supports `store_memory` (e.g. GitHub Copilot, Claude Code), also store high-value entries (ValueScore >= 6, Confidence: high) into platform-native memory so non-minime sessions benefit from accumulated knowledge. The wiki remains the authoritative source; platform memory is a read-optimized replica.
+- The durable knowledge base is not a changelog.
+- The wiki remains authoritative even if you also mirror high-value lessons to platform-native memory.
 
-## Auto-harvest triggers
+## Lint mode
 
-Invoke `skill("extract")` at these moments (not silently):
-1. **After LOW-risk review + green tests** (primary trigger).
-2. **After human corrections** during any phase.
-3. **At session end** with uncaptured design decisions or failed approaches.
-4. **After merge/ship.**
+When asked to lint, check the repo wiki pages for:
+1. stale citations
+2. contradictions
+3. orphan scopes
+4. duplicate guidance
+5. coverage gaps in recently touched directories
+6. research candidates from the blueprint that deserve promotion
 
-## Step 5: Wiki lint
-
-When invoked with a lint request, perform a health check on `VIRTUCON_HQ/<org>/_<repo>/wiki.md`:
-
-1. **Stale citations.** Open cited code locations. If gone or mismatched, mark `Status: stale`.
-2. **Contradictions.** Flag pairs of active entries with conflicting rules.
-3. **Orphan entries.** Scope globs matching zero files, or cited files that no longer exist. Check `git log --name-status --diff-filter=R` for renames before marking stale.
-4. **Duplicates.** Overlapping triggers and similar rules. Candidates for merge.
-5. **Coverage gaps.** Directories touched in recent commits with no scoped wiki entries.
-6. **Research candidates.** Evaluate blueprint's `## Research resolved` entries using write-filtering policy.
-
-Produce a lint report with counts per category and actions taken. Split actions:
-- **Auto-fix:** mark stale, update LastVerified, flag orphan scopes.
-- **Report-only:** merge duplicates, delete entries, supersede contradictions, create from research candidates.
-
-Follow context-engineering guidance in `assets/ORCHESTRATION.md` § Context engineering.
+Follow `assets/ORCHESTRATION.md` for the shared raw/wiki/schema contract.

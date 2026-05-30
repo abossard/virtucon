@@ -34,6 +34,7 @@ function makeWikiEntry(overrides: Partial<WikiEntry>): WikiEntry {
     confidence: 'unknown',
     status: 'active',
     lastVerified: '',
+    kind: 'entry',
     ...overrides,
   };
 }

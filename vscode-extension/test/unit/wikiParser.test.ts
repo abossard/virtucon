@@ -1,8 +1,8 @@
 import * as assert from 'assert';
-import { parseWikiContent } from '../../src/parsers/wikiParser';
+import { parseWikiContent, parseWikiPageContent } from '../../src/parsers/wikiParser';
 
 describe('wikiParser', () => {
-  const sampleWiki = `# test-org/test-repo -- Corrections Wiki
+  const sampleWiki = `# test-org/test-repo: Corrections Wiki
 
 ---
 
@@ -93,7 +93,7 @@ describe('wikiParser', () => {
   });
 
   it('should skip template/example headings', () => {
-    const content = `### Entries\n\n### EXAMPLE -- Money is integer\n- **Rule:** test\n- **Trigger:** test`;
+    const content = `### Entries\n\n### EXAMPLE: Money is integer\n- **Rule:** test\n- **Trigger:** test`;
     const entries = parseWikiContent(content, '/fake/wiki.md');
     assert.strictEqual(entries.length, 0);
   });
@@ -116,5 +116,28 @@ describe('wikiParser', () => {
     assert.strictEqual(entries[0].rule, 'Some rule');
     assert.strictEqual(entries[0].confidence, 'unknown');
     assert.strictEqual(entries[0].valueScore, 0);
+  });
+
+  it('should parse wiki page titles and summaries', () => {
+    const page = parseWikiPageContent(
+      '# Karpathy contract\n\nImmutable raw documents feed linked wiki pages.',
+      '/fake/wiki/karpathy-contract.md',
+      '2026-05-30'
+    );
+    assert.strictEqual(page.name, 'Karpathy contract');
+    assert.strictEqual(page.rule, 'Immutable raw documents feed linked wiki pages.');
+    assert.strictEqual(page.kind, 'page');
+    assert.strictEqual(page.lineNumber, 1);
+    assert.strictEqual(page.lastVerified, '2026-05-30');
+  });
+
+  it('should fall back to the filename when a wiki page has no heading', () => {
+    const page = parseWikiPageContent(
+      'Just a paragraph without a title.',
+      '/fake/wiki/index.md',
+      '2026-05-30'
+    );
+    assert.strictEqual(page.name, 'index');
+    assert.strictEqual(page.rule, 'Just a paragraph without a title.');
   });
 });

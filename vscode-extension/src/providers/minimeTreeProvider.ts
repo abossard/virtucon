@@ -80,7 +80,7 @@ export class MinimeTreeProvider implements vscode.TreeDataProvider<TreeNodeData>
       case 'wikiEntry':
         item.iconPath = new vscode.ThemeIcon(this.wikiThemeIcon(element.wikiEntry!));
         item.collapsibleState = vscode.TreeItemCollapsibleState.None;
-        item.description = element.wikiEntry!.confidence;
+        item.description = this.wikiDescription(element.wikiEntry!);
         item.tooltip = this.wikiTooltip(element.wikiEntry!);
         item.command = {
           command: 'minime.openFile',
@@ -215,7 +215,7 @@ export class MinimeTreeProvider implements vscode.TreeDataProvider<TreeNodeData>
 
   private getWikiChildren(repo: MinimeRepo): TreeNodeData[] {
     if (repo.wikiEntries.length === 0) {
-      return [{ type: 'empty', label: repo.wikiPath ? 'No entries' : 'No wiki file' }];
+      return [{ type: 'empty', label: repo.wikiPath ? 'No entries' : 'No wiki data' }];
     }
 
     return sortWikiEntries(repo.wikiEntries).map(entry => ({
@@ -268,15 +268,30 @@ export class MinimeTreeProvider implements vscode.TreeDataProvider<TreeNodeData>
   }
 
   private wikiThemeIcon(entry: WikiEntry): string {
+    if (entry.kind === 'page') return 'file';
     if (entry.status === 'stale' || entry.status === 'superseded') return 'warning';
     if (entry.confidence === 'high') return 'verified-filled';
     if (entry.confidence === 'medium') return 'verified';
     return 'unverified';
   }
 
+  private wikiDescription(entry: WikiEntry): string {
+    if (entry.kind === 'page') {
+      return path.basename(entry.filePath);
+    }
+    return entry.confidence;
+  }
+
   private wikiTooltip(entry: WikiEntry): vscode.MarkdownString {
     const md = new vscode.MarkdownString();
     md.appendMarkdown(`**${entry.name}**\n\n`);
+    if (entry.kind === 'page') {
+      if (entry.rule) md.appendMarkdown(`${entry.rule}\n\n`);
+      md.appendMarkdown(`Kind: page`);
+      if (entry.lastVerified) md.appendMarkdown(` | Updated: ${entry.lastVerified}`);
+      return md;
+    }
+
     if (entry.rule) md.appendMarkdown(`Rule: ${entry.rule}\n\n`);
     if (entry.trigger) md.appendMarkdown(`Trigger: ${entry.trigger}\n\n`);
     if (entry.evidence) md.appendMarkdown(`Evidence: \`${entry.evidence}\`\n\n`);

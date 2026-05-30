@@ -51,11 +51,44 @@ describe('paths', () => {
       assert.ok(testRepo.tasks.length >= 2, `expected >=2 tasks, got ${testRepo.tasks.length}`);
     });
 
-    it('should parse wiki from new convention', () => {
+    it('should parse legacy wiki.md files from new convention repos', () => {
       const orgs = scanMinimeHome(FIXTURES);
       const testOrg = orgs.find(o => o.name === 'test-org')!;
       const testRepo = testOrg.repos.find(r => r.name === 'test-repo')!;
       assert.ok(testRepo.wikiEntries.length >= 2, `expected >=2 wiki entries, got ${testRepo.wikiEntries.length}`);
+      assert.ok(testRepo.wikiEntries.every(entry => entry.kind === 'entry'));
+    });
+
+    it('should surface wiki pages from wiki directories', () => {
+      const orgs = scanMinimeHome(FIXTURES);
+      const testOrg = orgs.find(o => o.name === 'test-org')!;
+      const wikiDirRepo = testOrg.repos.find(r => r.name === 'wiki-dir-repo')!;
+      assert.strictEqual(wikiDirRepo.wikiPath, path.join(FIXTURES, 'test-org', '_wiki-dir-repo', 'wiki'));
+      assert.deepStrictEqual(
+        [...wikiDirRepo.wikiEntries.map(entry => entry.name)].sort(),
+        ['Karpathy contract', 'Wiki index: wiki-dir-repo', 'Wiki log: wiki-dir-repo']
+      );
+      assert.ok(wikiDirRepo.wikiEntries.every(entry => entry.kind === 'page'));
+    });
+
+    it('should surface org-level wiki directories as a synthetic repo', () => {
+      const orgs = scanMinimeHome(FIXTURES);
+      const testOrg = orgs.find(o => o.name === 'test-org')!;
+      const orgWikiRepo = testOrg.repos.find(r => r.name === '(org wiki)')!;
+      assert.strictEqual(orgWikiRepo.wikiPath, path.join(FIXTURES, 'test-org', 'wiki'));
+      assert.deepStrictEqual(
+        [...orgWikiRepo.wikiEntries.map(entry => entry.name)].sort(),
+        ['Org wiki index: test-org', 'Org wiki log: test-org']
+      );
+    });
+
+    it('should prefer wiki directories over legacy wiki.md when both exist', () => {
+      const orgs = scanMinimeHome(FIXTURES);
+      const testOrg = orgs.find(o => o.name === 'test-org')!;
+      const repo = testOrg.repos.find(r => r.name === 'prefer-wiki-dir-repo')!;
+      assert.strictEqual(repo.wikiPath, path.join(FIXTURES, 'test-org', '_prefer-wiki-dir-repo', 'wiki'));
+      assert.deepStrictEqual(repo.wikiEntries.map(entry => entry.name), ['Directory wiki index']);
+      assert.ok(repo.wikiEntries.every(entry => entry.kind === 'page'));
     });
   });
 
