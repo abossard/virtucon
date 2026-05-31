@@ -22,15 +22,16 @@ Runs first in the four-phase flow. No human review gate. The output is an execut
    If criteria are vague, nudge for EARS completeness with the minimum needed clarification.
    Every criterion must include an evidence method that names the proving tool, boundary, and pass/fail signal.
 
-3. **Locate wiki sources from the new layout.**
+3. **Locate wiki sources from the global layout.**
    Read these paths when present:
-   - `VIRTUCON_HQ/<org>/_<repo>/schema.md`
-   - `VIRTUCON_HQ/<org>/_<repo>/wiki/index.md`
-   - `VIRTUCON_HQ/<org>/_<repo>/wiki/log.md`
-   - relevant topic pages under `VIRTUCON_HQ/<org>/_<repo>/wiki/*.md`
-   Also read the org-level equivalents under `VIRTUCON_HQ/<org>/` for cross-repo guidance.
-   If a wiki directory is empty, continue with zero wiki context and note that in the blueprint instead of blocking.
-   Legacy `wiki.md` files are compatibility input only. Prefer `wiki/` whenever both exist.
+   - `VIRTUCON_HQ/schema.md`
+   - `VIRTUCON_HQ/wiki/index.md`
+   - `VIRTUCON_HQ/wiki/log.md`
+   - repo topic pages under `VIRTUCON_HQ/wiki/orgs/<org>/<repo>/`
+   - cross-repo topic pages under `VIRTUCON_HQ/wiki/patterns/`
+   - related raw documents under `VIRTUCON_HQ/raw/<org>/<repo>/`
+   If the repo topic directory is empty, continue with zero repo wiki context and note that in the blueprint instead of blocking.
+   Legacy `VIRTUCON_HQ/<org>/_<repo>/wiki/` and `wiki.md` files are compatibility input only. Prefer the global wiki tree whenever both exist.
 
 4. **Discover domain-specific skills and agents.**
    Scan local and installed skills or agents that might help the task.

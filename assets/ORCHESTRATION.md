@@ -10,10 +10,27 @@ Mirror only phase-local wording in skills and README.
 
 ### Layout
 
-Each knowledge root uses the same three-layer shape:
+`VIRTUCON_HQ` now has one shared knowledge root plus per-repo blueprint folders:
+
+```text
+VIRTUCON_HQ/
+  raw/
+    <org>/<repo>/
+  wiki/
+    index.md
+    log.md
+    orgs/<org>/<repo>/
+    patterns/
+  schema.md
+  templates/
+  _TEMPLATE.md
+  <org>/_<repo>/blueprints/
+```
+
+The shared root keeps the same three-layer contract:
 
 - `raw/`
-  - Immutable source documents.
+  - Immutable source documents stored under `raw/<org>/<repo>/`.
   - The agent may read them freely.
   - The agent should treat captured raw docs as append-only artifacts rather than living summaries.
   - Allowed examples: curated findings, distilled results, user messages, general knowledge discovered during work, hard-won discoveries, and compact notes about failed approaches.
@@ -22,12 +39,14 @@ Each knowledge root uses the same three-layer shape:
   - LLM-maintained markdown pages derived from the raw layer.
   - `index.md` is the catalog of current topic pages.
   - `log.md` is the chronological ingest/query/lint record.
+  - Repo topic pages live under `wiki/orgs/<org>/<repo>/`.
+  - Cross-repo guidance lives under `wiki/patterns/`.
   - Topic pages are linked markdown documents created from `_TEMPLATE.md` and updated over time.
 - `schema.md`
   - Co-evolved guidance that explains how the wiki is structured, named, and linked.
   - When schema guidance and live code disagree, live code wins.
 
-Repo roots also contain `blueprints/` for the living blueprint handoff files.
+Repo roots only keep `blueprints/` for the living blueprint handoff files.
 
 ### Operations
 

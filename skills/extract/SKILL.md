@@ -1,6 +1,6 @@
 ---
 name: extract
-description: Extract lessons from a just-merged task or current session into the repo and org raw/wiki knowledge roots. Human corrections are the highest-value signal. Every durable claim must cite live code.
+description: Extract lessons from a just-merged task or current session into the global raw/wiki knowledge root. Human corrections are the highest-value signal. Every durable claim must cite live code.
 when_to_use: Right after a task is merged or staged, after a significant session with learnings worth preserving, or when the user explicitly asks to extract lessons from recent work.
 allowed-tools: Read Edit Write Grep Glob Bash(git log *) Bash(git diff *) Bash(git show *) Bash(git remote get-url *) Bash(git status)
 ---
@@ -34,13 +34,14 @@ Harvest from the Decisions table, review discoveries, and verbatim user feedback
 ## Step 1: Locate the knowledge roots
 
 Derive `<org>` and `<repo>` from `git remote get-url origin`.
-Open these repo-level paths when present:
-- `VIRTUCON_HQ/<org>/_<repo>/schema.md`
-- `VIRTUCON_HQ/<org>/_<repo>/wiki/index.md`
-- `VIRTUCON_HQ/<org>/_<repo>/wiki/log.md`
-- relevant topic pages under `VIRTUCON_HQ/<org>/_<repo>/wiki/`
-- related raw documents under `VIRTUCON_HQ/<org>/_<repo>/raw/`
-Also check the org-level equivalents under `VIRTUCON_HQ/<org>/` to avoid duplicating cross-repo guidance.
+Open these shared-root paths when present:
+- `VIRTUCON_HQ/schema.md`
+- `VIRTUCON_HQ/wiki/index.md`
+- `VIRTUCON_HQ/wiki/log.md`
+- repo topic pages under `VIRTUCON_HQ/wiki/orgs/<org>/<repo>/`
+- cross-repo topic pages under `VIRTUCON_HQ/wiki/patterns/`
+- related raw documents under `VIRTUCON_HQ/raw/<org>/<repo>/`
+Also check for legacy `VIRTUCON_HQ/<org>/_<repo>/wiki/` or `wiki.md` inputs before declaring older guidance absent.
 
 ## Step 2: What to capture
 
@@ -54,10 +55,10 @@ Also check the org-level equivalents under `VIRTUCON_HQ/<org>/` to avoid duplica
 
 ### Raw layer
 
-Write compact curated source documents into `raw/`.
+Write compact curated source documents into `raw/<org>/<repo>/`.
 Good raw documents include findings, distilled results, user messages, general knowledge, and hard-won discoveries.
 Do not store logs or large command outputs in `raw/`.
-Name raw documents for the source, for example `raw/review-feedback-2026-05-30.md` or `raw/legacy-wiki.md`.
+Name raw documents for the source, for example `raw/<org>/<repo>/review-feedback-2026-05-30.md` or `raw/<org>/<repo>/legacy-wiki.md`.
 
 ### Wiki layer
 
@@ -65,6 +66,8 @@ Maintain the wiki as linked markdown pages under `wiki/`.
 
 - `index.md` catalogs topic pages and points at key raw sources.
 - `log.md` records dated ingest, query, and lint updates.
+- Repo-specific topic pages live under `wiki/orgs/<org>/<repo>/`.
+- Cross-repo topic pages live under `wiki/patterns/`.
 - Topic pages hold durable guidance. Create or update them with `VIRTUCON_HQ/_TEMPLATE.md`.
 
 Every topic page should keep these elements when they help retrieval:
@@ -83,8 +86,8 @@ Every topic page should keep these elements when they help retrieval:
 
 ## Boundaries
 
-- Repo-specific guidance stays in the repo wiki.
-- Cross-repo guidance stays in the org wiki.
+- Repo-specific guidance stays in `wiki/orgs/<org>/<repo>/`.
+- Cross-repo guidance stays in `wiki/patterns/`.
 - Never store secrets, tokens, credentials, or customer data.
 - The durable knowledge base is not a changelog.
 - The wiki remains authoritative even if you also mirror high-value lessons to platform-native memory.

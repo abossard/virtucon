@@ -26,6 +26,7 @@ export function scanMinimeHome(minimeHome: string): MinimeOrg[] {
 
   const orgMap = new Map<string, MinimeOrg>();
 
+  scanGlobalLayout(minimeHome, orgMap);
   scanNewConvention(minimeHome, orgMap);
   scanLegacyTasks(minimeHome, orgMap);
   scanLegacyWikis(minimeHome, orgMap);
@@ -56,6 +57,46 @@ function getOrCreateRepo(org: MinimeOrg, repoName: string, repoPath: string): Mi
     org.repos.push(repo);
   }
   return repo;
+}
+
+/**
+ * Scan global layout: raw/<org>/<repo>/ plus wiki/orgs/<org>/<repo>/.
+ */
+function scanGlobalLayout(minimeHome: string, orgMap: Map<string, MinimeOrg>): void {
+  const rawRoot = path.join(minimeHome, 'raw');
+  if (isDirectory(rawRoot)) {
+    for (const orgName of safeReaddir(rawRoot)) {
+      const orgRawDir = path.join(rawRoot, orgName);
+      if (!isDirectory(orgRawDir)) continue;
+
+      const org = getOrCreateOrg(orgMap, orgName, path.join(minimeHome, orgName));
+      for (const repoName of safeReaddir(orgRawDir)) {
+        const repoRawDir = path.join(orgRawDir, repoName);
+        if (!isDirectory(repoRawDir)) continue;
+        getOrCreateRepo(org, repoName, path.join(minimeHome, orgName, `_${repoName}`));
+      }
+    }
+  }
+
+  const wikiOrgsRoot = path.join(minimeHome, 'wiki', 'orgs');
+  if (!isDirectory(wikiOrgsRoot)) return;
+
+  for (const orgName of safeReaddir(wikiOrgsRoot)) {
+    const orgWikiDir = path.join(wikiOrgsRoot, orgName);
+    if (!isDirectory(orgWikiDir)) continue;
+
+    const org = getOrCreateOrg(orgMap, orgName, path.join(minimeHome, orgName));
+    for (const repoName of safeReaddir(orgWikiDir)) {
+      const repoWikiDir = path.join(orgWikiDir, repoName);
+      if (!isDirectory(repoWikiDir)) continue;
+
+      const repo = getOrCreateRepo(org, repoName, path.join(minimeHome, orgName, `_${repoName}`));
+      if (!repo.wikiPath) {
+        repo.wikiPath = repoWikiDir;
+        repo.wikiEntries = scanWikiDirectory(repoWikiDir);
+      }
+    }
+  }
 }
 
 /**
@@ -98,7 +139,7 @@ function scanNewConvention(minimeHome: string, orgMap: Map<string, MinimeOrg>): 
       }
 
       const wiki = scanWikiLocation(repoPath);
-      if (wiki) {
+      if (wiki && !repo.wikiPath) {
         repo.wikiPath = wiki.wikiPath;
         repo.wikiEntries = wiki.entries;
       }
@@ -202,11 +243,7 @@ function isDirectory(p: string): boolean {
 function scanWikiLocation(basePath: string): { wikiPath: string; entries: WikiEntry[] } | undefined {
   const wikiDir = path.join(basePath, 'wiki');
   if (isDirectory(wikiDir)) {
-    const entries = safeReaddir(wikiDir)
-      .filter(file => file.endsWith('.md'))
-      .map(file => parseWikiPageFile(path.join(wikiDir, file)))
-      .filter((entry): entry is WikiEntry => Boolean(entry));
-    return { wikiPath: wikiDir, entries };
+    return { wikiPath: wikiDir, entries: scanWikiDirectory(wikiDir) };
   }
 
   const wikiFile = path.join(basePath, 'wiki.md');
@@ -215,6 +252,13 @@ function scanWikiLocation(basePath: string): { wikiPath: string; entries: WikiEn
   }
 
   return undefined;
+}
+
+function scanWikiDirectory(wikiDir: string): WikiEntry[] {
+  return safeReaddir(wikiDir)
+    .filter(file => file.endsWith('.md'))
+    .map(file => parseWikiPageFile(path.join(wikiDir, file)))
+    .filter((entry): entry is WikiEntry => Boolean(entry));
 }
 
 function isSpecialDir(name: string): boolean {

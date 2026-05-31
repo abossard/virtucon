@@ -50,12 +50,15 @@ The SessionStart hook resolves paths, injects them into every session, and auto-
 
 ### Knowledge layout
 
-Each repo and org root uses:
-- `raw/` for immutable source documents such as findings, results, user messages, and hard-won discoveries
-- `wiki/` for linked markdown pages, including `index.md`, `log.md`, and topic pages
+`VIRTUCON_HQ` now has one shared knowledge root plus per-repo blueprint folders:
+- `raw/<org>/<repo>/` for immutable source documents such as findings, results, user messages, and hard-won discoveries
+- `wiki/index.md` and `wiki/log.md` for the shared catalog and ingest log
+- `wiki/orgs/<org>/<repo>/` for repo topic pages
+- `wiki/patterns/` for cross-repo guidance
 - `schema.md` for the conventions that shape the wiki
+- `<org>/_<repo>/blueprints/` for living blueprints
 
-The previous `wiki.md` becomes `raw/legacy-wiki.md` when bootstrap sees it.
+A legacy repo `wiki.md` becomes `raw/<org>/<repo>/legacy-wiki.md` when bootstrap sees it.
 Logs and large outputs stay in execution evidence, not in `raw/`.
 
 ### 🔐 Subagent policy

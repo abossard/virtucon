@@ -3,6 +3,7 @@ import * as path from 'path';
 import { resolveMinimeHome, scanMinimeHome, getTemplatePaths, findLatestTask } from '../../src/utils/paths';
 
 const FIXTURES = path.join(__dirname, '..', 'fixtures');
+const GLOBAL_LAYOUT_FIXTURE = path.join(FIXTURES, 'global-layout');
 
 describe('paths', () => {
   describe('resolveMinimeHome', () => {
@@ -89,6 +90,49 @@ describe('paths', () => {
       assert.strictEqual(repo.wikiPath, path.join(FIXTURES, 'test-org', '_prefer-wiki-dir-repo', 'wiki'));
       assert.deepStrictEqual(repo.wikiEntries.map(entry => entry.name), ['Directory wiki index']);
       assert.ok(repo.wikiEntries.every(entry => entry.kind === 'page'));
+    });
+  });
+
+  describe('scanMinimeHome (global layout)', () => {
+    it('should merge global wiki repos with blueprint tasks', () => {
+      const orgs = scanMinimeHome(GLOBAL_LAYOUT_FIXTURE);
+      const testOrg = orgs.find(o => o.name === 'test-org');
+      assert.ok(testOrg, 'should find test-org');
+
+      const globalRepo = testOrg!.repos.find(r => r.name === 'global-repo');
+      assert.ok(globalRepo, 'should find global-repo');
+      assert.strictEqual(
+        globalRepo!.wikiPath,
+        path.join(GLOBAL_LAYOUT_FIXTURE, 'wiki', 'orgs', 'test-org', 'global-repo')
+      );
+      assert.strictEqual(globalRepo!.tasks.length, 1);
+      assert.deepStrictEqual(
+        [...globalRepo!.wikiEntries.map(entry => entry.name)].sort(),
+        ['Global repo overview', 'Global repo playbook']
+      );
+      assert.ok(globalRepo!.wikiEntries.every(entry => entry.kind === 'page'));
+    });
+
+    it('should discover repos from global raw and wiki trees without blueprints', () => {
+      const orgs = scanMinimeHome(GLOBAL_LAYOUT_FIXTURE);
+      const testOrg = orgs.find(o => o.name === 'test-org');
+      assert.ok(testOrg, 'should find test-org');
+
+      const rawOnlyRepo = testOrg!.repos.find(r => r.name === 'raw-only-repo');
+      assert.ok(rawOnlyRepo, 'should find raw-only-repo from raw tree');
+      assert.strictEqual(rawOnlyRepo!.tasks.length, 0);
+      assert.strictEqual(rawOnlyRepo!.wikiPath, undefined);
+
+      const wikiOnlyRepo = testOrg!.repos.find(r => r.name === 'wiki-only-repo');
+      assert.ok(wikiOnlyRepo, 'should find wiki-only-repo from wiki tree');
+      assert.strictEqual(
+        wikiOnlyRepo!.wikiPath,
+        path.join(GLOBAL_LAYOUT_FIXTURE, 'wiki', 'orgs', 'test-org', 'wiki-only-repo')
+      );
+      assert.deepStrictEqual(
+        wikiOnlyRepo!.wikiEntries.map(entry => entry.name),
+        ['Wiki-only repo overview']
+      );
     });
   });
 

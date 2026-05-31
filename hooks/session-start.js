@@ -82,21 +82,55 @@ function buildLog(label) {
   ].join('\n');
 }
 
-function seedLegacyWiki(rootDir) {
-  const legacyWiki = path.join(rootDir, 'wiki.md');
-  const rawLegacy = path.join(rootDir, 'raw', 'legacy-wiki.md');
+function seedLegacyWiki(repoDir, repoRawDir) {
+  const legacyWiki = path.join(repoDir, 'wiki.md');
+  const rawLegacy = path.join(repoRawDir, 'legacy-wiki.md');
   if (fs.existsSync(legacyWiki) && !fs.existsSync(rawLegacy)) {
     fs.copyFileSync(legacyWiki, rawLegacy);
   }
 }
 
-function ensureKnowledgeRoot(rootDir, label) {
-  fs.mkdirSync(path.join(rootDir, 'raw'), { recursive: true });
-  fs.mkdirSync(path.join(rootDir, 'wiki'), { recursive: true });
-  writeIfMissing(path.join(rootDir, 'schema.md'), buildSchema(label));
-  writeIfMissing(path.join(rootDir, 'wiki', 'index.md'), buildIndex(label));
-  writeIfMissing(path.join(rootDir, 'wiki', 'log.md'), buildLog(label));
-  seedLegacyWiki(rootDir);
+function directoryHasContent(dirPath) {
+  try {
+    return fs.readdirSync(dirPath).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function copyDirectoryContents(srcDir, dstDir) {
+  for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
+    const srcPath = path.join(srcDir, entry.name);
+    const dstPath = path.join(dstDir, entry.name);
+    if (entry.isDirectory()) {
+      fs.mkdirSync(dstPath, { recursive: true });
+      copyDirectoryContents(srcPath, dstPath);
+      continue;
+    }
+    if (!fs.existsSync(dstPath)) {
+      fs.copyFileSync(srcPath, dstPath);
+    }
+  }
+}
+
+function migrateLegacyWiki(repoDir, repoWikiDir) {
+  const legacyWikiDir = path.join(repoDir, 'wiki');
+  if (!fs.existsSync(legacyWikiDir) || !fs.statSync(legacyWikiDir).isDirectory()) {
+    return;
+  }
+  if (directoryHasContent(repoWikiDir)) {
+    return;
+  }
+  copyDirectoryContents(legacyWikiDir, repoWikiDir);
+}
+
+function ensureGlobalKnowledgeRoot() {
+  fs.mkdirSync(path.join(VIRTUCON_HQ, 'raw'), { recursive: true });
+  fs.mkdirSync(path.join(VIRTUCON_HQ, 'wiki', 'orgs'), { recursive: true });
+  fs.mkdirSync(path.join(VIRTUCON_HQ, 'wiki', 'patterns'), { recursive: true });
+  writeIfMissing(path.join(VIRTUCON_HQ, 'schema.md'), buildSchema('global'));
+  writeIfMissing(path.join(VIRTUCON_HQ, 'wiki', 'index.md'), buildIndex('global'));
+  writeIfMissing(path.join(VIRTUCON_HQ, 'wiki', 'log.md'), buildLog('global'));
 }
 
 function ensureBootstrap(orgRepo) {
@@ -106,16 +140,22 @@ function ensureBootstrap(orgRepo) {
 
   copyIfMissing(path.join(assets, 'blueprint.template.md'), path.join(templateDir, 'blueprint.template.md'));
   copyIfMissing(path.join(assets, '.agent', 'wiki', '_TEMPLATE.md'), path.join(VIRTUCON_HQ, '_TEMPLATE.md'));
+  ensureGlobalKnowledgeRoot();
 
   if (!orgRepo) {
     return;
   }
 
-  const orgDir = path.join(VIRTUCON_HQ, orgRepo.org);
-  const repoDir = path.join(orgDir, `_${orgRepo.repo}`);
+  const repoDir = path.join(VIRTUCON_HQ, orgRepo.org, `_${orgRepo.repo}`);
+  const repoRawDir = path.join(VIRTUCON_HQ, 'raw', orgRepo.org, orgRepo.repo);
+  const repoWikiDir = path.join(VIRTUCON_HQ, 'wiki', 'orgs', orgRepo.org, orgRepo.repo);
+
   fs.mkdirSync(path.join(repoDir, 'blueprints'), { recursive: true });
-  ensureKnowledgeRoot(orgDir, orgRepo.org);
-  ensureKnowledgeRoot(repoDir, `${orgRepo.org}/${orgRepo.repo}`);
+  fs.mkdirSync(repoRawDir, { recursive: true });
+  fs.mkdirSync(repoWikiDir, { recursive: true });
+
+  seedLegacyWiki(repoDir, repoRawDir);
+  migrateLegacyWiki(repoDir, repoWikiDir);
 }
 
 function buildNudge(orgRepo) {
@@ -144,7 +184,8 @@ function buildNudge(orgRepo) {
   const org = orgRepo ? orgRepo.org : '<org>';
   const repo = orgRepo ? orgRepo.repo : '<repo>';
   const repoRoot = `${VIRTUCON_HQ}/${org}/_${repo}`;
-  const orgRoot = `${VIRTUCON_HQ}/${org}`;
+  const repoRaw = `${VIRTUCON_HQ}/raw/${org}/${repo}/`;
+  const repoWiki = `${VIRTUCON_HQ}/wiki/orgs/${org}/${repo}/`;
 
   return [
     '<minime-workflow-nudge>',
@@ -153,13 +194,12 @@ function buildNudge(orgRepo) {
     '**Minime paths (single source of truth. Do not hardcode; use these):**',
     `  VIRTUCON_HQ=${VIRTUCON_HQ}`,
     `  Templates: ${VIRTUCON_HQ}/templates/`,
+    `  Global raw: ${VIRTUCON_HQ}/raw/`,
+    `  Global wiki: ${VIRTUCON_HQ}/wiki/`,
+    `  Global schema: ${VIRTUCON_HQ}/schema.md`,
     `  Blueprints: ${repoRoot}/blueprints/`,
-    `  Repo raw: ${repoRoot}/raw/`,
-    `  Repo wiki: ${repoRoot}/wiki/`,
-    `  Repo schema: ${repoRoot}/schema.md`,
-    `  Org raw: ${orgRoot}/raw/`,
-    `  Org wiki: ${orgRoot}/wiki/`,
-    `  Org schema: ${orgRoot}/schema.md`,
+    `  Repo raw: ${repoRaw}`,
+    `  Repo wiki: ${repoWiki}`,
     `  Template: ${VIRTUCON_HQ}/_TEMPLATE.md`,
     '',
     'Available skills:',

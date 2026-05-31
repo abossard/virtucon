@@ -1,6 +1,6 @@
 ---
 name: lab
-description: Bootstrap minime user-home state only (no repository writes). Creates blueprint templates plus repo and org raw/wiki/schema roots under VIRTUCON_HQ.
+description: Bootstrap minime user-home state only (no repository writes). Creates blueprint templates plus global raw/wiki/schema roots and repo blueprint dirs under VIRTUCON_HQ.
 when_to_use: First-time setup of the minime flow. Run once per machine or profile. Idempotent. Safe to re-run.
 disable-model-invocation: true
 allowed-tools: Bash(git remote get-url *) Bash(cp *) Bash(mkdir *) Bash(ls *) Bash(test *) Bash(cat *) Bash(printf *) Bash(perl *) Bash(cut *) Bash(echo *)
@@ -15,18 +15,16 @@ Bootstrap minime in plugin-only mode. The session-start hook already auto-bootst
 ```
 VIRTUCON_HQ/templates/blueprint.template.md
 VIRTUCON_HQ/_TEMPLATE.md
-VIRTUCON_HQ/<org>/raw/
-VIRTUCON_HQ/<org>/wiki/index.md
-VIRTUCON_HQ/<org>/wiki/log.md
-VIRTUCON_HQ/<org>/schema.md
-VIRTUCON_HQ/<org>/_<repo>/raw/
-VIRTUCON_HQ/<org>/_<repo>/wiki/index.md
-VIRTUCON_HQ/<org>/_<repo>/wiki/log.md
-VIRTUCON_HQ/<org>/_<repo>/schema.md
+VIRTUCON_HQ/raw/<org>/<repo>/
+VIRTUCON_HQ/wiki/index.md
+VIRTUCON_HQ/wiki/log.md
+VIRTUCON_HQ/wiki/orgs/<org>/<repo>/
+VIRTUCON_HQ/wiki/patterns/
+VIRTUCON_HQ/schema.md
 VIRTUCON_HQ/<org>/_<repo>/blueprints/
 ```
 
-If a legacy `wiki.md` already exists at the org or repo root, bootstrap copies it to `raw/legacy-wiki.md` once.
+If a legacy `wiki.md` already exists at the repo root, bootstrap copies it to `raw/<org>/<repo>/legacy-wiki.md` once.
 
 ## Bootstrap
 
@@ -64,64 +62,64 @@ copy_if_missing() {
 }
 
 seed_legacy() {
-  root="$1"
-  if [ -f "$root/wiki.md" ] && [ ! -e "$root/raw/legacy-wiki.md" ]; then
-    cp "$root/wiki.md" "$root/raw/legacy-wiki.md"
-    echo "seeded $root/raw/legacy-wiki.md"
+  repo_root="$1"
+  repo_raw="$2"
+  if [ -f "$repo_root/wiki.md" ] && [ ! -e "$repo_raw/legacy-wiki.md" ]; then
+    cp "$repo_root/wiki.md" "$repo_raw/legacy-wiki.md"
+    echo "seeded $repo_raw/legacy-wiki.md"
   fi
 }
 
-ensure_root() {
-  root="$1"
-  label="$2"
-  mkdir -p "$root/raw" "$root/wiki"
+ensure_global_root() {
+  mkdir -p "$VIRTUCON_HQ/raw" "$VIRTUCON_HQ/wiki/orgs" "$VIRTUCON_HQ/wiki/patterns"
 
-  if [ ! -e "$root/schema.md" ]; then
-    cat > "$root/schema.md" <<EOF_SCHEMA
-# Wiki schema: $label
+  if [ ! -e "$VIRTUCON_HQ/schema.md" ]; then
+    cat > "$VIRTUCON_HQ/schema.md" <<EOF_SCHEMA
+# Wiki schema: global
 
 This root uses raw/, wiki/, and schema.md.
-raw/ holds immutable source documents.
-wiki/ holds index.md, log.md, and topic pages.
+raw/ holds immutable source documents under raw/<org>/<repo>/.
+wiki/ holds index.md, log.md, repo pages in wiki/orgs/<org>/<repo>/, and shared patterns in wiki/patterns/.
 Do not store logs or large outputs in raw/.
 EOF_SCHEMA
-    echo "wrote  $root/schema.md"
+    echo "wrote  $VIRTUCON_HQ/schema.md"
   else
-    echo "skip   $root/schema.md (exists)"
+    echo "skip   $VIRTUCON_HQ/schema.md (exists)"
   fi
 
-  if [ ! -e "$root/wiki/index.md" ]; then
-    cat > "$root/wiki/index.md" <<EOF_INDEX
-# Wiki index: $label
+  if [ ! -e "$VIRTUCON_HQ/wiki/index.md" ]; then
+    cat > "$VIRTUCON_HQ/wiki/index.md" <<EOF_INDEX
+# Wiki index: global
 
 Track topic pages and their raw sources here.
 EOF_INDEX
-    echo "wrote  $root/wiki/index.md"
+    echo "wrote  $VIRTUCON_HQ/wiki/index.md"
   else
-    echo "skip   $root/wiki/index.md (exists)"
+    echo "skip   $VIRTUCON_HQ/wiki/index.md (exists)"
   fi
 
-  if [ ! -e "$root/wiki/log.md" ]; then
-    cat > "$root/wiki/log.md" <<EOF_LOG
-# Wiki log: $label
+  if [ ! -e "$VIRTUCON_HQ/wiki/log.md" ]; then
+    cat > "$VIRTUCON_HQ/wiki/log.md" <<EOF_LOG
+# Wiki log: global
 
 Track dated ingest, query, and lint updates here.
 EOF_LOG
-    echo "wrote  $root/wiki/log.md"
+    echo "wrote  $VIRTUCON_HQ/wiki/log.md"
   else
-    echo "skip   $root/wiki/log.md (exists)"
+    echo "skip   $VIRTUCON_HQ/wiki/log.md (exists)"
   fi
-
-  seed_legacy "$root"
 }
 
 copy_if_missing "$ASSETS/blueprint.template.md" "$VIRTUCON_HQ/templates/blueprint.template.md"
 copy_if_missing "$ASSETS/.agent/wiki/_TEMPLATE.md" "$VIRTUCON_HQ/_TEMPLATE.md"
+ensure_global_root
 
 if [ -n "$ORG" ] && [ -n "$REPO" ]; then
-  ensure_root "$VIRTUCON_HQ/$ORG" "$ORG"
-  ensure_root "$VIRTUCON_HQ/$ORG/_$REPO" "$ORG/$REPO"
-  mkdir -p "$VIRTUCON_HQ/$ORG/_$REPO/blueprints"
+  repo_root="$VIRTUCON_HQ/$ORG/_$REPO"
+  repo_raw="$VIRTUCON_HQ/raw/$ORG/$REPO"
+  repo_wiki="$VIRTUCON_HQ/wiki/orgs/$ORG/$REPO"
+  mkdir -p "$repo_root/blueprints" "$repo_raw" "$repo_wiki"
+  seed_legacy "$repo_root" "$repo_raw"
 fi
 
 echo
