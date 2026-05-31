@@ -36,7 +36,7 @@ Runs first in the four-phase flow. No human review gate. The output is an execut
 4. **Discover domain-specific skills and agents.**
    Scan local and installed skills or agents that might help the task.
 
-5. **Run VOI triage.**
+5. **Run VOI triage** (see `assets/ORCHESTRATION.md` § VOI taxonomy for the full classification).
    Resolve `decided-by-data` unknowns directly.
    Dispatch only strong `general-purpose` subagents for `needs-research` items.
    Research returns must lead with raw proof such as URLs, exact quotes, and code paths before interpretation.

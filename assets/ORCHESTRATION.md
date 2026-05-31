@@ -54,10 +54,62 @@ Repo roots only keep `blueprints/` for the living blueprint handoff files.
 - **Query**: planning reads a small ranked set of wiki pages, not the whole knowledge base.
 - **Lint**: health checks look for stale claims, contradictions, orphan scopes, and missing citations.
 
+## Evidence value chain
+
+Evidence weight tiers:
+- 1. full value (execution output, user confirmation)
+- 2. some value (direct code references)
+- 3. zero value (AI statements without execution or code reference)
+
+## VOI taxonomy
+
+For each open unknown, classify and resolve by level:
+- **decided-by-data**: resolvable from code, docs, tests, or specs. Resolve directly with evidence.
+- **needs-research**: resolvable but needs evidence gathering first. Dispatch subagents with strict return contracts: raw proof first, interpretation second.
+- **undecidable-now**: true value tradeoff or policy decision. Use `ask_user` per the ask_user contract below.
+
+## Phase isolation
+
+Each phase (except inspect) runs in a fresh `general-purpose` subagent via the `task` tool. This prevents tool-output accumulation in the orchestrator's context. The blueprint on disk is the sole cross-phase state bus; no phase depends on chat context from a previous phase.
+
 ## Ask_user rule
 
 Use `ask_user` only for true `undecidable-now` tradeoffs or when the task source is missing.
 Do not add plan approval checkpoints.
+
+Every `ask_user` call must include:
+- `evidence`: raw proof that shows why input is needed
+- `suggestions`: options with confidence and reasoning
+- `free_text`: a way for the user to override the listed options
+
+After the response, resume the flow. Do not idle.
+
+**Anti-patterns (each of these is a violation):**
+- "Should I start?" / "Should I proceed?" / "Want me to continue?" in plain text
+- "Is this plan good?" / "Does this look correct?" in plain text
+- Presenting Option A / Option B as prose instead of an `ask_user` form
+- Ending a response with a question directed at the user without calling `ask_user`
+- Asking ANY question and then waiting for a conversational reply
+
+## Topic ownership
+
+| Topic | Canonical definition | Phase-local mirrors | Notes |
+|-------|---------------------|---------------------|-------|
+| Evidence-first / No-verdict | inspect/SKILL.md | (none needed, frau reads inspect) | |
+| Evidence weight tiers | ORCHESTRATION.md | replicate, inspect (reference only) | |
+| VOI triage (3-level) | ORCHESTRATION.md | blueprint (full), dr-evil (reference) | |
+| ask_user contract | ORCHESTRATION.md | dr-evil (reference), blueprint, inspect | |
+| Knowledge layout | ORCHESTRATION.md | blueprint (reads), extract (reads+writes), lab (bash) | |
+| Risk tiers (HIGH/LOW) | inspect/SKILL.md | dr-evil (routes), README (summary) | |
+| Inspect review gate wording | inspect/SKILL.md | (none needed) | Routes HIGH-risk items to `ask_user`. |
+| Phase isolation | ORCHESTRATION.md | dr-evil (reference) | |
+| EARS criteria | blueprint/SKILL.md | replicate (tests), inspect (verifies) | |
+| Scoped wiki entries | ORCHESTRATION.md | all skills (phase-specific) | |
+| Constraint re-injection | replicate/SKILL.md | (none needed) | |
+| Test-at-boundary | replicate/SKILL.md | inspect (verifies) | |
+| No human gate | ORCHESTRATION.md | skill frontmatter only | |
+| Preserve raw wording | ORCHESTRATION.md | blueprint, inspect | |
+| Human corrections signal | extract/SKILL.md | inspect (flags for extract) | |
 
 ## Context engineering
 

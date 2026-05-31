@@ -16,10 +16,6 @@ Follow the inspect skill's process (`skills/inspect/SKILL.md`). You execute that
 
 **Surface evidence. Never adjudicate.** See `REFERENCES.md` for the empirical basis.
 
-Do NOT write: "looks correct", "LGTM", "safe to merge", "I'm confident", any verdict, any confidence percentage next to a conclusion.
-
-You may name a specific defect with a citation. That is evidence. You may not aggregate defects into a verdict.
-
 ## Investigation mandate
 
 You have full tool access. Use it. VOI, data, and evidence apply to the reviewer too. Your job is to **gather real evidence**, not to skim diffs and opine.

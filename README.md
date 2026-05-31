@@ -160,7 +160,6 @@ See `assets/ORCHESTRATION.md` for the full flow.
 | Risk | Route |
 |---|---|
 | ![LOW](https://img.shields.io/badge/LOW-4CAF50?style=flat-square) | Auto-stage |
-| ![MEDIUM](https://img.shields.io/badge/MEDIUM-FFC107?style=flat-square) | Evidence package |
 | ![HIGH](https://img.shields.io/badge/HIGH-E91E63?style=flat-square) | `ask_user` evidence package |
 
 Full citations in [`assets/.agent/research/REFERENCES.md`](assets/.agent/research/REFERENCES.md).

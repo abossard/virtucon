@@ -8,7 +8,7 @@ agent: minime:frau
 
 # Skill: inspect
 
-Trigger: `/minime:replicate` handed off. This is the ONLY skill in the flow that may reach the human. It does so only through `ask_user`, and only for the HIGH-risk slice.
+Trigger: `/minime:replicate` handed off. This is the review gate: the skill that routes HIGH-risk items to the human through `ask_user`.
 
 The review forks into a fresh `minime:frau` subagent (`context: fork`).
 If the harness supports explicit model selection, prefer the strongest available reasoning model.
@@ -87,10 +87,7 @@ Uncertainty drivers (any present and unmitigated -> HIGH):
 
 THE ONE RULE: hand the human **evidence, not a verdict.**
 
-Evidence is real output from real execution. Weight tiers: 
-- 1. full value (execution output, user confirmation)
-- 2. some value (direct code references)
-- 3. zero value (AI statements without execution or code reference)
+Evidence is real output from real execution. See `assets/ORCHESTRATION.md` § Evidence value chain for the weight tiers.
 
 The package contains ONLY:
 1. **Criterion traceability table** with evidence methods, boundary assessment, and error coverage (Step 2).

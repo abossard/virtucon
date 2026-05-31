@@ -28,7 +28,7 @@ Treat this constraint with the same priority as "don't commit secrets." A questi
 
 ## The flow — phase-isolated
 
-Each phase (except inspect) runs in a fresh `general-purpose` subagent via the `task` tool. This prevents tool-output accumulation in the orchestrator's context. The blueprint on disk is the sole cross-phase state bus — no phase depends on chat context from a previous phase. See `assets/ORCHESTRATION.md` § Context engineering.
+See `assets/ORCHESTRATION.md` § Phase isolation for the rationale. Each phase runs in a fresh subagent; the blueprint on disk is the sole cross-phase state bus.
 
 **Dispatch pattern:** read the phase's `skills/<phase>/SKILL.md`, then launch a `general-purpose` task subagent (sync mode) with: the SKILL.md content, the blueprint path, and the working directory. Each subagent returns:
 - `status` (done/blocked/failed), `blueprint_path`, `changed_files[]`, `blocking_issue`
@@ -49,7 +49,7 @@ Do not invent intermediate phases.
 
 ## VOI gate
 
-Before asking the user to decide anything: is this decidable-by-data? If yes, resolve it first. Only escalate true undecidable tradeoffs.
+Apply the VOI taxonomy from `assets/ORCHESTRATION.md` § VOI taxonomy. Resolve decided-by-data items first, dispatch research for needs-research items, and escalate only undecidable-now tradeoffs.
 
 ## Phase transition checks
 
@@ -64,23 +64,7 @@ If not, repeat the previous phase.
 
 ## When to use ask_user
 
-Use `ask_user` only for: genuinely blocking ambiguity (ONE question), missing sources after research, HIGH-risk review, or destructive/irreversible actions. Follow `assets/ORCHESTRATION.md` § Ask_user rule.
-
-Every `ask_user` call must include:
-- `evidence`: raw proof that shows why input is needed
-- `suggestions`: options with confidence and reasoning
-- `free_text`: a way for the user to override the listed options
-
-After the response, resume the flow. Do not idle.
-
-**Anti-patterns (each of these is a violation):**
-- "Should I start?" / "Should I proceed?" / "Want me to continue?" in plain text
-- "Is this plan good?" / "Does this look correct?" in plain text
-- Presenting Option A / Option B as prose instead of an `ask_user` form
-- Ending a response with a question directed at the user without calling `ask_user`
-- Asking ANY question and then waiting for a conversational reply
-
-Do NOT ask: "Should I start?", "Is this plan good?", "Should I merge?"
+Use `ask_user` only for: genuinely blocking ambiguity (ONE question), missing sources after research, HIGH-risk review, or destructive/irreversible actions. Follow `assets/ORCHESTRATION.md` § Ask_user rule for the format contract and anti-patterns.
 
 ## Memory
 

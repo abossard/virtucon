@@ -23,11 +23,7 @@ Follow context-engineering guidance in `assets/ORCHESTRATION.md` § Context engi
 
 ## What counts as evidence
 
-Evidence is real output from real execution: test results, command output, HTTP responses, screenshots, logs. Three tiers of evidence weight:
-1. **Full weight**: actual execution output (test results, command output, logs)
-2. **Full weight**: explicit user confirmation
-3. **Some weight**: direct references to code (file, line, symbol)
-4. **Zero weight**: AI statements about code behavior 
+Evidence is real output from real execution: test results, command output, HTTP responses, screenshots, logs. See `assets/ORCHESTRATION.md` § Evidence value chain for the weight tiers.
 
 ## The loop (this is the empirically strongest part of the flow)
 

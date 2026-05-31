@@ -104,5 +104,8 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.22.3",
     "typescript": "^5.3.3"
+  },
+  "overrides": {
+    "serialize-javascript": ">=7.0.5"
   }
 }
