@@ -99,7 +99,7 @@
     "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^2.22.0",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.1",
     "mocha": "^11.7.5",
     "ts-node": "^10.9.2",
     "tsx": "^4.22.3",
