@@ -11,6 +11,10 @@ Trigger: a task is merged or a session produced lessons worth preserving. It tur
 
 Human corrections are the highest-value signal. Capture them first.
 
+## Progress
+
+Mark this phase in the harness native todo tool: `in_progress` on entry, `done` at handoff. Visibility aid for the user, never a gate. Skip silently if no todo tool is available. See `assets/ORCHESTRATION.md` § Progress tracking.
+
 ## Learn from the blueprint
 
 Read the persisted blueprint at `VIRTUCON_HQ/<org>/_<repo>/blueprints/<date>-<name>.blueprint.md`.

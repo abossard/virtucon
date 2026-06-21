@@ -9,6 +9,10 @@ allowed-tools: Read Edit Write Grep Glob Bash
 
 Trigger: `/minime:blueprint` has handed off, or the user invoked you directly with an existing plan. **No human review gate.** Quality here comes from a tight execution-grounded loop, not from human checkpoints.
 
+## Progress
+
+Mark this phase in the harness native todo tool: `in_progress` on entry, `done` at handoff. Visibility aid for the user, never a gate. Skip silently if no todo tool is available. See `assets/ORCHESTRATION.md` § Progress tracking.
+
 ## Living blueprint
 
 Locate the persisted blueprint at `VIRTUCON_HQ/<org>/_<repo>/blueprints/<date>-<name>.blueprint.md` (VIRTUCON_HQ is in the session nudge). **Read the file at the start of this phase to confirm it exists.** If it does not exist, the blueprint phase failed to persist it; create it now before proceeding.

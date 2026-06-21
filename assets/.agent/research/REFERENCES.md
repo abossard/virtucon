@@ -60,7 +60,7 @@ Findings used by this flow:
 
 ## Practitioner heuristics (internal observations, not empirical)
 
-- Instruction attenuation / constraint re-injection: observed pattern where rules applied early in a loop lose substance mid-loop. No formal citation. -> re-injection in the implement skill.
+- Instruction attenuation / constraint re-injection: observed pattern where rules applied early in a loop lose substance mid-loop. Now supported by LLMs Get Lost in Multi-Turn Conversation (arXiv:2505.06120, cited above): multi-turn degradation driven by unreliability is consistent with rules losing substance mid-loop. -> re-injection in the implement skill.
 - "Forget-Me-Not" label is a practitioner shorthand, not a published finding.
 
 ## Interpretation notes (for workflow decisions)

@@ -9,6 +9,10 @@ allowed-tools: Read Edit Grep Glob Bash(git remote get-url *) Bash(git log *) Ba
 
 Runs first in the four-phase flow. No human review gate. The output is an executable handoff for replicate.
 
+## Progress
+
+Mark this phase in the harness native todo tool: `in_progress` on entry, `done` at handoff. Visibility aid for the user, never a gate. Skip silently if no todo tool is available. See `assets/ORCHESTRATION.md` § Progress tracking.
+
 ## Steps
 
 1. **Persist the living blueprint first.**

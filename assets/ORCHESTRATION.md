@@ -72,6 +72,16 @@ For each open unknown, classify and resolve by level:
 
 Each phase (except inspect) runs in a fresh `general-purpose` subagent via the `task` tool. This prevents tool-output accumulation in the orchestrator's context. The blueprint on disk is the sole cross-phase state bus; no phase depends on chat context from a previous phase.
 
+## Progress tracking
+
+Surface live phase progress through the harness native todo or task tool, not a bespoke status file.
+
+- Seed one todo per phase at the start of a run: blueprint, replicate, inspect, extract.
+- Mark the active phase `in_progress` on entry and `done` at handoff. Keep exactly one phase `in_progress` at a time.
+- Sub-step todos inside a phase are optional (for example a per-criterion item in replicate). Complete them before handoff.
+- The todo list is a read-only visibility aid for the user. It never replaces the blueprint, which stays the durable cross-phase state bus, and it never becomes an approval gate.
+- If the harness has no todo tool, skip this silently.
+
 ## Ask_user rule
 
 Use `ask_user` only for true `undecidable-now` tradeoffs or when the task source is missing.
@@ -103,6 +113,7 @@ After the response, resume the flow. Do not idle.
 | Risk tiers (HIGH/LOW) | inspect/SKILL.md | dr-evil (routes), README (summary) | |
 | Inspect review gate wording | inspect/SKILL.md | (none needed) | Routes HIGH-risk items to `ask_user`. |
 | Phase isolation | ORCHESTRATION.md | dr-evil (reference) | |
+| Progress tracking | ORCHESTRATION.md | dr-evil (seeds list), all skills (mark phase) | Harness native todo tool, visibility only |
 | EARS criteria | blueprint/SKILL.md | replicate (tests), inspect (verifies) | |
 | Scoped wiki entries | ORCHESTRATION.md | all skills (phase-specific) | |
 | Constraint re-injection | replicate/SKILL.md | (none needed) | |

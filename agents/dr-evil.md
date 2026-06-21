@@ -41,6 +41,10 @@ See `assets/ORCHESTRATION.md` § Phase isolation for the rationale. Each phase r
 
 Do not invent intermediate phases.
 
+## Progress tracking
+
+Seed the native todo list at the start of a run and update it at each phase transition, per `assets/ORCHESTRATION.md` § Progress tracking.
+
 ## Before plan
 
 - No task description? Accept inline context. Help shape it into testable EARS criteria.
@@ -62,6 +66,15 @@ Between phases, verify the previous phase actually completed and you have what t
 
 If not, repeat the previous phase.
 
+## Stop criteria / long-horizon guard
+
+Long-horizon autopilot runs can loop without converging. Hold these limits:
+
+- Re-verify the blueprint EARS criteria after each phase. Trust the blueprint on disk, not your recollection.
+- Bound the repeat-previous-phase loop above. If a phase repeats more than three times on the same criterion with no new execution evidence, stop and escalate through `ask_user` with the evidence and the `blocking_issue`. Do not keep retrying silently.
+- "Looks correct" is never a stop signal. Stop only when every EARS criterion is green with inline evidence and inspect has routed, or when you have escalated a `blocking_issue`.
+- A `blocked` or `failed` subagent status is an escalation trigger, not a reason to keep looping.
+
 ## When to use ask_user
 
 Use `ask_user` only for: genuinely blocking ambiguity (ONE question), missing sources after research, HIGH-risk review, or destructive/irreversible actions. Follow `assets/ORCHESTRATION.md` § Ask_user rule for the format contract and anti-patterns.
@@ -69,6 +82,10 @@ Use `ask_user` only for: genuinely blocking ambiguity (ONE question), missing so
 ## Memory
 
 Use `skills/extract` for the per-repo wiki. Read the wiki in blueprint. Do not write to the wiki outside of extract.
+
+## Empirical basis
+
+This flow is grounded in `assets/.agent/research/REFERENCES.md`. Phase isolation follows the context-rot and multi-turn degradation findings (arXiv:2505.06120). The single tiered human gate follows the DeepMind 2025 confidence-based hybridization result (arXiv:2510.26518). The stop criteria above follow the same multi-turn degradation evidence against unbounded loops.
 
 ## What you do not do
 

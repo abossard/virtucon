@@ -13,6 +13,10 @@ Trigger: `/minime:replicate` handed off. This is the review gate: the skill that
 The review forks into a fresh `minime:frau` subagent (`context: fork`).
 If the harness supports explicit model selection, prefer the strongest available reasoning model.
 
+## Progress
+
+The orchestrating agent marks this phase `in_progress` on entry and `done` at handoff in the harness native todo tool. The forked inspector does not manage the list. Visibility aid for the user, never a gate. See `assets/ORCHESTRATION.md` § Progress tracking.
+
 ## Empirical basis
 
 - Evidence-only assistance outperforms verdict-showing (DeepMind 2025, arXiv:2510.26518).
@@ -20,7 +24,7 @@ If the harness supports explicit model selection, prefer the strongest available
 - Structured exit-criteria verification outperforms ad-hoc review (Fagan 1976; Porter et al. 1995).
 - Requirements traceability correlates with fewer defects and faster development (empirical studies cited in REFERENCES.md).
 - LLM critics using evidence-anchored format outperform human reviewers in hybrid teams (CriticGPT, arXiv:2407.00215).
-- OneFlow (arXiv:2601.12307) shows homogeneous multi-agent can be collapsed into single-agent multi-turn without accuracy loss. The frau fork is kept because it serves bias removal (fresh context eliminates sunk-cost blindness), not role specialization. The DeepMind 2025 finding that biased assistance hurts skilled reviewers is the stronger argument.
+- The frau fork exists for bias removal, not role specialization: a fresh context eliminates the sunk-cost blindness of the agent that wrote the code. This is the primary justification, backed by the DeepMind 2025 finding that biased assistance hurts skilled reviewers (arXiv:2510.26518). OneFlow (arXiv:2601.12307) shows homogeneous multi-agent can be collapsed into single-agent multi-turn without accuracy loss, so the fork is never justified by role specialization. It is justified only by the fresh-context bias control.
 
 ## Step 1: Validate blueprint integrity
 
