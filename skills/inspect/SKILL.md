@@ -43,7 +43,7 @@ Read the persisted blueprint (`VIRTUCON_HQ/<org>/_<repo>/blueprints/<date>-<name
 
 - **Treat all findings as advisory.** Verify every finding by reading the real code path and adjacent files. Read dependency docs/source/types when the finding depends on external behavior.
 - **Reject speculative risks.** Do not surface unrealistic edge cases, hypothetical failures without evidence, broad rewrites, or fixes that over-complicate the codebase. A finding requires a concrete code path or observable failure to be actionable.
-- **Stop when clean.** Once the review pass produces no accepted/actionable findings, stop. Do not run an additional review cycle for a nicer summary, second opinion, or cleaner wording. One clean pass is sufficient.
+- **Stop when clean; one gate, not seven.** Once the review pass produces no accepted/actionable findings, stop. Do not run another review cycle, spawn a second reviewer, or stack another AI gate; stacking reviewers multiplies cost and blind spots without adding safety. One bounded pass plus the human is the design.
 - **Scope-match findings.** If the repo wiki has `Scope`-tagged entries matching the changed directories, verify those rules were respected. Flag violations as findings.
 
 For each acceptance criterion, build a traceability row:
@@ -104,7 +104,7 @@ The package contains ONLY:
 
 **Evidence-first principle.** Present raw data (test output, command output, diff) FIRST. Label any analysis or interpretation separately and after the raw evidence. Data outranks interpretation. If they conflict, the data wins.
 
-FORBIDDEN: "this looks correct / LGTM / safe to merge / I'm confident", any verdict, any score next to a conclusion, any persuasion. The human adjudicates.
+FORBIDDEN: "this looks correct / LGTM / safe to merge / I'm confident", any verdict, any score, any persuasion, and any reasoning trace offered as proof. Longer explanation is not stronger evidence; the human adjudicates on executed output.
 
 ## Step 7: Route
 
