@@ -20,16 +20,19 @@
 
 minime is a GitHub Copilot CLI plugin that carries a coding task through planning, implementation, independent inspection, and knowledge capture. It addresses requirements drift in long agent sessions, reviews built on summaries instead of executed proof, and useful lessons that disappear when a session ends.
 
-You start with a task description. The `minime:dr-evil` agent manages the work and coordinates four phases: blueprint, replicate, inspect, and extract. It brings you evidence and asks you to judge choices it cannot resolve from data.
+You start with a task description. The `minime:dr-evil` agent manages the work and coordinates four phases: blueprint, replicate, inspect, and extract. It dispatches one native task worker per phase, keeps criterion-linked runtime reporting, and asks you to judge choices it cannot resolve from data.
 
 ## Features
 
 - **A living blueprint:** minime turns your request into verifiable criteria, records decisions, and keeps the plan on disk across fresh contexts.
+- **Native blueprint canvas:** when capability exists, minime opens or focuses the blueprint canvas, supports section-first editing plus advanced source on the same draft, preserves section boundary newlines during replacement, and falls back to the blueprint file path when canvas support is unavailable.
 - **Visible work management:** Dr. Evil discovers available skills and plugins, aligns the blueprint with native plans, todos, and subagent work, and can keep an external tracker synchronized with your permission.
-- **Execution-grounded implementation:** replicate selects tests for the touched surface, runs them, observes the output, and fixes failures.
+- **Execution-grounded implementation:** replicate selects tests for the touched surface, runs them, observes the output, fixes failures, and reconciles design diagrams with changed multi-file or multi-module code.
 - **Fresh inspection:** the `minime:frau` inspector starts without the implementer's context, checks the current task against its criteria, and returns evidence for human judgment.
+- **Global wiki canvas:** minime ships a wiki canvas that searches all repositories by default, offers a removable current-repository preset, and keeps raw sources read-only.
 - **Durable project knowledge:** minime retrieves relevant cited wiki entries during planning and captures reusable lessons with links back to live code.
 - **Automatic local setup:** a session hook creates the knowledge and blueprint directories under `VIRTUCON_HQ`. The default location is `$HOME/.minime`.
+- **Model policy:** minime respects Copilot App model defaults. It sets task-level model overrides only when you select them.
 
 The phase badges above link to each skill. See the [orchestration guide](assets/ORCHESTRATION.md) for workflow mechanics and policy.
 
@@ -48,6 +51,8 @@ Update an existing installation:
 copilot plugin update minime@virtucon
 ```
 
+minime does not ship a copy installer. Use `copilot plugin update` when you want the latest packaged canvases.
+
 ## Use
 
 Start Copilot CLI with Dr. Evil:
@@ -57,6 +62,12 @@ copilot --agent minime:dr-evil
 ```
 
 Describe the coding task in the prompt. Dr. Evil runs the flow and returns the evidence or decisions that need your attention. Set `VIRTUCON_HQ` before launch if you want minime to store its local state somewhere other than `$HOME/.minime`.
+
+## Copilot App
+
+Minime includes an editable blueprint view and a shared wiki browser. See the [Canvas tour](docs/canvases.md) for screenshots and controls, or [Canvas guidance](assets/CANVAS.md) for agent behavior.
+
+The [orchestration guide](assets/ORCHESTRATION.md) defines how work proceeds, how corrections take effect, and when a decision needs your input.
 
 ## Inspiration
 

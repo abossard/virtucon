@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { lstatSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, resolve, sep } from "node:path";
+import { repositoryRoots } from "./document-store.mjs";
 
 const TERMINAL_STATUS = /^(?:complete|completed|done|implemented|extracted)\b/;
 
@@ -18,8 +19,7 @@ export function deriveRepository(cwd = process.cwd()) {
 }
 
 export function repositoryBlueprintRoot({ org, repo }) {
-    if (!process.env.HOME) throw new Error("HOME is unavailable.");
-    return realpathSync(resolve(process.env.HOME, ".minime", org, `_${repo}`, "blueprints"));
+    return realpathSync(repositoryRoots({ org, repo }).blueprintRoot);
 }
 
 function section(markdown, heading) {
@@ -31,7 +31,7 @@ function section(markdown, heading) {
     return (next < 0 ? rest : rest.slice(0, next)).trim();
 }
 
-export function parseBlueprint(markdown, filename, stats = {}) {
+export function parseBlueprint(markdown, filename, stats = {}, blueprintPath = null) {
     const title =
         markdown.match(/^# Blueprint:\s*(.+)$/m)?.[1]?.trim() ??
         filename.replace(/\.blueprint\.md$/, "");
@@ -40,14 +40,20 @@ export function parseBlueprint(markdown, filename, stats = {}) {
         "unknown";
     const active = section(markdown, "Active criteria");
     const criteria = [...active.matchAll(/^- \[([ xX])\]\s+(.+)$/gm)].map(
-        ([, mark, text]) => ({
-            complete: mark.toLowerCase() === "x",
-            text: text.split(/\s+\|\s+VOI:/)[0].trim(),
-        }),
+        ([, mark, text]) => {
+            const criterion = text.split(/\s+\|\s+VOI:/)[0].trim();
+            const idMatch = criterion.match(/^([A-Za-z0-9]+-[0-9]+)\s+(.+)$/);
+            return {
+                complete: mark.toLowerCase() === "x",
+                id: idMatch?.[1] ?? null,
+                text: idMatch?.[2] ?? criterion,
+            };
+        },
     );
     const completed = criteria.filter((criterion) => criterion.complete).length;
     return {
         filename,
+        path: blueprintPath,
         title,
         status,
         goal: section(markdown, "Goal"),
@@ -80,7 +86,7 @@ function confinedPath(root, filename) {
 export function readBlueprint(root, filename) {
     const path = confinedPath(root, filename);
     const markdown = readFileSync(path, "utf8");
-    return { path, markdown, model: parseBlueprint(markdown, filename, statSync(path)) };
+    return { path, markdown, model: parseBlueprint(markdown, filename, statSync(path), path) };
 }
 
 export function listOpenBlueprints(root) {

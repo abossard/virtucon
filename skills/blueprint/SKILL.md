@@ -1,121 +1,76 @@
 ---
 name: blueprint
-description: "Blueprint a coding task from inline context or an existing blueprint. Reads the repo and org wiki page collections, scores and verifies them, thinks silently, self-challenges, and returns a persisted plan. No human review gate. The blueprint is the durable handoff artifact."
-when_to_use: "When the user has a task to plan, whether as an existing blueprint file, inline conversation context, or a verbal description. This skill starts the orchestration flow."
+description: Plan a coding task from a request or an existing blueprint. Persist criteria, decisions, design, and evidence methods for implementation.
 allowed-tools: Read Edit Grep Glob Bash(git remote get-url *) Bash(git log *) Bash(git status) Bash(ls *) Bash(mkdir *) Write
 ---
 
-# Skill: blueprint
+# Blueprint
 
-Turn the task into a persisted executable plan. Runs first in the four-phase flow. No human review gate.
+Read the [shared workflow](../../assets/ORCHESTRATION.md) on entry. It defines phase ownership, progress, decisions, knowledge layout, and handoffs.
 
-Trigger: the user has a task to plan, or the orchestrator started a run.
+## 1. Persist the task
 
-## Agent
-Run blueprint with a reasoning-capable agent that can dispatch research and other agents. Prefer strong reasoning models, such as Opus 5 or GPT 5.6 Sol.
+Resolve the task source and owning repository. Create or update the living blueprint in the shared knowledge layout, starting from the user's HQ template.
 
-## Progress
+The [bundled template](../../assets/blueprint.template.md) owns the required document shape. Normalize an older or reordered HQ template in the living document only; leave the user's template untouched. Keep unsealed legacy completion records for independent inspection rather than inventing archive proof.
 
-Mark this phase `in_progress` on entry and `done` at handoff in the harness native todo tool. Visibility aid, never a gate. Skip silently when no todo tool exists. See `assets/ORCHESTRATION.md` § Progress tracking.
+Preserve the original request once in its section. Append later user corrections under User feedback and reference them from the active correction.
 
-## Steps
+Read the new file back before continuing. For presentation or unavailable canvas support, follow [Canvas guidance](../../assets/CANVAS.md).
 
-1. **Persist the living blueprint first.**
-   Derive `<org>` and `<repo>` from `git remote get-url origin`. Take VIRTUCON_HQ from the session nudge, then the env var, then `~/.minime`.
-   Create or update `VIRTUCON_HQ/<org>/_<repo>/blueprints/<YYYY-MM-DD>-<short-name>.blueprint.md` from `VIRTUCON_HQ/templates/blueprint.template.md`.
-   When an older HQ template lacks the correction-scoped `## Active criteria` or `## Criteria archive` sections, or orders sections differently from the readability contract below, normalize the living blueprint and leave the user's template file untouched. Move only uncompleted criteria into the current correction. Never copy completed criteria back into active state and never fabricate archive hashes; leave unsealed legacy completion text for later independent inspection.
-   Read the file back from disk before continuing.
+## 2. Make criteria checkable
 
-2. **Accept the task source from wherever it lives.**
-   Preserve the user's original request verbatim.
-   Nudge for EARS completeness with the minimum clarification when criteria are vague.
-   Give every criterion an evidence method that names the proving tool, the boundary it exercises, and the pass/fail signal.
+Write one observable behavior per criterion using EARS form: identify the trigger or condition and the required response.
 
-3. **Locate wiki sources.**
-   Read these paths when present:
-   - `VIRTUCON_HQ/schema.md`
-   - `VIRTUCON_HQ/wiki/index.md`
-   - `VIRTUCON_HQ/wiki/log.md`
-   - repo topic pages under `VIRTUCON_HQ/wiki/orgs/<org>/<repo>/`
-   - cross-repo topic pages under `VIRTUCON_HQ/wiki/patterns/`
-   - related raw documents under `VIRTUCON_HQ/raw/<org>/<repo>/`
-   When the repo topic directory is empty, continue with zero repo wiki context and note that in the blueprint instead of blocking.
-   Treat legacy `VIRTUCON_HQ/<org>/_<repo>/wiki/` and `wiki.md` files as compatibility input only. Prefer the global wiki tree whenever both exist.
+For each criterion, name the proving tool or interface, the boundary exercised, and the pass/fail result. Include a meaningful edge or error case. For preservation requirements, identify the existing behavior that must remain.
 
-4. **Discover domain-specific and writing skills.**
-   Scan local and installed skills or agents that fit the task.
-   Scan the same inventory for skills that make a document easier for people and agents to read, such as `writing-for-agents` for structure and `stop-slop` for prose review.
-   Record the matches under `## Discovered skills and agents`.
+Use the shared decision rule when the task lacks a value choice that evidence cannot resolve.
 
-5. **Run VOI triage.**
-   Resolve `decided-by-data` unknowns directly.
-   Dispatch only strong `general-purpose` subagents for `needs-research` items, and require raw proof such as URLs, exact quotes, and code paths ahead of any interpretation.
-   Use `ask_user` only for `undecidable-now` tradeoffs.
-   Record every resolution in the Decisions table.
-   See `assets/ORCHESTRATION.md` § VOI taxonomy and § Ask_user rule.
+## 3. Gather relevant guidance
 
-6. **Rank wiki pages before reading them deeply.**
-   Rank by `Scope` match, title or summary match, active status, stronger code citations, recency, and user-correction origin.
-   Read only the small set the task needs. Treat `index.md` and `log.md` as navigation aids, not final truth.
+Use the shared knowledge layout to locate the schema, navigation pages, scoped topics, and related raw sources. Apply the [context rules](../../assets/ORCHESTRATION.md#context-engineering) when selecting and verifying claims.
 
-7. **Verify before trusting.**
-   Open the cited code paths from selected pages.
-   Mark an uncited claim as a lead only.
-   When a cited claim no longer matches live code, ignore it for planning and flag it for extract as stale.
-   Tag every entry carried into `## Relevant verified wiki entries` with an inline `active`, `stale`, or `superseded` status against live code.
+Record relevant entries with their sources and an `active`, `stale`, or `superseded` status. Continue with zero repository wiki context when no topic pages exist.
 
-8. **Call `writing-for-agents` before drafting.**
-   Call the skill tool for `writing-for-agents` when step 4 found it, then apply its guidance while writing every section.
-   When step 4 found no writing skill, apply the readability contract below and record the absence in step 10.
+Resolve remaining unknowns through the shared VOI process. Use bounded general-purpose workers for research that warrants delegation.
 
-9. **Plan silently and persist the handoff.**
-   Write `## Plan summary` with files to touch, implementation order, fix shape, tests, and resolved wiki constraints.
-   Write every section named in the readability contract below.
+## 4. Select supporting skills
 
-10. **Review the prose and clean the document.**
-    Call the skill tool for a prose-review skill such as `stop-slop` when step 4 found one, then apply its edits. Its metrics are editing input, not an acceptance score.
-    List the exact skill names you called under `## Discovered skills and agents`. List `none available; readability contract applied` when you called none.
-    Delete every HTML authoring comment, every `<angle-bracket>` placeholder, and the template's EARS pattern and quality-check scaffolding from the living blueprint.
+Discover skills that fit the task. For module design, prefer `codebase-design` when available.
 
-11. **Critique the test strategy.**
-    Rubber-duck each criterion until it is backed by a user-facing proof and at least one meaningful edge case.
+Before drafting, invoke available writing guidance such as `writing-for-agents`. Use an available prose-review skill such as `stop-slop` after the draft. Record the exact skill names invoked.
 
-12. **Self-challenge briefly.**
-    State the riskiest assumption, when the approach would be wrong, and any remaining ambiguity.
+If no writing skill is available, apply the readability rules below. Supporting skills are optional dependencies, not installation prerequisites.
 
-13. **Return.**
-    Return control to the orchestrator, or to the caller for direct manual use. Do not invoke another phase.
+## 5. Write the plan
 
-## Readability contract
+Match the requested level of detail.
 
-The persisted blueprint is the only cross-phase state bus. Write it so a person or a fresh agent can act on it without rereading the conversation.
+- For interface or boundary principles, describe responsibilities, inputs, outputs, and observable guarantees. Leave private implementation choices to the implementer.
+- For an implementation plan, identify affected files, work order, approach, tests, and verified constraints.
 
-Emit exactly these level-2 sections, once each, in this order:
+Apply the [visual-design guidance](visual-design.md) to Plan summary. Keep design decisions beside their sources.
 
-`## Goal`, `## Active criteria`, `## Criteria archive`, `## Plan summary`, `## Constraints / non-negotiables`, `## Out of scope`, `## User's original request`, `## Decisions made`, `## Relevant verified wiki entries`, `## Research resolved`, `## Discovered skills and agents`, `## Evidence collected`, `## Test strategy critique`, `## Self-challenge`, `## Handoff`, `## Discovered during review`, `## User feedback`.
+## 6. Review the document
 
-- Write `None.` under a section that has no content yet, and keep the heading.
-- Keep the `## Goal` and `## Active criteria` headings byte-exact. The Minime canvas parses them.
-- State one meaning in one section. Keep a decision beside its source.
-- Give every decision and every wiki entry a direct source. Label an unsupported claim a lead.
-- Write short factual sentences in active voice. Join clauses with a full stop, comma, colon, or parentheses, so the finished document holds zero em dash characters.
-- Name a writing skill only after the skill tool has returned it.
+Check for missing outputs, material initialization or error behavior, conflicting guarantees, and claims a reader cannot verify.
 
-## Result contract
+Challenge each criterion's proof: it must exercise the stated behavior, including its meaningful edge case. State the riskiest assumption, when the approach would be wrong, and any unresolved ambiguity.
 
-Return exactly the shared result contract from `assets/ORCHESTRATION.md`:
-- `status`: `done`, `blocked`, or `failed`
-- `blueprint_path`: absolute persisted path, or `null`
-- `changed_files[]`: sorted repository-relative paths, or an empty array
-- `blocking_issue`: actionable text, or `null`
-- `evidence_excerpts[]`: compact raw proof, or an empty array
+Apply the selected prose review. Its metrics guide edits; they do not establish correctness.
 
-Never omit a field. Return to the caller without self-chaining.
+## 7. Complete the handoff
 
-## Rules
+Read the persisted file. Confirm the template sections, required visuals, criteria and proof methods, decisions, and canvas-availability evidence are present.
 
-- Do not create a plan approval gate.
-- Prefer the smallest plan that satisfies the criteria.
-- Preserve raw user wording.
-- Evidence beats interpretation.
-- Follow `assets/ORCHESTRATION.md` for the shared raw/wiki/schema contract.
+Remove authoring comments, placeholders, and teaching scaffolding. Use `None.` for empty sections. Set the document status to `planned` when it is ready.
+
+Update native progress and return the [shared result](../../assets/ORCHESTRATION.md#result-contract). Include the persisted path and relevant availability evidence.
+
+## Readability rules
+
+- State each requirement once and reference it elsewhere.
+- Name the owner, public inputs and outputs, and material edge behavior.
+- Use consistent terms and short factual sentences.
+- Keep source references beside the claims they support.
+- Preserve user wording verbatim; write surrounding prose without em dashes, process narration, or self-praise.

@@ -1,15 +1,14 @@
 # Blueprint: <short-name>
 
-Created: <YYYY-MM-DD HH:MM ±TZ>  |  Status: planning  |  Repo: <org>/<repo>
+Created: <YYYY-MM-DD HH:MM ±TZ> | Status: planning | Repo: <org>/<repo>
 
-<!-- Authoring guide. Fill every section in the order below, then delete every HTML comment and
-     every <angle-bracket> placeholder before handoff.
-     The Minime canvas parser (`.github/extensions/minime-flow/lib/blueprints.mjs`) reads
-     `## Goal` and `## Active criteria` byte-exact. Keep those two headings unchanged. -->
+<!-- This template owns the blueprint's section order and archive shape.
+     Keep the headings, including byte-exact Goal and Active criteria.
+     Remove authoring comments and placeholders from the living document. -->
 
 ## Goal
 
-<2-4 sentences. The outcome and why it matters. Not how.>
+<The requested outcome and why it matters.>
 
 ## Active criteria
 
@@ -17,115 +16,84 @@ Created: <YYYY-MM-DD HH:MM ±TZ>  |  Status: planning  |  Repo: <org>/<repo>
 
 #### Correction source
 
-> <the exact task or correction words, unmodified>
+<Reference the verbatim source in User's original request or User feedback.>
 
-<!-- Only this correction's new, failed, or invalidated criteria belong here.
-     Completed criteria from earlier corrections stay in the archive. -->
-
-<!-- EARS patterns. Each criterion collapses to one checkable claim:
-       Ubiquitous:  The system shall <requirement>.
-       Event:       When <trigger>, the system shall <response>.
-       State:       While <state>, the system shall <response>.
-       Conditional: If <condition>, then the system shall <response>.
-       Optional:    Where <feature included>, the system shall <response>.
-     Quality check before planning:
-       - one verifiable behavior per criterion
-       - an explicit `When ... shall ...` trigger for event-driven behavior
-       - `If ... then ... shall ...` for edge and error behavior
-       - outcomes rather than code structure
-       - an evidence method naming tool, boundary, and pass/fail signal
-       - evidence at the user-facing or API boundary
-       - one nameable test per criterion -->
-
-- [ ] `<C0-1>` <criterion> | VOI: <decided-by-data|needs-research|undecidable-now> | Evidence: <tool, boundary, pass/fail>
-- [ ] `<C0-2>` <criterion> | VOI: <decided-by-data|needs-research|undecidable-now> | Evidence: <tool, boundary, pass/fail>
+- [ ] `<C0-1>` <observable requirement> | VOI: <category> | Evidence: <tool, interface, pass/fail result>
 
 ## Criteria archive
 
-<!-- Append a record only after fresh inspect accepts a criterion, then remove its active record
-     and its inline raw evidence. Hash artifact bytes with SHA-256. For multiple artifacts, hash a
-     sorted manifest of repository-relative path plus each file's SHA-256. Hash the exact compact
-     raw proof bytes before removing them. Prefix both hashes with `sha256:`.
-     Write one line stating the absence while the table is empty. -->
+<!-- The shared workflow determines when a criterion may enter this archive.
+     Hash artifact bytes with SHA-256. For several artifacts, hash a sorted manifest
+     of repository-relative paths and each file's SHA-256.
+     Hash the exact compact proof bytes before removing inline evidence.
+     Prefix both hashes with sha256:. Keep the timestamp of acceptance. -->
+
+None.
 
 | ID | Correction | Criterion | Artifact refs | Artifact hash | Evidence method | Evidence hash | Completed |
 |----|------------|-----------|---------------|---------------|-----------------|---------------|-----------|
 
 ## Plan summary
 
-<!-- Files to touch, implementation order, fix shape per area, what proves each criterion,
-     and the wiki constraints that shaped the plan. -->
+<!-- Follow the blueprint skill for the requested level of detail and the visual-design
+     guide for diagrams. -->
 
-| Order | File | Change |
-|------:|------|--------|
-| 1 | `<path>` | <change> |
+<Approach and required visuals.>
 
 ## Constraints / non-negotiables
 
-<!-- Concrete rules replicate re-injects mid-implementation: budgets, libraries, patterns to follow. -->
-
-- <constraint>
+<Behavior, interfaces, or limits the implementation must preserve.>
 
 ## Out of scope
 
-- <explicit non-goal>
+<Explicit non-goals.>
 
 ## User's original request
 
-<!-- The user's exact words. Append later corrections; edit nothing. -->
+<!-- Preserve the first request verbatim here. Store later corrections in User feedback. -->
 
-> <the user's exact request>
+> <original request>
 
 ## Decisions made
 
 | Unknown | VOI level | Resolution | Source |
 |---------|-----------|------------|--------|
-| <unknown> | <level> | <resolution> | <file:line or command output> |
+| <question> | <category> | <decision> | <direct source> |
 
 ## Relevant verified wiki entries
 
-<!-- Only entries selected for this task. Tag each `active`, `stale`, or `superseded` against live code. -->
-
-- **<status>** `<wiki path>`: <claim>. Verified against `<file:line>`.
+<Relevant claims, their sources, and active/stale/superseded status against live code.>
 
 ## Research resolved
 
-- <needs-research item and the raw proof that closed it>
+<Resolved research questions and the evidence that resolved them.>
 
 ## Discovered skills and agents
 
-<!-- Include the writing skills applied to this document, or state that none was available. -->
-
-- `<skill or agent>`: <why it matters here>
-- Writing skills applied: <skills, or `none available; readability contract applied`>
+<Selected capabilities and the exact skill names invoked. State any unavailable writing support.>
 
 ## Evidence collected
 
-- <compact raw excerpt or command output>
+<Observed canvas availability and compact execution proof. Link larger artifacts.>
 
 ## Test strategy critique
 
-- <rubber-duck finding per criterion, including the meaningful edge case>
+<Gaps in the proposed proof and the meaningful edge cases it must exercise.>
 
 ## Self-challenge
 
-- Riskiest assumption: <text>
-- When this approach is wrong: <text>
-- Remaining ambiguity: <text>
+<Riskiest assumption, when the approach would be wrong, and remaining ambiguity.>
 
 ## Handoff
 
-Invoke `skill("replicate")` with this blueprint path.
+<Status, completed work, and remaining work for the caller.>
 
 ## Discovered during review
-
-<!-- Criteria surfaced by review feedback that belonged in the original EARS.
-     Each gets its own checkbox and VOI level. -->
 
 None.
 
 ## User feedback
 
-<!-- Exact user feedback with timestamps. Append, never edit or reinterpret. -->
+<!-- Append verbatim feedback with timestamps. Reference it from the relevant correction. -->
 
 None.

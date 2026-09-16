@@ -1,0 +1,21 @@
+{
+  "name": "minime-flow-renderer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:ui": "node ./ui/build-ui.mjs",
+    "test:ui": "node --test ui/*.test.mjs"
+  },
+  "dependencies": {
+    "dompurify": "3.4.15",
+    "marked": "18.0.12",
+    "mermaid": "11.17.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "linkedom": "0.18.13"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

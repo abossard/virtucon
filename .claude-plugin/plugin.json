@@ -1,7 +1,7 @@
 {
   "name": "minime",
-  "description": "Four skills (blueprint / replicate / inspect / extract) run a coding task through one risk-tiered human review gate. Dr. Evil coordinates the flow, Frau inspects in a fresh context with full tool access, and lab bootstraps per-repo state.",
-  "version": "0.2.26b",
+  "description": "Four skills (blueprint / replicate / inspect / extract) run coding tasks through planning, implementation, inspection, and knowledge capture. Dr. Evil coordinates runtime reporting and bundled flow and wiki canvases discovered from .github/extensions.",
+  "version": "0.2.27b",
   "author": {
     "name": "abossard"
   },
@@ -14,5 +14,8 @@
     "workflow",
     "inspection",
     "evidence-based"
+  ],
+  "extensions": [
+    ".github/extensions"
   ]
 }

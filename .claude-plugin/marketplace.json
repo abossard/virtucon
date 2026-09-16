@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "virtucon",
-  "description": "Evidence-based agent orchestration: blueprint, replicate, inspect, extract.",
+  "description": "Evidence-based agent orchestration with bundled flow and wiki canvases discovered from .github/extensions.",
   "owner": {
     "name": "abossard"
   },
@@ -9,7 +9,7 @@
     {
       "name": "minime",
       "source": "./",
-      "description": "Four-phase agent workflow (blueprint / replicate / inspect / extract) with a per-repo corrections wiki and one risk-tiered human review gate. Dr. Evil runs the flow; Frau inspects in a fresh context with full tool access."
+      "description": "Four-phase agent workflow (blueprint / replicate / inspect / extract) plus bundled canvases exposed as plugin:minime:minime-flow and plugin:minime:minime-wiki. Includes removable current-repo wiki preset, raw read-only policy, and manual update flow."
     }
   ]
 }

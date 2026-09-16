@@ -9,60 +9,109 @@
 </head>
 <body>
   <header class="masthead">
-    <div><p class="eyebrow">Minime process</p><h1>Flow control</h1></div>
+    <div>
+      <p class="eyebrow">Minime process</p>
+      <h1>Blueprint flow</h1>
+    </div>
     <p id="project-name" class="project-name" aria-live="polite"></p>
   </header>
-  <nav class="tabs" role="tablist" aria-label="Canvas views">
-    <button id="flow-tab" role="tab" aria-selected="true" aria-controls="flow-panel">Current flow</button>
-    <button id="project-tab" role="tab" aria-selected="false" aria-controls="project-panel" tabindex="-1">Project</button>
-  </nav>
-  <main>
-    <section id="flow-panel" role="tabpanel" aria-labelledby="flow-tab">
-      <div class="blueprint-heading">
-        <div><p class="eyebrow">Selected living blueprint</p><h2 id="blueprint-title">Loading blueprint…</h2></div>
-        <span id="blueprint-status" class="status-pill"></span>
+  <main class="layout">
+    <section class="card">
+      <div class="row">
+        <h2 id="blueprint-title">Loading blueprint…</h2>
+        <span id="live-indicator" class="pill">Connecting</span>
       </div>
-      <section class="goal-card" aria-labelledby="goal-title">
-        <h3 id="goal-title">Goal</h3><p id="blueprint-goal"></p>
-        <div class="progress-copy"><span id="criteria-progress"></span><span id="criteria-percent"></span></div>
-        <div class="progress-track" aria-hidden="true"><span id="progress-bar"></span></div>
-      </section>
-      <section class="work-card" aria-labelledby="work-title">
-        <div><p class="eyebrow">Current work</p><h3 id="work-title"></h3></div>
-        <p id="session-state" class="session-state" aria-live="polite"></p>
-        <ul id="unmapped-runs" class="run-list"></ul>
-      </section>
-      <section aria-labelledby="flow-title">
-        <div class="section-heading">
-          <div><p class="eyebrow">Live agent map</p><h3 id="flow-title">Phase flow</h3></div>
-          <span id="live-indicator" class="live-indicator">Connecting</span>
+      <p id="blueprint-path" class="meta"></p>
+      <p id="blueprint-status" class="meta"></p>
+      <ol id="phase-strip" class="phase-strip" aria-label="Current flow phases"></ol>
+    </section>
+
+    <section class="card" aria-labelledby="work-title">
+      <h3 id="work-title">Current work</h3>
+      <p id="current-criterion-id" class="meta"></p>
+      <p id="current-criterion"></p>
+      <p id="current-phase" class="meta"></p>
+      <p id="needs-input" class="meta"></p>
+      <div class="actions">
+        <button id="jump-criterion" type="button">Jump to criterion</button>
+        <button id="open-evidence" type="button">Open evidence</button>
+        <button id="open-agents" type="button">Open agents</button>
+      </div>
+    </section>
+
+    <section class="card editor" aria-labelledby="editor-title">
+      <div class="row stack-mobile">
+        <div>
+          <h3 id="editor-title">Blueprint editor</h3>
+          <p id="design-status" class="meta"></p>
         </div>
-        <ol id="phase-flow" class="phase-flow"></ol>
-      </section>
-      <section class="criteria-card" aria-labelledby="criteria-title">
-        <h3 id="criteria-title">Active criteria</h3><ul id="criteria-list" class="criteria-list"></ul>
-      </section>
-      <section class="comment-card" aria-labelledby="comment-title">
-        <p class="eyebrow">Correction channel</p><h3 id="comment-title">Comment on this blueprint</h3>
-        <p>Comments are sent to the active agent. This canvas never edits the blueprint directly.</p>
-        <form id="comment-form">
-          <label for="comment">Correction</label>
-          <textarea id="comment" name="comment" maxlength="4000" required rows="4" placeholder="Describe the correction to preserve verbatim."></textarea>
-          <div class="composer-row">
-            <p id="comment-state" class="comment-state" aria-live="polite">Ready for a correction.</p>
-            <button id="comment-submit" class="primary" type="submit">Send correction</button>
-          </div>
-        </form>
-      </section>
-    </section>
-    <section id="project-panel" role="tabpanel" aria-labelledby="project-tab" hidden>
-      <div class="section-heading">
-        <div><p class="eyebrow">Repository scope</p><h2>Open blueprints</h2></div>
-        <span id="blueprint-count" class="status-pill"></span>
+        <div class="actions">
+          <button id="save-draft" class="primary" type="button">Save draft</button>
+          <button id="apply-draft" type="button">Apply correction</button>
+          <button id="toggle-help" type="button" aria-controls="panel-help">Help</button>
+        </div>
       </div>
-      <p>Only blueprints with active work in this repository are shown.</p>
-      <ul id="blueprint-list" class="blueprint-list"></ul>
+      <p id="draft-state" class="status" aria-live="polite">Loading draft…</p>
+      <p id="section-warning" class="status"></p>
+
+      <div class="tabs" role="tablist" aria-label="Editor mode">
+        <button id="mode-sections" data-mode-control="sections" role="tab" aria-selected="true" aria-controls="mode-panel-sections">Sections</button>
+        <button id="mode-source" data-mode-control="source" role="tab" aria-selected="false" aria-controls="mode-panel-source" tabindex="-1">Markdown source</button>
+        <button id="mode-preview" data-mode-control="preview" role="tab" aria-selected="false" aria-controls="mode-panel-preview" tabindex="-1">Preview</button>
+      </div>
+
+      <section id="mode-panel-sections" data-mode-panel="sections" role="tabpanel" aria-labelledby="mode-sections">
+        <label for="goal-input">Goal</label>
+        <textarea id="goal-input" rows="8" spellcheck="false"></textarea>
+        <label for="active-criteria-input">Active criteria</label>
+        <textarea id="active-criteria-input" rows="12" spellcheck="false"></textarea>
+        <label for="plan-summary-input">Plan summary (includes Design)</label>
+        <textarea id="plan-summary-input" rows="14" spellcheck="false"></textarea>
+      </section>
+
+      <section id="mode-panel-source" data-mode-panel="source" role="tabpanel" aria-labelledby="mode-source" hidden>
+        <label for="source-input">Full markdown source</label>
+        <textarea id="source-input" rows="26" spellcheck="false"></textarea>
+      </section>
+
+      <section id="mode-panel-preview" data-mode-panel="preview" role="tabpanel" aria-labelledby="mode-preview" hidden>
+        <p id="preview-state" class="meta"></p>
+        <article id="preview-output" class="preview" aria-live="polite"></article>
+      </section>
     </section>
+
+    <details id="panel-help" class="card">
+      <summary>Keyboard controls</summary>
+      <ul class="list">
+        <li><kbd>Ctrl/Cmd</kbd> + <kbd>S</kbd> saves the current draft.</li>
+        <li><kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd> opens section edit.</li>
+        <li><kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd> opens markdown source.</li>
+        <li><kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> opens preview.</li>
+        <li><kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd> applies the saved draft.</li>
+        <li><kbd>?</kbd> toggles this help panel.</li>
+      </ul>
+    </details>
+
+    <details id="panel-evidence" class="card">
+      <summary>Evidence</summary>
+      <ul id="evidence-list" class="list"></ul>
+    </details>
+
+    <details id="panel-history" class="card">
+      <summary>History</summary>
+      <ul id="history-list" class="list"></ul>
+    </details>
+
+    <details id="panel-navigation" class="card">
+      <summary>Navigation</summary>
+      <p id="blueprint-count" class="meta"></p>
+      <ul id="blueprint-list" class="list"></ul>
+    </details>
+
+    <details id="panel-agents" class="card">
+      <summary>Agents</summary>
+      <ul id="agent-list" class="list"></ul>
+    </details>
   </main>
   <script type="module" src="/app.js"></script>
 </body>

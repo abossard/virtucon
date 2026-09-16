@@ -1,21 +1,141 @@
 # Orchestration
 
-minime runs four phases in order: blueprint -> replicate -> inspect -> extract.
-The flow has no mandatory approval gate between phases.
+Dr. Evil owns the workflow. Phase workers complete their assigned work and return evidence to the caller.
+
+## Phase isolation
+
+Dispatch each phase through a fresh native task named `blueprint`, `replicate`, `inspect`, or `extract`. Use a general-purpose or project specialist for blueprint, replicate, and extract; use `minime:frau` for inspect.
+
+Explicit dispatch establishes the fresh context. Skill metadata alone does not establish it in every runtime. A direct phase invocation returns to its caller without starting another phase.
+
+The persisted blueprint is the sole cross-phase state bus. Keep task decisions and evidence there so the next worker can proceed without the previous conversation.
+
+## Phase transition ownership
+
+1. **Blueprint:** obtain a persisted plan with checkable criteria and evidence methods.
+2. **Replicate:** obtain the task-scoped changes, execution output, and updated blueprint.
+3. **Inspect:** obtain fresh verification and a risk tier. Route HIGH-risk findings through the [decision rule](#ask_user-rule). Archive accepted criteria and return unfinished work to replicate.
+4. **Extract:** dispatch at the [terminal boundary](#terminal-extract-boundary).
+
+After three attempts on one criterion without new execution evidence, present the obstacle through the decision rule.
+
+## Result contract
+
+Each phase returns all of these fields. The status describes that phase, not the whole workflow.
+
+| Field | Value |
+|-------|-------|
+| `status` | `done`, `blocked`, or `failed` |
+| `blueprint_path` | Absolute persisted path, or `null` |
+| `changed_files[]` | Sorted repository-relative paths changed by this phase for the task |
+| `blocking_issue` | Actionable reason, or `null` |
+| `evidence_excerpts[]` | Compact raw proof or direct observations |
+
+Use empty arrays for empty collections. Store durable proof in the blueprint; excerpts identify the evidence needed for the next step.
+
+## Correction queue contract
+
+Keep the user's draft separate from the applied blueprint that workers read.
+
+When the user applies a correction, stop dispatching successors and let active workers reach their boundary. Recover current worker state before applying after a reconnect; unknown state is not evidence that work has stopped. An idle worker has finished its current turn.
+
+The owner then:
+
+1. Reads the applied document, proposed correction, and available base version.
+2. Reconciles concurrent changes while preserving the user's submission and worker evidence.
+3. Applies the result through the available revision-checked operation.
+4. Reads back the persisted result and resumes unfinished criteria.
+
+On conflict, retain both versions and identify the next action. Discover operation names and inputs from current runtime capabilities. Private storage edits are not a recovery interface.
+
+The user-correction interface protects the original request and accepted archive. The owner maintains routine evidence and archives through normal file tools after rereading the blueprint. An already-applied notification is a receipt, not a new task.
+
+## Living blueprint lifecycle
+
+Keep only the current correction's new, failed, or invalidated criteria active, with a reference to its verbatim source. A checked active criterion records passing implementation evidence; it is not yet an accepted archive record.
+
+After fresh inspection accepts a criterion, the owner moves it to the archive using the fields and sealing instructions in the [blueprint template](blueprint.template.md#criteria-archive). Preserve its identity and evidence references without copying the removed raw proof into the archive.
+
+A missing or changed artifact, or a changed proof definition, invalidates the associated baseline. Recheck those records; leave unchanged archived proofs excluded.
+
+## Inspection scope
+
+Give inspect the current-task delta, active criteria, and invalidated archived proofs. If that boundary is missing or ambiguous, resolve it before inspection.
+
+The inspector evaluates only that scope. Its [skill](../skills/inspect/SKILL.md) owns verification methods, risk assessment, and the evidence package.
+
+## Terminal extract boundary
+
+Keep extract pending through correction loops. Dispatch it at most once, when the task completes or the session explicitly ends, with no active criteria or blocker.
+
+## Progress tracking
+
+Use native plans, todos, and task status for execution visibility. They reflect the blueprint; they do not replace it.
+
+For an orchestrated run, the owner creates one item per phase and keeps one phase in progress. For a direct invocation, track only that phase. Update assignments and dependencies at handoffs, and finish substeps before marking the phase done. If no native planning tool exists, continue with the blueprint.
+
+Distinguish unfinished work from a blocker. A blocked update must name the impediment, affected work, next action, and action owner. Say when the user must act. Unrun verification is pending work.
+
+For canvas presentation, editing, or verification, read [Canvas guidance](CANVAS.md). When an external tracker would help, obtain permission before maintaining it as another view of progress.
+
+## Value of Information -> VOI
+
+| Unknown | Response |
+|---------|----------|
+| `decided-by-data` | Resolve from code, documentation, tests, or specifications. |
+| `needs-research` | Gather evidence, using a bounded worker when warranted. |
+| `undecidable-now` | Ask the user to choose a value tradeoff or policy. |
+
+Record the resolution beside its source in the blueprint.
+
+## Ask_user rule
+
+Use the native question tool for undecidable tradeoffs, a missing task source, or a concrete obstacle that needs the user's action.
+
+Show the evidence, recommended options with confidence and reasons, and a free-text override. Adapt this information to the tool's actual schema. Ask one focused question at a time, then resume the work after the answer.
+
+Keep permission requests separate from routine handoffs. A completed plan does not require an extra approval question.
+
+## Evidence value chain
+
+Evidence weight has three tiers:
+
+1. Execution output or user confirmation: full value.
+2. Direct code references: supporting value.
+3. AI assertions without execution or code references: no value.
+
+Match the proof to the claimed boundary. A local or mocked check does not establish native host, browser, or cloud behavior.
+
+## Reasoning invariant
+
+Respect the user's current model, reasoning, and context settings. Supply explicit task overrides only when the user selected them for this task.
+
+Use strong reasoning under those settings. A faster validation route narrows scope and time, not inspection independence.
+
+## Documentation validation fast path
+
+The owner may use the fast path only when all of these conditions hold:
+
+- The entire delta is non-operational prose.
+- Added plus removed lines total fewer than 50.
+- No executable, configuration, schema, manifest, generated output, hook, agent instruction, or skill instruction changes.
+- No criterion requires executable or live-cloud proof.
+
+Instruction documents are operational regardless of file extension. Mixed changes use standard validation.
+
+The fast path retains fresh inspection and shares one cumulative 120-second monotonic deadline across validation commands and phases. Never reset that deadline. Timeout, failure, inconclusive proof, or changed eligibility requires standard validation; none counts as success.
+
+## Git mutation boundary
+
+Keep changes unstaged unless the user authorizes the specific current-task Git operation. Permission is phase-bound, not standing authorization. Staging is not a prerequisite for verification or completion.
 
 ## Shared knowledge contract
 
-This file is also the canonical contract for repo and org knowledge under `VIRTUCON_HQ`.
-Skills and README keep only phase-local wording.
-
-### Layout
-
-`VIRTUCON_HQ` has a shared knowledge root plus per-repo blueprint folders:
+Resolve `VIRTUCON_HQ` from the session nudge, then the environment, then `~/.minime`. Derive repository identity from its configured origin.
 
 ```text
 VIRTUCON_HQ/
-  raw/
-    <org>/<repo>/
+  raw/<org>/<repo>/
   wiki/
     index.md
     log.md
@@ -27,193 +147,36 @@ VIRTUCON_HQ/
   <org>/_<repo>/blueprints/
 ```
 
-The shared root keeps a three-layer contract:
+| Layer | Purpose and boundary |
+|-------|----------------------|
+| Raw | Immutable, append-only source material: user feedback, curated findings, decisions, and useful failed approaches. Keep bulk logs in execution artifacts. |
+| Wiki | Maintained guidance derived from raw sources. Keep repository topics in their repository scope and reusable cross-repository rules in patterns. |
+| Schema | Naming and linking conventions for the knowledge base. Use live code to resolve conflicting claims. |
+| Blueprints | Living task plans and handoffs, kept under the owning repository's blueprint directory. |
 
-- `raw/`
-  - Immutable source documents stored under `raw/<org>/<repo>/`.
-  - The agent may read them freely.
-  - The agent should treat captured raw docs as append-only artifacts rather than living summaries.
-  - Allowed examples: curated findings, distilled results, user messages, general knowledge discovered during work, hard-won discoveries, and compact notes about failed approaches.
-  - Forbidden examples: logs, large command outputs, bulky traces, or anything that should stay in ephemeral execution evidence instead of durable memory.
-- `wiki/`
-  - LLM-maintained markdown pages derived from the raw layer.
-  - `index.md` is the catalog of current topic pages.
-  - `log.md` is the chronological ingest/query/lint record.
-  - Repo topic pages live under `wiki/orgs/<org>/<repo>/`.
-  - Cross-repo guidance lives under `wiki/patterns/`.
-  - Topic pages are linked markdown documents created from `_TEMPLATE.md` and updated over time.
-- `schema.md`
-  - Co-evolved guidance that explains how the wiki is structured, named, and linked.
-  - When schema guidance and live code disagree, live code wins.
+The wiki index is a catalog; the log records ingest, query, and lint activity. Topic pages use `_TEMPLATE.md` at the knowledge root. Prefer the global wiki tree; legacy per-repository wiki files are compatibility inputs.
 
-Repo roots only keep `blueprints/` for the living blueprint handoff files.
-
-### Operations
-
-- **Ingest**: new raw source arrives, then the relevant wiki pages, `index.md`, and `log.md` are updated.
-- **Query**: planning reads a small ranked set of wiki pages, not the whole knowledge base.
-- **Lint**: health checks look for stale claims, contradictions, orphan scopes, and missing citations.
-
-## Evidence value chain
-
-Evidence weight tiers:
-- 1. full value (execution output, user confirmation)
-- 2. some value (direct code references)
-- 3. zero value (AI statements without execution or code reference)
-
-## Value of Information -> VOI
-
-For each unclear thing, assumption or unknown, check if it falls into one of these categories:
-- **decided-by-data**: resolvable from code, docs, tests, or specs. Resolve directly with evidence.
-- **needs-research**: resolvable but needs evidence gathering first. Dispatch subagents with strict return contracts: raw proof first, interpretation second.
-- **undecidable-now**: true value tradeoff or policy decision. Use `ask_user` per the ask_user contract below.
-
-## Phase isolation
-
-- Each phase runs in a fresh subagent dispatched through the `task` tool. 
-- Blueprint, replicate, and extract use `general-purpose` or existing specialized agents for the project
-- inspect uses `minime:frau`. Explicit task dispatch is the enforcement point because skill frontmatter fork metadata is not honored by every harness. This prevents tool-output accumulation in the orchestrator's context. The blueprint on disk is the sole cross-phase state bus; no phase depends on chat context from a previous phase.
-
-## Phase transition ownership
-
-Run the phases with these handoffs:
-
-1. Dispatch blueprint. Continue only with a completed plan and persisted blueprint path.
-2. Dispatch replicate. Continue only with the current-task delta, execution proof, and updated blueprint.
-3. Dispatch inspect through a fresh `minime:frau` task. Continue only with its evidence package and risk tier. Route HIGH findings through `ask_user`; archive accepted criteria, open correction criteria, and return to replicate when needed.
-   An inspect result produced inline in the orchestrator's implementing context is incomplete. Repeat inspect through the required fresh `minime:frau` task dispatch.
-4. Dispatch extract only at the terminal boundary below.
-
-After three attempts on one criterion without new execution evidence, route the blocker through `ask_user`.
-
-Every phase returns exactly this shared result contract:
-
-- `status`: `done`, `blocked`, or `failed`.
-- `blueprint_path`: absolute path to the persisted blueprint, or `null` when no blueprint is available.
-- `changed_files[]`: sorted repository-relative paths changed by that phase for the current task, or an empty array when none changed.
-- `blocking_issue`: compact actionable text, or `null` when unblocked.
-- `evidence_excerpts[]`: compact raw output lines or direct observations needed by the caller, or an empty array when none exist.
-
-Fields are never omitted. Use an empty array for an empty collection and `null` only for an unavailable scalar. Durable proof belongs in the blueprint, not only in the returned excerpts.
-
-## Reasoning invariant
-
-Standard and fast-path work use strong high reasoning. A fast path may narrow validation scope and elapsed time only. It must not lower reasoning, select a cheaper model, or weaken fresh inspection.
-
-## Documentation validation fast path
-
-The orchestrator classifies the current-task delta before validation. Fast-path eligibility requires all of the following:
-
-- The delta is exclusively non-operational prose documentation.
-- The line metric is `added + removed < 50`; exactly 50 lines is ineligible.
-- No changed artifact is executable, configuration, schema, manifest, generated output, hook, agent instruction, or skill instruction.
-- The task requires no executable or live-cloud proof.
-
-Files under `agents/**`, `skills/**`, and `hooks/**` are operational even when they use Markdown or another text format. Documentation plus any ineligible artifact uses standard validation.
-
-The fast path keeps fresh inspection and has one single cumulative 120-second monotonic wall-clock deadline across all validation commands and phases. The deadline starts once and never resets. A timeout, failed proof, inconclusive proof, or eligibility drift immediately falls back to standard validation; none can be treated as success.
-
-Policy matrix:
-
-| Current-task delta | Route |
-|--------------------|-------|
-| 49 changed lines of non-operational prose only | fast path |
-| Exactly 50 changed prose lines | standard |
-| 49 prose lines plus configuration | standard |
-| Agent or skill operational Markdown | standard |
-| Any live-cloud proof requirement | standard |
-
-## Living blueprint lifecycle
-
-Each correction has one small `## Active criteria` section with a correction ID, its verbatim correction source, and only new, failed, or invalidated criteria for that correction. Completed criteria from earlier corrections do not return to active state unless their archived baseline proof is invalidated.
-
-After fresh inspect accepts an active criterion, the orchestrator removes its inline active record and appends one compact archive record containing:
-
-- stable criterion ID and exact criterion text
-- correction ID
-- artifact references and `sha256:` artifact hash
-- evidence method and `sha256:` evidence hash
-- completion timestamp
-
-For multiple artifacts, the artifact hash is SHA-256 over a sorted manifest of repository-relative path plus each artifact's SHA-256. The evidence hash is SHA-256 over the exact compact raw proof bytes removed from the active section. Archive only after independent inspection. Do not duplicate the removed raw evidence in the archive.
-
-A missing or changed referenced artifact, or a changed proof definition, invalidates that archived baseline proof. Inspect revalidates only invalidated archive records. Unchanged archived proofs remain excluded.
-
-## Inspection scope
-
-The orchestrator supplies inspect with the current-task delta, current active criteria, and invalidated archived baseline proofs. Inspect must not gather the full branch, repository, or every archived criterion. The fresh `minime:frau` task dispatch remains mandatory.
-
-## Terminal extract boundary
-
-Extract stays pending throughout correction loops. The orchestrator dispatches extract at most once, only when the requested task completes or the session explicitly ends, there are no active criteria, and there is no blocking issue. Inspect and other phase workers return without invoking extract.
-
-## Git mutation boundary
-
-Leave all changes unstaged unless the user gives exact current-task permission for that Git mutation. Authorization is phase-bound and is not standing permission. Staging is not a prerequisite for inspect, extract, or completion.
-
-## Progress tracking
-
-Surface live phase progress through the harness native todo or task tool, not a bespoke status file.
-
-- Seed one todo per phase at the start of a run: blueprint, replicate, inspect, extract.
-- Mark the active phase `in_progress` on entry and `done` at handoff. Keep exactly one phase `in_progress` at a time.
-- Sub-step todos inside a phase are optional (for example a per-criterion item in replicate). Complete them before handoff.
-- The todo list is a read-only visibility aid for the user. It never replaces the blueprint, which stays the durable cross-phase state bus, and it never becomes an approval gate.
-- If the harness has no todo tool, skip this silently.
-
-## Ask_user rule
-
-Use `ask_user` only for `undecidable-now` tradeoffs or when the task source is missing.
-Do not add plan approval checkpoints.
-
-Every `ask_user` call must include:
-- `evidence`: raw proof that shows why input is needed
-- `suggestions`: options with confidence and reasoning
-- `free_text`: a way for the user to override the listed options
-
-After the response, resume the flow. Do not idle.
-
-**Anti-patterns (each of these is a violation):**
-- "Should I start?" / "Should I proceed?" / "Want me to continue?" in plain text
-- "Is this plan good?" / "Does this look correct?" in plain text
-- Presenting Option A / Option B as prose instead of an `ask_user` form
-- Ending a response with a question directed at the user without calling `ask_user`
-- Asking ANY question and then waiting for a conversational reply
-
-## Topic ownership
-
-| Topic | Canonical definition | Phase-local mirrors | Notes |
-|-------|---------------------|---------------------|-------|
-| Evidence-first / No-verdict | inspect/SKILL.md | (none needed, frau reads inspect) | |
-| Evidence weight tiers | ORCHESTRATION.md | replicate, inspect (reference only) | |
-| VOI triage (3-level) | ORCHESTRATION.md | blueprint (full), orchestrator agent (reference) | |
-| ask_user contract | ORCHESTRATION.md | orchestrator agent (reference), blueprint, inspect | |
-| Knowledge layout | ORCHESTRATION.md | blueprint (reads), extract (reads+writes), lab (bash) | |
-| Risk tiers (HIGH/LOW) | inspect/SKILL.md | orchestrator agent (routes), README (summary) | |
-| Inspect review gate wording | inspect/SKILL.md | (none needed) | Routes HIGH-risk items to `ask_user`. |
-| Phase isolation | ORCHESTRATION.md | orchestrator agent (reference) | Inspect dispatches through `task` to `minime:frau`. |
-| Phase transition ownership | ORCHESTRATION.md | orchestrator agent, all phase skills, hook, README (reference only) | One orchestrator dispatches successors. |
-| Phase result contract | ORCHESTRATION.md | orchestrator agent, all phase skills | Required fields and empty behavior. |
-| Documentation validation fast path | ORCHESTRATION.md | orchestrator agent, README | Scope and time narrow; reasoning does not. |
-| Living blueprint lifecycle | ORCHESTRATION.md | blueprint template, blueprint, orchestrator agent, inspect | Active correction and hashed archive. |
-| Inspection scope | ORCHESTRATION.md | orchestrator agent, inspect | Current-task delta and invalidated proofs only. |
-| Terminal extract boundary | ORCHESTRATION.md | orchestrator agent, extract, hook, README | One deferred terminal harvest. |
-| Git mutation boundary | ORCHESTRATION.md | orchestrator agent, all phase skills, README | Exact current-task permission only. |
-| Reasoning invariant | ORCHESTRATION.md | orchestrator agent, inspect, README | High reasoning in every route. |
-| Progress tracking | ORCHESTRATION.md | orchestrator agent (seeds list), all skills (mark phase) | Harness native todo tool, visibility only |
-| EARS criteria | blueprint/SKILL.md | replicate (tests), inspect (verifies) | |
-| Scoped wiki entries | ORCHESTRATION.md | all skills (phase-specific) | |
-| Constraint re-injection | replicate/SKILL.md | (none needed) | |
-| Test-at-boundary | replicate/SKILL.md | inspect (verifies) | |
-| Preserve raw wording | ORCHESTRATION.md | blueprint, inspect | |
-| Human corrections signal | extract/SKILL.md | inspect (flags for extract) | |
+During ingest, preserve the raw source, then maintain affected topics and navigation. During query, select relevant topics before reading deeply. During lint, check citations, contradictions, duplicate guidance, and orphan scopes.
 
 ## Context engineering
 
-- Preserve raw user wording verbatim in blueprints and raw knowledge docs.
-- Read only the wiki pages needed for the current task.
-- Rank wiki pages by `Scope` match, task-term match, active status, better citations, and recency.
-- Research returns must lead with raw proof such as URLs, exact quotes, and code paths before any interpretation.
-- Treat uncited or stale wiki claims as leads only. Re-verify them against live code before trusting them.
-- When entering a directory for the first time in a task, look for active wiki pages whose `Scope` covers that directory and apply them as local guidance.
-- Keep evidence in the blueprint so the next phase can continue in a fresh context.
+Preserve user wording verbatim. Redact secrets, tokens, credentials, and customer data before persisting it, and identify the redaction.
+
+Rank knowledge by scope match, relevance, active status, citation quality, recency, and user-correction origin. Read a small relevant set, then open its cited code before treating a claim as guidance. Uncited claims are leads; flag stale claims for extract.
+
+On entering a new work area, check for applicable scoped guidance. Keep research returns evidence-first, with source paths, URLs, or exact quotes ahead of interpretation.
+
+## Topic ownership
+
+| Responsibility | Authoritative source |
+|----------------|----------------------|
+| Workflow, corrections, shared knowledge, and handoffs | This guide |
+| Planning and acceptance-criterion writing | [Blueprint](../skills/blueprint/SKILL.md) |
+| Blueprint document shape and archive records | [Blueprint template](blueprint.template.md) |
+| Design visuals and simplification | [Visual design](../skills/blueprint/visual-design.md) |
+| Implementation and test scope | [Replicate](../skills/replicate/SKILL.md) |
+| Independent verification and risk | [Inspect](../skills/inspect/SKILL.md) |
+| Knowledge capture and maintenance | [Extract](../skills/extract/SKILL.md) |
+| Canvas interaction | [Canvas guidance](CANVAS.md) |
+
+Reference the owning guidance instead of copying it. Runtime schemas and source code own callable interfaces, supported values, and implementation details.
