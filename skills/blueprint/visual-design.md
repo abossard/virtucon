@@ -1,6 +1,6 @@
 # Visual design reference
 
-Use this guide when planning or checking a blueprint's visuals. Ground them in the changed code and keep them readable in dark mode.
+Use this guide when boundaries change, placement is uncertain, or a visual is requested. The [shared workflow](../../assets/ORCHESTRATION.md#boundary-approval) owns approval and drift.
 
 ## Diagram selection
 
@@ -8,23 +8,23 @@ Use this guide when planning or checking a blueprint's visuals. Ground them in t
 - Use a sequence diagram when call ordering or lifecycle is the main risk.
 - Use a state diagram when transition rules or recovery paths are the main risk.
 
-## Required visuals
+## Boundary map
 
-- Start Plan summary with a small phase visual identifying the current phase.
-- For multi-file or multi-module changes, add a separate design diagram in Plan summary.
-- Label each interaction with a verb and keep labels tied to source paths.
-- Draw actual planned calls, data flow, and ownership. Use separate old/new views for removed dependencies.
+- Embed or link a visual in Plan summary with persisted editable source. Choose from user preferences and available tools, including Mermaid, draw.io, or a diagram canvas. Report unavailable preferences; use the shared decision rule for an unavailable required format.
+- Draw the affected owners, cross-boundary contracts, and actual interactions, anchored to source paths. Keep unchanged boundaries small and marked unchanged.
+- Show current and proposed boundaries. Distinguish dependency direction from data flow and mark added, changed, and removed relationships.
+- Keep labels readable in dark mode. Text and tables supplement the visual.
 - Use `<br/>` for line breaks in Mermaid labels.
 
-## Simplification loop
+## Untangling
 
-1. Name the changed modules and each module's interface responsibility.
-2. Remove pass-through seams that add no value for callers or maintainers.
-3. Redraw the diagram after each simplification pass.
-4. Split implementation slices when one diagram still mixes unrelated responsibilities.
-5. Ask the user only when simplification changes behavior or scope.
+1. Trace affected owners and callers in live code. Identify each owner's public responsibility and the implementation decisions it hides.
+2. Compare plausible placements when ownership is uncertain. Prefer substantial behavior behind simple interfaces over pass-through seams or more tiny modules.
+3. In existing projects, untangle and reduce complexity; additions should preserve it where feasible. Compare changed boundaries for caller knowledge, dependencies, representation leakage, state/effect coordination, and future change locality.
+4. Record added obligations and alternatives in Decisions made for the same boundary approval. Moving coupling elsewhere or reducing file count alone does not show simplification. Keep changes task-scoped.
+5. Complete when each changed boundary has an owner and contract, and material tradeoffs are recorded for the user.
 
 ## Handoff checks
 
-- Reconcile the final diagram with the implemented interfaces.
-- Identify unresolved differences as remaining work.
+- Check the rendered map and editable-source references, then compare code with approved decisions under the shared approval rule.
+- Report unapproved differences as Boundary drift.

@@ -1,6 +1,6 @@
 ---
 name: inspect
-description: Verify task-scoped changes in a fresh context against active criteria and invalidated proofs. Return evidence and a correctness-uncertainty risk tier.
+description: Verify task-scoped changes in a fresh context against criteria and affected accepted requirements. Return evidence and a correctness-uncertainty risk tier.
 context: fork
 agent: minime:frau
 ---
@@ -19,7 +19,7 @@ Return proposed fixes, conflict resolutions, and permission needs to the owner. 
 
 Read the blueprint and supplied task boundary. Check that passing criteria have proof, status matches the work, and decisions and implementation evidence are present.
 
-Identify archived proofs invalidated by changed artifacts or proof definitions. Record missing or contradictory handoff information as process gaps.
+Identify accepted requirements whose behavior, boundaries, or evidence the change affects. Record missing or contradictory handoff information as process gaps.
 
 If the task boundary is absent or ambiguous, return `blocked` with the scope the owner must supply. Do not expand it into a branch-wide or repository-wide review.
 
@@ -27,14 +27,18 @@ If the task boundary is absent or ambiguous, return `blocked` with the scope the
 
 Treat candidate findings as leads. Verify each against the real code, its callers, and relevant dependency documentation. Keep findings concrete and within the task boundary.
 
-For each active criterion and invalidated proof, record:
+For each active criterion and affected accepted requirement, record:
 
 | Criterion | Evidence method | Boundary exercised | Edge/error case | Raw result | Remaining uncertainty |
 |-----------|-----------------|--------------------|-----------------|------------|-----------------------|
 
 Exercise behavior through the interface its caller uses. Distinguish internal checks from proof at the required boundary. A behavioral criterion needs a meaningful edge or failure case.
 
-Check applicable scoped knowledge against live code. When the change includes or requires a design artifact, follow the [visual-design guidance](../blueprint/visual-design.md) and verify that the diagram agrees with the changed interfaces.
+Check applicable scoped knowledge against live code. For structural criteria, verify callers, imports, contracts, and state/effect ownership against declared requirements. Use the [visual-design guidance](../blueprint/visual-design.md) when a Boundary map is required or present.
+
+Compare code with approved boundary decisions under the [shared approval rule](../../assets/ORCHESTRATION.md#boundary-approval). Report drift instead of rewriting those decisions. Check untangling claims against actual dependencies and caller obligations.
+
+Trace claimed calculations for mutable reads and effects, and check shared-input preservation. For every moved action, compare before/after lock, transaction, retry, and cancellation scopes; verify required ordering, frequency, and failures. State uncertainty that single-threaded tests leave unresolved.
 
 When reviewing a canvas change, use the verification section in [Canvas guidance](../../assets/CANVAS.md#verify-a-changed-view). Discover current interface details from runtime schemas and source rather than treating copied inventories as requirements.
 
@@ -62,7 +66,7 @@ For each present driver, collect the corresponding mitigation:
 | External state | Executed integration checks with representative state and a failure path |
 | Unfamiliar patterns | An established analogous code path plus executed boundary checks |
 | New executable lacks execution proof | Independent execution with representative valid and wrong inputs |
-| Missing or stale design artifact | An updated diagram and verified agreement with the changed code |
+| Missing or stale design artifact | Verified map/code agreement under the shared approval rule; unresolved Boundary drift remains HIGH |
 
 Assign HIGH when a present driver lacks mitigation, a concrete contradiction or runtime reference is unresolved, or confidence is below high. Assign LOW only when each present driver has its mitigation and confidence is high. Explain the remaining uncertainty.
 
@@ -72,10 +76,10 @@ Prepare one package containing:
 
 1. Criterion traceability and the scoped diff.
 2. Raw output for criterion-proving and failing runs. A bulk passing suite that proves no active criterion may use a one-line summary.
-3. Assumptions and two or three specific least-sure points.
+3. Assumptions and remaining uncertainty that affect correctness.
 4. Process gaps and out-of-scope discoveries.
 5. Inconsistencies between sources, or an explicit `None.` when they agree.
 
 Present raw proof before interpretation, following the shared evidence rules. Report concrete uncertainty without personal assurance. Do not include an approval verdict, score, or persuasion; the caller decides what to accept.
 
-Return the [shared result](../../assets/ORCHESTRATION.md#result-contract), with accepted criterion IDs, invalidated-proof outcomes, the risk tier, and package references in its excerpts. The owner handles archival and subsequent work.
+Return the [shared result](../../assets/ORCHESTRATION.md#result-contract), with accepted criterion IDs, recheck outcomes, the risk tier, and package references in its excerpts. The owner handles archival and subsequent work.

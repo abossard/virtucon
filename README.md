@@ -24,10 +24,10 @@ You start with a task description. The `minime:dr-evil` agent manages the work a
 
 ## Features
 
-- **A living blueprint:** minime turns your request into verifiable criteria, records decisions, and keeps the plan on disk across fresh contexts.
+- **A living blueprint:** minime persists verifiable criteria, a visual boundary map, and design decisions across fresh contexts.
 - **Native blueprint canvas:** when capability exists, minime opens or focuses the blueprint canvas, supports section-first editing plus advanced source on the same draft, preserves section boundary newlines during replacement, and falls back to the blueprint file path when canvas support is unavailable.
 - **Visible work management:** Dr. Evil discovers available skills and plugins, aligns the blueprint with native plans, todos, and subagent work, and can keep an external tracker synchronized with your permission.
-- **Execution-grounded implementation:** replicate selects tests for the touched surface, runs them, observes the output, fixes failures, and reconciles design diagrams with changed multi-file or multi-module code.
+- **Execution-grounded implementation:** replicate runs checks for the touched surface, fixes observed failures, implements approved boundaries, and returns structural drift for a decision.
 - **Fresh inspection:** the `minime:frau` inspector starts without the implementer's context, checks the current task against its criteria, and returns evidence for human judgment.
 - **Global wiki canvas:** minime ships a wiki canvas that searches all repositories by default, offers a removable current-repository preset, and keeps raw sources read-only.
 - **Durable project knowledge:** minime retrieves relevant cited wiki entries during planning and captures reusable lessons with links back to live code.

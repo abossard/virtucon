@@ -19,6 +19,14 @@ The persisted blueprint is the sole cross-phase state bus. Keep task decisions a
 
 After three attempts on one criterion without new execution evidence, present the obstacle through the decision rule.
 
+## Boundary approval
+
+Boundary decisions cover responsibility owners, cross-boundary contracts, dependencies, and state/effect ownership.
+
+Record approved boundary decisions in Decisions made. Ask again before changing agreed boundaries; private refinements and cosmetic diagram edits need no new approval.
+
+**Boundary drift:** return disagreements between code and approved decisions to the owner. Fix implementation mistakes within the agreed design; get a user decision for a design change. Unresolved drift blocks completion even when behavioral tests pass.
+
 ## Result contract
 
 Each phase returns all of these fields. The status describes that phase, not the whole workflow.
@@ -54,13 +62,13 @@ The user-correction interface protects the original request and accepted archive
 
 Keep only the current correction's new, failed, or invalidated criteria active, with a reference to its verbatim source. A checked active criterion records passing implementation evidence; it is not yet an accepted archive record.
 
-After fresh inspection accepts a criterion, the owner moves it to the archive using the fields and sealing instructions in the [blueprint template](blueprint.template.md#criteria-archive). Preserve its identity and evidence references without copying the removed raw proof into the archive.
+After fresh inspection accepts a criterion, move its ID, requirement, and proof reference to the [criteria archive](blueprint.template.md#criteria-archive). Keep raw evidence reachable.
 
-A missing or changed artifact, or a changed proof definition, invalidates the associated baseline. Recheck those records; leave unchanged archived proofs excluded.
+Recheck accepted requirements when behavior or boundaries change, or their evidence no longer establishes them. Limit rechecks to affected requirements.
 
 ## Inspection scope
 
-Give inspect the current-task delta, active criteria, and invalidated archived proofs. If that boundary is missing or ambiguous, resolve it before inspection.
+Give inspect the current-task delta, active criteria, and any accepted requirements affected by it. If that boundary is missing or ambiguous, resolve it before inspection.
 
 The inspector evaluates only that scope. Its [skill](../skills/inspect/SKILL.md) owns verification methods, risk assessment, and the evidence package.
 
@@ -94,7 +102,7 @@ Use the native question tool for undecidable tradeoffs, a missing task source, o
 
 Show the evidence, recommended options with confidence and reasons, and a free-text override. Adapt this information to the tool's actual schema. Ask one focused question at a time, then resume the work after the answer.
 
-Keep permission requests separate from routine handoffs. A completed plan does not require an extra approval question.
+Keep permission requests separate from routine handoffs. A completed plan needs no extra approval question unless the [boundary approval rule](#boundary-approval) applies.
 
 ## Evidence value chain
 
@@ -111,19 +119,6 @@ Match the proof to the claimed boundary. A local or mocked check does not establ
 Respect the user's current model, reasoning, and context settings. Supply explicit task overrides only when the user selected them for this task.
 
 Use strong reasoning under those settings. A faster validation route narrows scope and time, not inspection independence.
-
-## Documentation validation fast path
-
-The owner may use the fast path only when all of these conditions hold:
-
-- The entire delta is non-operational prose.
-- Added plus removed lines total fewer than 50.
-- No executable, configuration, schema, manifest, generated output, hook, agent instruction, or skill instruction changes.
-- No criterion requires executable or live-cloud proof.
-
-Instruction documents are operational regardless of file extension. Mixed changes use standard validation.
-
-The fast path retains fresh inspection and shares one cumulative 120-second monotonic deadline across validation commands and phases. Never reset that deadline. Timeout, failure, inconclusive proof, or changed eligibility requires standard validation; none counts as success.
 
 ## Git mutation boundary
 
@@ -170,7 +165,7 @@ On entering a new work area, check for applicable scoped guidance. Keep research
 
 | Responsibility | Authoritative source |
 |----------------|----------------------|
-| Workflow, corrections, shared knowledge, and handoffs | This guide |
+| Workflow, boundary approval, corrections, shared knowledge, and handoffs | This guide |
 | Planning and acceptance-criterion writing | [Blueprint](../skills/blueprint/SKILL.md) |
 | Blueprint document shape and archive records | [Blueprint template](blueprint.template.md) |
 | Design visuals and simplification | [Visual design](../skills/blueprint/visual-design.md) |
