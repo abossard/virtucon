@@ -31,8 +31,7 @@ None.
 
 ## Plan summary
 
-<!-- Follow the blueprint skill for the requested level of detail and the visual-design
-     guide for diagrams. -->
+<!-- Follow the blueprint skill for detail and ousterhout-review for boundary visuals. -->
 
 <Approach, affected boundaries, and material risks or verification gaps. Include a visual
 Boundary map when boundaries change, placement is uncertain, or the user requests one.>

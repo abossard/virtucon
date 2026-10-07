@@ -1,7 +1,7 @@
 {
   "name": "minime",
-  "description": "Four skills (blueprint / replicate / inspect / extract) run coding tasks through planning, implementation, inspection, and knowledge capture. Dr. Evil coordinates runtime reporting and bundled flow and wiki canvases discovered from .github/extensions.",
-  "version": "0.2.28b",
+  "description": "Four-phase coding workflow with standalone Ousterhout and Grokking Simplicity reviews. Dr. Evil coordinates planning, implementation, inspection, knowledge capture, and bundled flow and wiki canvases.",
+  "version": "0.2.29b",
   "author": {
     "name": "abossard"
   },

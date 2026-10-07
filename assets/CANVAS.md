@@ -28,4 +28,4 @@ Resolve provider ambiguity before acting. Preserve existing personal providers a
 
 Exercise the actual host for claims about navigation, keyboard behavior, focus, layout, or reconnection. Include a meaningful failure path.
 
-For editing changes, prove persistence and conflict handling without losing either version. For status changes, verify that the view identifies the right work and distinguishes missing data from completion. When reviewing diagrams, use the [visual-design guidance](../skills/blueprint/visual-design.md).
+For editing changes, prove persistence and conflict handling without losing either version. For status changes, verify that the view identifies the right work and distinguishes missing data from completion. When reviewing diagrams, use the [visual-design guidance](../skills/ousterhout-review/visual-design.md).

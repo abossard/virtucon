@@ -38,7 +38,7 @@ Resolve remaining unknowns through the shared VOI process. Use bounded general-p
 
 ## 4. Select supporting skills
 
-Discover skills that fit the task. For module design, prefer `codebase-design` when available.
+Discover skills that fit the task. Use [ousterhout-review](../ousterhout-review/SKILL.md) for boundary design when needed; it owns architecture assessment and visual guidance.
 
 Before drafting, invoke available writing guidance such as `writing-for-agents`. Use an available prose-review skill such as `stop-slop` after the draft.
 
@@ -51,7 +51,7 @@ Match the requested level of detail.
 - For interface or boundary principles, describe responsibilities, inputs, outputs, and observable guarantees. Leave private implementation choices to the implementer.
 - For an implementation plan, identify affected files, work order, approach, tests, and verified constraints.
 
-Draw a Boundary map when boundaries change, placement is uncertain, or the user requests one, using the [visual-design guidance](visual-design.md). Otherwise state that boundaries are unchanged. Record design decisions under the [shared approval rule](../../assets/ORCHESTRATION.md#boundary-approval).
+Use the [boundary-map guidance](../ousterhout-review/visual-design.md) when boundaries change, placement is uncertain, or a visual is requested. Otherwise state that boundaries are unchanged. Record design decisions under the [shared approval rule](../../assets/ORCHESTRATION.md#boundary-approval).
 
 ## 6. Review the document
 

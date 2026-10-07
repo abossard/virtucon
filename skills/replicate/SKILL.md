@@ -31,14 +31,7 @@ Broaden validation when a shared interface, schema, or contract changes. Reserve
 
 Follow the shared Boundary drift rule when agreed boundaries must change.
 
-### Data, calculations, and actions
-
-- Treat shared data as immutable. Return new values for updates, copying changed nested paths and protecting values passed to mutating code. Local mutation of fresh, unshared values can stay private.
-- Calculations return results from explicit value inputs or immutable constants. Keep them free of mutable external reads and effects.
-- Actions depend on when or how often they run: mutable reads, I/O, time, and randomness. Calling an effectful injected dependency remains an action.
-- Extract within existing owners and keep interfaces simple. Test calculations through production interfaces or existing internal access, with parameterized decision cases and input-preservation checks where mutation is a risk.
-
-When moving actions, check lock, transaction, retry, and cancellation scopes. Preserve required ordering, frequency, errors, and concurrency; record intentional changes or unresolved risks and prove the touched behavior.
+Apply the [simplicity-review criteria](../simplicity-review/SKILL.md#review-criteria) to changed implementation. Use the skill for review when decisions, shared values, or action coordination need assessment.
 
 ## 3. Record evidence as work completes
 

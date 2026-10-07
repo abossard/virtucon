@@ -29,6 +29,7 @@ You start with a task description. The `minime:dr-evil` agent manages the work a
 - **Visible work management:** Dr. Evil discovers available skills and plugins, aligns the blueprint with native plans, todos, and subagent work, and can keep an external tracker synchronized with your permission.
 - **Execution-grounded implementation:** replicate runs checks for the touched surface, fixes observed failures, implements approved boundaries, and returns structural drift for a decision.
 - **Fresh inspection:** the `minime:frau` inspector starts without the implementer's context, checks the current task against its criteria, and returns evidence for human judgment.
+- **Standalone design reviews:** [minime:ousterhout-review](skills/ousterhout-review/SKILL.md) combines available architecture skills with Ousterhout's design principles; [minime:simplicity-review](skills/simplicity-review/SKILL.md) combines optional Ponytail reviews with data, calculations, actions, and effect-safety checks. Both also support the existing flow.
 - **Global wiki canvas:** minime ships a wiki canvas that searches all repositories by default, offers a removable current-repository preset, and keeps raw sources read-only.
 - **Durable project knowledge:** minime retrieves relevant cited wiki entries during planning and captures reusable lessons with links back to live code.
 - **Automatic local setup:** a session hook creates the knowledge and blueprint directories under `VIRTUCON_HQ`. The default location is `$HOME/.minime`.
@@ -62,6 +63,8 @@ copilot --agent minime:dr-evil
 ```
 
 Describe the coding task in the prompt. Dr. Evil runs the flow and returns the evidence or decisions that need your attention. Set `VIRTUCON_HQ` before launch if you want minime to store its local state somewhere other than `$HOME/.minime`.
+
+The standalone reviews optionally reuse [Matt Pocock's skills](https://github.com/mattpocock/skills) for architecture exploration and design, and [Ponytail](https://github.com/DietrichGebert/ponytail) for over-engineering reviews. Both reviews also work without these integrations.
 
 ## Copilot App
 

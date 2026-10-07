@@ -34,11 +34,11 @@ For each active criterion and affected accepted requirement, record:
 
 Exercise behavior through the interface its caller uses. Distinguish internal checks from proof at the required boundary. A behavioral criterion needs a meaningful edge or failure case.
 
-Check applicable scoped knowledge against live code. For structural criteria, verify callers, imports, contracts, and state/effect ownership against declared requirements. Use the [visual-design guidance](../blueprint/visual-design.md) when a Boundary map is required or present.
+Check applicable scoped knowledge against live code. Use [ousterhout-review](../ousterhout-review/SKILL.md) for structural criteria or boundary assessment, including any required or present map.
 
-Compare code with approved boundary decisions under the [shared approval rule](../../assets/ORCHESTRATION.md#boundary-approval). Report drift instead of rewriting those decisions. Check untangling claims against actual dependencies and caller obligations.
+Compare code with approved boundary decisions under the [shared approval rule](../../assets/ORCHESTRATION.md#boundary-approval). Report drift instead of rewriting those decisions.
 
-Trace claimed calculations for mutable reads and effects, and check shared-input preservation. For every moved action, compare before/after lock, transaction, retry, and cancellation scopes; verify required ordering, frequency, and failures. State uncertainty that single-threaded tests leave unresolved.
+Use [simplicity-review](../simplicity-review/SKILL.md) for changed decisions, shared values, or action coordination. Its findings and evidence join this inspection package.
 
 When reviewing a canvas change, use the verification section in [Canvas guidance](../../assets/CANVAS.md#verify-a-changed-view). Discover current interface details from runtime schemas and source rather than treating copied inventories as requirements.
 

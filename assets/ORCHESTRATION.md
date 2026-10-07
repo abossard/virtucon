@@ -168,7 +168,8 @@ On entering a new work area, check for applicable scoped guidance. Keep research
 | Workflow, boundary approval, corrections, shared knowledge, and handoffs | This guide |
 | Planning and acceptance-criterion writing | [Blueprint](../skills/blueprint/SKILL.md) |
 | Blueprint document shape and archive records | [Blueprint template](blueprint.template.md) |
-| Design visuals and simplification | [Visual design](../skills/blueprint/visual-design.md) |
+| Boundary design, visuals, and metric interpretation | [Ousterhout review](../skills/ousterhout-review/SKILL.md) |
+| Data/calculations/actions assessment | [Simplicity review](../skills/simplicity-review/SKILL.md) |
 | Implementation and test scope | [Replicate](../skills/replicate/SKILL.md) |
 | Independent verification and risk | [Inspect](../skills/inspect/SKILL.md) |
 | Knowledge capture and maintenance | [Extract](../skills/extract/SKILL.md) |
