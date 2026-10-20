@@ -23,3 +23,9 @@ Thumbs.db
 # Test artifacts
 vscode-extension/.vscode-test/
 .playwright-mcp/
+
+# Promptfoo evaluation harness artifacts
+evals/promptfoo/node_modules/
+evals/promptfoo/artifacts/
+evals/promptfoo/state/
+evals/promptfoo/runtime/.payload-staging/

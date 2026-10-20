@@ -1,0 +1,19 @@
+description: minime default-vs-full-flow coding evaluation
+sharing: false
+providers:
+  - id: file://./provider.mjs
+    config:
+      suite: ${PROMPTFOO_SUITE}
+      model: ${PROMPTFOO_MODEL}
+      reasoningEffort: ${PROMPTFOO_REASONING}
+      maxAiCredits: ${PROMPTFOO_MAX_AI_CREDITS}
+prompts:
+  - |
+    Execute the current suite task with the configured arm and return structured runtime output.
+tests:
+  - vars: {}
+    assert:
+      - type: javascript
+        value: file://./assertion.mjs
+evaluateOptions:
+  cache: false

@@ -1,0 +1,118 @@
+diff --git a/bin/diagrammo.mjs b/bin/diagrammo.mjs
+index 648fc98..6365e6e 100644
+--- a/bin/diagrammo.mjs
++++ b/bin/diagrammo.mjs
+@@ -16,6 +16,7 @@ import { renderSwimlane } from "../src/swimlane.mjs";
+ import { getTheme, THEME_NAMES } from "../src/themes.mjs";
+ import { Diagnostics } from "../src/diag.mjs";
+ import { syncMarkdown, svgHref } from "../src/markdown-sync.mjs";
++import { inventoryDocuments } from "../src/inventory.mjs";
+ 
+ const HELP = `diagrammo — mermaid blocks in Markdown → themed SVGs
+ 
+@@ -27,6 +28,8 @@ Options:
+   -t, --theme <name>     ${THEME_NAMES.join(" | ")}   (default: portal)
+   -r, --renderer <name>  auto | swimlane | mermaid           (default: auto)
+   -l, --list             list detected blocks and options, render nothing
++      --format <fmt>     with --list: text | json            (default: text)
++                         json → one machine-readable inventory object on stdout
+   -v, --verbose          log every parsed node/edge/fold decision
+       --strict           any warning fails the run (exit 1)
+       --sync-markdown    rewrite each file's fences into a visible <img> + fully hidden, still-editable
+@@ -53,12 +56,12 @@ Signal rows may carry their own value and state:  P95 latency = 230 ms (degraded
+ `;
+ 
+ function parseArgs(argv) {
+-  const a = { files: [], out: "diagrams", theme: "portal", renderer: "auto", list: false, verbose: false, strict: false, syncMarkdown: false, imageFormat: "commonmark" };
++  const a = { files: [], out: "diagrams", theme: "portal", renderer: "auto", list: false, verbose: false, strict: false, syncMarkdown: false, imageFormat: "commonmark", format: null };
+   for (let i = 0; i < argv.length; i++) {
+     const v = argv[i];
+     if (v === "-h" || v === "--help") a.help = true;
+     else if (v === "-V" || v === "--version") a.version = true;
+-    else if (v === "-o" || v === "--out" || v === "-t" || v === "--theme" || v === "-r" || v === "--renderer" || v === "--image-format") {
++    else if (v === "-o" || v === "--out" || v === "-t" || v === "--theme" || v === "-r" || v === "--renderer" || v === "--image-format" || v === "--format") {
+       const value = argv[i + 1];
+       if (value == null || value.startsWith("-")) {
+         console.error(`error: option ${v} requires a value`);
+@@ -67,6 +70,7 @@ function parseArgs(argv) {
+         if (v === "-o" || v === "--out") a.out = value;
+         else if (v === "-t" || v === "--theme") a.theme = value;
+         else if (v === "-r" || v === "--renderer") a.renderer = value;
++        else if (v === "--format") a.format = value;
+         else a.imageFormat = value;
+         i++;
+       }
+@@ -97,6 +101,13 @@ if (!["commonmark", "learn"].includes(args.imageFormat)) {
+   console.error(`error: unknown image format "${args.imageFormat}" (use commonmark or learn)`); process.exit(1);
+ }
+ 
++if (args.format !== null && !args.list) {
++  console.error("error: --format is only valid together with --list"); process.exit(1);
++}
++if (args.format !== null && !["text", "json"].includes(args.format)) {
++  console.error(`error: unknown format "${args.format}" (use text or json)`); process.exit(1);
++}
++
+ // Same-directory temp file + rename: POSIX rename(2) is atomic on the same filesystem. The temp
+ // name includes this process's pid plus a random suffix so two concurrent invocations (even ones
+ // syncing the exact same target file) never share a temp path and race each other's
+@@ -119,9 +130,23 @@ const outDir = resolve(args.out);
+ let ok = 0, total = 0, warnCount = 0;
+ const failures = [];
+ const inputs = [];
+-for (const file of args.files) {
++const unreadableFiles = new Map();
++for (const [index, file] of args.files.entries()) {
+   try { inputs.push({ name: file, source: readFileSync(file, "utf8") }); }
+-  catch (e) { console.error(`error: cannot read ${file}: ${e.message}`); process.exitCode = 1; }
++  catch (e) {
++    unreadableFiles.set(index, { name: file, blocks: [], diagnostics: [{ level: "error", message: `cannot read ${file}: ${e.message}`, line: null, origin: "document", scope: "document" }] });
++    if (!(args.list && args.format === "json")) console.error(`error: cannot read ${file}: ${e.message}`);
++    process.exitCode = 1;
++  }
++}
++if (args.list && args.format === "json") {
++  const inventory = inventoryDocuments(inputs, { theme: args.theme, renderer: args.renderer });
++  const readable = inventory.documents.values();
++  inventory.documents = args.files.map((name, i) => unreadableFiles.get(i) ?? readable.next().value);
++  const hasError = inventory.documents.some((d) => d.diagnostics.some((i) => i.level === "error") || d.blocks.some((b) => b.issues.some((i) => i.level === "error")));
++  const hasWarning = inventory.documents.some((d) => d.blocks.some((b) => b.issues.some((i) => i.level === "warn")));
++  await new Promise((done) => process.stdout.write(JSON.stringify(inventory, null, 2) + "\n", done));
++  process.exit(hasError || (args.strict && hasWarning) ? 1 : 0);
+ }
+ const documents = prepareDocuments(inputs, { theme: args.theme, renderer: args.renderer }, { sync: args.syncMarkdown && !args.list });
+ for (const doc of documents) {
+diff --git a/src/index.mjs b/src/index.mjs
+index dc3fdab..33007b0 100644
+--- a/src/index.mjs
++++ b/src/index.mjs
+@@ -6,3 +6,4 @@ export { THEMES, THEME_NAMES, getTheme } from "./themes.mjs";
+ export { Diagnostics } from "./diag.mjs";
+ export { textWidth, wrapText } from "./text.mjs";
+ export { projectPositions, relaxCoordinates, assignTracks, corridorsOf, pickCorridorX } from "./layout.mjs";
++export { inventoryDocuments } from "./inventory.mjs";
+diff --git a/src/inventory.mjs b/src/inventory.mjs
+new file mode 100644
+index 0000000..1f5b991
+--- /dev/null
++++ b/src/inventory.mjs
+@@ -0,0 +1,19 @@
++// Machine-readable projection of prepareDocuments(): one calculation shared by the API and the CLI.
++import { prepareDocuments } from "./document.mjs";
++
++export function inventoryDocuments(inputs, defaults = {}) {
++  const documents = prepareDocuments(inputs, defaults).map((doc) => ({
++    name: doc.name,
++    blocks: doc.blocks.map((b) => ({
++      slug: b.slug,
++      line: b.line,
++      closeLine: b.closeLine,
++      location: b.location,
++      renderer: b.renderer,
++      effectiveOptions: b.effectiveOptions,
++      issues: b.issues,
++    })),
++    diagnostics: doc.diagnostics,
++  }));
++  return { schemaVersion: 1, documents };
++}

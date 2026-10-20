@@ -1,0 +1,36 @@
+diff --git a/src/extract.mjs b/src/extract.mjs
+index d2736ff..e879a4b 100644
+--- a/src/extract.mjs
++++ b/src/extract.mjs
+@@ -78,18 +78,26 @@ export function parseFenceInfo(info, themeNames, issues = null, line = null) {
+ function tokenizeFenceInfo(info) {
+   const tokens = [];
+   let token = "", quote = null;
+-  for (const char of (info || "").replace(/[{}]/g, " ")) {
++  for (const char of (info || "")) {
+     if (quote) {
+       token += char;
+       if (char === quote) quote = null;
+-    } else if (char === '"' || char === "'") {
++      continue;
++    }
++    if (char === '"' || char === "'") {
+       quote = char;
+       token += char;
+-    } else if (/\s/.test(char)) {
++      continue;
++    }
++    if (char === "{" || char === "}") {
+       if (token) { tokens.push(token); token = ""; }
+-    } else {
+-      token += char;
++      continue;
++    }
++    if (/\s/.test(char)) {
++      if (token) { tokens.push(token); token = ""; }
++      continue;
+     }
++    token += char;
+   }
+   if (token) tokens.push(token);
+   return { tokens, unclosedQuote: quote };

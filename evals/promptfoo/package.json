@@ -1,0 +1,22 @@
+{
+  "name": "@virtucon/promptfoo-minime-eval",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Promptfoo harness for default-vs-minime coding agent evaluation",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "setup": "node ./cli.mjs setup",
+    "preflight": "node ./cli.mjs preflight",
+    "validate": "node ./cli.mjs validate",
+    "smoke": "node ./cli.mjs run --suite ahm-parser-smoke@1 --repeat 1",
+    "eval": "node ./cli.mjs run --suite ahm-managed-hard@2 --repeat 3",
+    "test": "node --test ./test/*.test.mjs"
+  },
+  "dependencies": {
+    "@github/copilot": "1.0.99-3",
+    "promptfoo": "0.124.1"
+  }
+}

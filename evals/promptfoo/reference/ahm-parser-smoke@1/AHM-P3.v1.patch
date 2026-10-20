@@ -1,0 +1,46 @@
+diff --git a/src/extract.mjs b/src/extract.mjs
+index d2736ff..5cb614f 100644
+--- a/src/extract.mjs
++++ b/src/extract.mjs
+@@ -42,7 +42,7 @@ function scalar(v) {
+   if (/^".*"$/.test(v) || /^'.*'$/.test(v)) return v.slice(1, -1);
+   if (v.startsWith("[") && v.endsWith("]")) {
+     const inner = v.slice(1, -1).trim();
+-    return inner ? inner.split(",").map((x) => scalar(x)) : [];
++    return inner ? splitInlineList(inner).map((x) => scalar(x)) : [];
+   }
+   if (v === "true" || v === "on" || v === "yes") return true;
+   if (v === "false" || v === "off" || v === "no") return false;
+@@ -51,6 +51,32 @@ function scalar(v) {
+   return v;
+ }
+ 
++
++function splitInlineList(inner) {
++  const parts = [];
++  let token = "", quote = null;
++  for (const char of inner) {
++    if (quote) {
++      token += char;
++      if (char === quote) quote = null;
++      continue;
++    }
++    if (char === '"' || char === "'") {
++      quote = char;
++      token += char;
++      continue;
++    }
++    if (char === ",") {
++      if (token.trim()) parts.push(token.trim());
++      token = "";
++      continue;
++    }
++    token += char;
++  }
++  if (token.trim()) parts.push(token.trim());
++  return parts;
++}
++
+ // ---------- option sources ----------
+ const RENDERERS = new Set(["auto", "swimlane", "mermaid"]);
+ 

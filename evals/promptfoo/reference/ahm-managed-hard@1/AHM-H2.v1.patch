@@ -1,0 +1,131 @@
+diff --git a/bin/diagrammo.mjs b/bin/diagrammo.mjs
+index 648fc98..5c5a42c 100644
+--- a/bin/diagrammo.mjs
++++ b/bin/diagrammo.mjs
+@@ -16,6 +16,7 @@ import { renderSwimlane } from "../src/swimlane.mjs";
+ import { getTheme, THEME_NAMES } from "../src/themes.mjs";
+ import { Diagnostics } from "../src/diag.mjs";
+ import { syncMarkdown, svgHref } from "../src/markdown-sync.mjs";
++import { restoreDocuments } from "../src/restore.mjs";
+ 
+ const HELP = `diagrammo — mermaid blocks in Markdown → themed SVGs
+ 
+@@ -33,6 +34,8 @@ Options:
+                          Mermaid source; leaves the file untouched if any of its blocks fails
+       --image-format <fmt>  visible embed for --sync-markdown: commonmark | learn   (default: commonmark)
+                             commonmark → ![alt](href); learn → Microsoft Learn :::image:::  directive
++      --restore-markdown   standalone: turn every managed block in the files back into its plain Mermaid
++                         fence (all files are validated first; nothing is written if any file is invalid)
+   -h, --help             this help
+   -V, --version          print version
+ 
+@@ -53,17 +56,19 @@ Signal rows may carry their own value and state:  P95 latency = 230 ms (degraded
+ `;
+ 
+ function parseArgs(argv) {
+-  const a = { files: [], out: "diagrams", theme: "portal", renderer: "auto", list: false, verbose: false, strict: false, syncMarkdown: false, imageFormat: "commonmark" };
++  const a = { files: [], out: "diagrams", theme: "portal", renderer: "auto", list: false, verbose: false, strict: false, syncMarkdown: false, restore: false, explicit: [], imageFormat: "commonmark" };
+   for (let i = 0; i < argv.length; i++) {
+     const v = argv[i];
+     if (v === "-h" || v === "--help") a.help = true;
+     else if (v === "-V" || v === "--version") a.version = true;
++    else if (v === "--restore-markdown") a.restore = true;
+     else if (v === "-o" || v === "--out" || v === "-t" || v === "--theme" || v === "-r" || v === "--renderer" || v === "--image-format") {
+       const value = argv[i + 1];
+       if (value == null || value.startsWith("-")) {
+         console.error(`error: option ${v} requires a value`);
+         a.help = true; a.bad = true;
+       } else {
++        a.explicit.push(v);
+         if (v === "-o" || v === "--out") a.out = value;
+         else if (v === "-t" || v === "--theme") a.theme = value;
+         else if (v === "-r" || v === "--renderer") a.renderer = value;
+@@ -97,6 +102,13 @@ if (!["commonmark", "learn"].includes(args.imageFormat)) {
+   console.error(`error: unknown image format "${args.imageFormat}" (use commonmark or learn)`); process.exit(1);
+ }
+ 
++if (args.restore) {
++  const conflicts = [args.list && "--list", args.syncMarkdown && "--sync-markdown", ...args.explicit].filter(Boolean);
++  if (conflicts.length) {
++    console.error(`error: --restore-markdown cannot be combined with ${conflicts.join(", ")}`); process.exit(1);
++  }
++}
++
+ // Same-directory temp file + rename: POSIX rename(2) is atomic on the same filesystem. The temp
+ // name includes this process's pid plus a random suffix so two concurrent invocations (even ones
+ // syncing the exact same target file) never share a temp path and race each other's
+@@ -123,6 +135,19 @@ for (const file of args.files) {
+   try { inputs.push({ name: file, source: readFileSync(file, "utf8") }); }
+   catch (e) { console.error(`error: cannot read ${file}: ${e.message}`); process.exitCode = 1; }
+ }
++if (args.restore) {
++  if (process.exitCode) process.exit(1);
++  let restored;
++  try { restored = restoreDocuments(inputs); }
++  catch (e) { console.error(`error: cannot restore ${e.message}`); process.exit(1); }
++  for (const doc of restored) {
++    if (doc.restored !== doc.source) {
++      atomicWriteFileSync(doc.name, doc.restored);
++      console.log(`restored ${doc.name} (${doc.blocks} managed block${doc.blocks === 1 ? "" : "s"})`);
++    } else console.log(`${doc.name}: nothing to restore`);
++  }
++  process.exit(0);
++}
+ const documents = prepareDocuments(inputs, { theme: args.theme, renderer: args.renderer }, { sync: args.syncMarkdown && !args.list });
+ for (const doc of documents) {
+   for (const issue of doc.diagnostics) {
+diff --git a/src/index.mjs b/src/index.mjs
+index dc3fdab..1442a84 100644
+--- a/src/index.mjs
++++ b/src/index.mjs
+@@ -6,3 +6,4 @@ export { THEMES, THEME_NAMES, getTheme } from "./themes.mjs";
+ export { Diagnostics } from "./diag.mjs";
+ export { textWidth, wrapText } from "./text.mjs";
+ export { projectPositions, relaxCoordinates, assignTracks, corridorsOf, pickCorridorX } from "./layout.mjs";
++export { restoreMarkdown } from "./restore.mjs";
+diff --git a/src/restore.mjs b/src/restore.mjs
+new file mode 100644
+index 0000000..98e4baf
+--- /dev/null
++++ b/src/restore.mjs
+@@ -0,0 +1,40 @@
++// Inverse of syncMarkdown(): replaces each managed span with its original Mermaid fence.
++import { decodeManagedSpans, validateManagedSpans, splitLines, joinLines } from "./managed-source.mjs";
++import { extractBlocks } from "./extract.mjs";
++
++function restoreWithSpans(source) {
++  const decoded = decodeManagedSpans(source);
++  const spans = validateManagedSpans(decoded);
++  if (spans.length === 0) return { restored: source, slugs: [] };
++  const { lines, eol, hadTrailingNewline } = splitLines(decoded);
++  const out = lines.slice();
++  for (const span of [...spans].reverse()) {
++    const inner = lines.slice(span.beginLine - 1, span.endLine).join("\n");
++    const [block] = extractBlocks(inner);
++    if (block.closeLine == null) {
++      throw new Error(`markdown-sync: managed span "${span.slug}" (lines ${span.beginLine}-${span.endLine}) has an unclosed mermaid fence — malformed managed block`);
++    }
++    const fence = lines.slice(span.beginLine - 1 + block.line - 1, span.beginLine - 1 + block.closeLine);
++    out.splice(span.beginLine - 1, span.endLine - span.beginLine + 1, ...fence);
++  }
++  return { restored: joinLines(out, eol, hadTrailingNewline), slugs: spans.map((s) => s.slug) };
++}
++
++export function restoreMarkdown(source) {
++  return restoreWithSpans(source).restored;
++}
++
++// Validates the whole batch (including cross-file slug identity) before returning any result.
++export function restoreDocuments(inputs) {
++  const owners = new Map();
++  return inputs.map(({ name, source }) => {
++    let result;
++    try { result = restoreWithSpans(source); }
++    catch (e) { throw new Error(`${name}: ${e.message}`); }
++    for (const slug of result.slugs) {
++      if (owners.has(slug)) throw new Error(`${name}: managed slug "${slug}" is already used by ${owners.get(slug)} — duplicate managed identity`);
++      owners.set(slug, name);
++    }
++    return { name, source, restored: result.restored, blocks: result.slugs.length };
++  });
++}

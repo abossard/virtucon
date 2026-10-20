@@ -1,0 +1,16 @@
+diff --git a/src/index.mjs b/src/index.mjs
+index dc3fdab..125e8f3 100644
+--- a/src/index.mjs
++++ b/src/index.mjs
+@@ -6,3 +6,4 @@ export { THEMES, THEME_NAMES, getTheme } from "./themes.mjs";
+ export { Diagnostics } from "./diag.mjs";
+ export { textWidth, wrapText } from "./text.mjs";
+ export { projectPositions, relaxCoordinates, assignTracks, corridorsOf, pickCorridorX } from "./layout.mjs";
++export { inventoryDocuments } from "./stub.mjs";
+diff --git a/src/stub.mjs b/src/stub.mjs
+new file mode 100644
+index 0000000..49c22de
+--- /dev/null
++++ b/src/stub.mjs
+@@ -0,0 +1 @@
++export function inventoryDocuments() { return { schemaVersion: 1, documents: [] }; }

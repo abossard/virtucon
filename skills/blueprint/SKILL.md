@@ -48,6 +48,8 @@ If no writing skill is available, apply the readability rules below. Supporting 
 
 Match the requested level of detail.
 
+Explain consequential choices through the constraints they address and the consequences they accept. Reference code and configuration for recoverable details. Keep facts needed for decisions, contracts, or proof. Mark unknown rationale as unknown; distinguish recorded reasons from proposed justifications.
+
 - For interface or boundary principles, describe responsibilities, inputs, outputs, and observable guarantees. Leave private implementation choices to the implementer.
 - For an implementation plan, identify affected files, work order, approach, tests, and verified constraints.
 
@@ -55,7 +57,7 @@ Use the [boundary-map guidance](../ousterhout-review/visual-design.md) when boun
 
 ## 6. Review the document
 
-Check for missing outputs, material initialization or error behavior, conflicting guarantees, and claims a reader cannot verify.
+Check that each passage adds a reason, decision, guarantee, proof, or necessary action. Verify rationale against its source. Check for missing outputs, material initialization or error behavior, conflicting guarantees, and claims a reader cannot verify.
 
 Challenge each criterion's proof, including its meaningful edge case. Record material assumptions or verification gaps in Plan summary.
 

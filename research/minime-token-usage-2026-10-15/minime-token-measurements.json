@@ -1,0 +1,160 @@
+{
+  "measured_on": "2026-10-15",
+  "source": "Internal session_store_sql, local assistant_usage_events and turns",
+  "sample_period": "2026-10-08 through 2026-10-15",
+  "units": {
+    "aiu": "Recorded total_nano_aiu divided by 1000000000. Not dollars.",
+    "input_tokens": "Sum of request prompt sizes. Includes cache reads and writes.",
+    "noncached_input_tokens": "input_tokens minus cache_read_tokens; not necessarily unique text.",
+    "output_tokens": "Recorded output tokens. Do not add reasoning_tokens again."
+  },
+  "bounded_inspections": [
+    {
+      "session_id": "20c39459-5dfe-4235-8f98-0d5cec5b931e",
+      "label": "QLC+ recording",
+      "calls": 16,
+      "input_tokens": 2455071,
+      "cache_read_tokens": 2249754,
+      "noncached_input_tokens": 205317,
+      "output_tokens": 22076,
+      "aiu": 95.90039,
+      "first_request_input_tokens": 81403
+    },
+    {
+      "session_id": "8f45992b-b4f0-43e6-9008-65c0fa915aac",
+      "label": "CAF documentation, with user-directed corrections",
+      "calls": 22,
+      "input_tokens": 2419489,
+      "cache_read_tokens": 2245342,
+      "noncached_input_tokens": 174147,
+      "output_tokens": 64492,
+      "aiu": 130.47887,
+      "first_request_input_tokens": 41576
+    },
+    {
+      "session_id": "d84b3ff3-6c22-4633-b132-c21cd6f106a8",
+      "label": "CloudHealth MCP",
+      "calls": 27,
+      "input_tokens": 4454445,
+      "cache_read_tokens": 4219732,
+      "noncached_input_tokens": 234713,
+      "output_tokens": 39878,
+      "aiu": 140.74952,
+      "first_request_input_tokens": 40667
+    },
+    {
+      "session_id": "383b6aae-22b2-40de-abb8-6f492163bb9d",
+      "label": "CloudHealth C7 MCP",
+      "calls": 46,
+      "input_tokens": 7448935,
+      "cache_read_tokens": 7216465,
+      "noncached_input_tokens": 232470,
+      "output_tokens": 45573,
+      "aiu": 175.84825,
+      "first_request_input_tokens": 40613
+    }
+  ],
+  "bounded_inspection_totals": {
+    "runs": 4,
+    "calls": 111,
+    "input_tokens": 16777940,
+    "cache_read_tokens": 15931293,
+    "noncached_input_tokens": 846647,
+    "cache_write_tokens": 846314,
+    "output_tokens": 172019,
+    "aiu": 542.97703,
+    "median_run_aiu": 135.614195,
+    "aiu_by_token_type": {
+      "cache_read": 159.31293,
+      "cache_write": 211.5785,
+      "input_excluding_cache": 0.0666,
+      "output": 172.019
+    }
+  },
+  "long_running_inspector": {
+    "session_id": "dae6f516-6d7f-4be4-8f3e-d2c9ed58a217",
+    "first_usage": "2026-10-08T15:03:14.804Z",
+    "last_usage": "2026-10-12T12:28:12.686Z",
+    "calls": 673,
+    "user_turns": 135,
+    "input_tokens": 278902509,
+    "cache_read_tokens": 267261790,
+    "noncached_input_tokens": 11640719,
+    "output_tokens": 816485,
+    "max_request_input_tokens": 817527,
+    "aiu": 11648.06069,
+    "base_tier_requests": 142,
+    "high_tier_requests": 531,
+    "highest_observed_base_tier_input_tokens": 269960,
+    "lowest_observed_high_tier_input_tokens": 272094,
+    "same_tokens_priced_at_base_tier_aiu": 6396.85245,
+    "high_tier_premium_aiu": 5251.20824,
+    "caveat": "A multi-day correction and verification conversation, not a single representative inspection. The premium counterfactual is not a guaranteed saving from rotation."
+  },
+  "observed_gpt_6_1_sol_rates_aiu_per_million_tokens": {
+    "base": {
+      "input_excluding_cache": 200,
+      "cache_read": 10,
+      "cache_write": 250,
+      "output": 1000
+    },
+    "high_context": {
+      "input_excluding_cache": 400,
+      "cache_read": 20,
+      "cache_write": 500,
+      "output": 1500
+    }
+  },
+  "illustrative_prefix_reduction": {
+    "fixed_prefix_tokens_removed": 10000,
+    "requests": 27,
+    "assumptions": "One initial cache write followed by 26 cache reads, at observed base rates. Output and trajectory unchanged.",
+    "raw_input_tokens_removed": 270000,
+    "estimated_aiu_saved": 5.1
+  },
+  "orchestration_example": {
+    "session_id": "122bba77-bd03-48a1-8a2f-4ec4ebe0521b",
+    "root_calls": 145,
+    "root_aiu": 1236.29557,
+    "completion_notification_user_turns": 10,
+    "calls_on_turns_triggered_by_completion_notifications": 36,
+    "aiu_on_those_turns": 355.98988,
+    "caveat": "These turns include useful integration, fixes and checks. Their entire cost is not avoidable notification overhead. Ten root calls did not join a retained turns row."
+  },
+  "isolated_blueprint_author_example": {
+    "session_id": "32fbf8f2-346e-4d51-8fe2-bf7f3743b7d8",
+    "calls": 28,
+    "input_tokens": 4240656,
+    "cache_read_tokens": 4059833,
+    "noncached_input_tokens": 180823,
+    "output_tokens": 35766,
+    "aiu": 121.56588,
+    "caveat": "A multi-repository planning update with external research reports, not a generic small-task planning baseline."
+  },
+  "blueprint_corpus": {
+    "source": "blueprint_combined.json, collected by the source research agent",
+    "documents": 682,
+    "bytes": 27132321,
+    "mean_bytes": 39783.461876832844,
+    "median_bytes": 24889,
+    "p90_bytes_lower_order_statistic": 83349,
+    "p99_bytes_lower_order_statistic": 295547,
+    "max_bytes": 886775,
+    "mean_estimated_tokens_chars_div_4": 9917.455278592375,
+    "token_estimate_caveat": "Document token sizes are heuristics, not tokenizer measurements. Session usage tokens above are measured.",
+    "date_only_mtime_cohort": {
+      "filter": "Recorded local mtime >= 2026-10-08, not an exact rolling-seven-day cutoff",
+      "documents": 53,
+      "bytes": 2872757,
+      "mean_bytes": 54202.96226415094,
+      "median_bytes": 28561
+    }
+  },
+  "limitations": [
+    "Purposive identifiable phase sample, not a random sample or all Minime work.",
+    "Standalone inspector session totals exclude parent orchestration and separately launched reviewers.",
+    "Some older sessions retain usage and metadata but not detailed turns.",
+    "Cloud session_usage.cost is an aggregate of model request multipliers, not the token-priced AIU field used here.",
+    "No controlled comparison against the same task without Minime."
+  ]
+}

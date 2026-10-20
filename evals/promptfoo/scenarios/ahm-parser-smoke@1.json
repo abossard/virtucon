@@ -1,0 +1,230 @@
+{
+  "schemaVersion": "1.0.0",
+  "suite": {
+    "id": "ahm-parser-smoke",
+    "version": 1,
+    "role": "smoke",
+    "reportingKey": "ahm-parser-smoke@1"
+  },
+  "sourcePin": {
+    "repository": "abossard/ahm-diagrammo",
+    "commit": "7f93a1eddb08c319a157d6b1a1c58bf571dc3ce7",
+    "visibility": "public",
+    "licenseSpdx": "MIT",
+    "licenseBlob": "783bbed58653a479b17be364dae3d42989aa544b",
+    "capturedAt": "2026-10-17",
+    "licensePath": "LICENSE"
+  },
+  "orderedTasks": [
+    {
+      "id": "AHM-P1",
+      "version": 1
+    },
+    {
+      "id": "AHM-P2",
+      "version": 1
+    },
+    {
+      "id": "AHM-P3",
+      "version": 1
+    }
+  ],
+  "tasks": {
+    "AHM-P1@1": {
+      "referencePatch": "reference/ahm-parser-smoke@1/AHM-P1.v1.patch",
+      "pathAllowlist": [
+        "src/**",
+        "bin/**",
+        "test/**",
+        "README.md"
+      ],
+      "definitionHash": "sha256:190c1f4a0c4c90f81d4d3c50f84b0716f327d15ada7ecdfca8879c67bc43c855",
+      "definition": {
+        "title": "Quoted scalar parser support",
+        "contractVersion": "1.0.0",
+        "requiresChange": true,
+        "api": {
+          "requiredExports": [
+            "extractBlocks"
+          ],
+          "module": "./src/index.mjs",
+          "checks": [
+            {
+              "name": "fence-quoted-primitives-preserved",
+              "expected": "pass"
+            }
+          ],
+          "runtimeChecks": [
+            {
+              "name": "fence-quoted-primitives-preserved",
+              "script": "import { extractBlocks } from './src/index.mjs'; const fence = String.fromCharCode(96).repeat(3); const md = '## 123\\n' + fence + 'mermaid title=\\\"123\\\" subtitle=\\'false\\' legend=false\\nflowchart TD\\nA-->B\\n' + fence + '\\n'; const block = extractBlocks(md, [])[0]; if (!block) { console.error('expected one block, got none'); process.exit(1); } const actual = { title: block.options?.title, titleType: typeof block.options?.title, subtitle: block.options?.subtitle, subtitleType: typeof block.options?.subtitle, legend: block.options?.legend, legendType: typeof block.options?.legend }; const expected = { title: '123', titleType: 'string', subtitle: 'false', subtitleType: 'string', legend: false, legendType: 'boolean' }; if (JSON.stringify(actual) !== JSON.stringify(expected)) { console.error('expected=' + JSON.stringify(expected) + ' actual=' + JSON.stringify(actual)); process.exit(1); }"
+            }
+          ]
+        },
+        "cli": {
+          "command": "node bin/diagrammo.mjs test/fixtures/torture-deep.md --list",
+          "expectedExitCode": 0,
+          "stdoutIncludes": [
+            "torture-deep.md:"
+          ],
+          "stderrExcludes": [
+            "Error",
+            "Unhandled"
+          ]
+        },
+        "preservation": {
+          "command": "node --test test/extract.test.mjs"
+        },
+        "filesystem": {
+          "requiredWrites": [
+            "src/**"
+          ],
+          "forbiddenWrites": [
+            "evals/**",
+            ".github/**",
+            "assets/**"
+          ]
+        },
+        "prompt": "Implement Quoted scalar parser support. Keep changes within allowed paths and preserve existing behavior.",
+        "agentContract": {
+          "requirements": [
+            "Preserve quoted scalar values in mermaid options without coercing strings to booleans or numbers.",
+            "Keep --list behavior unchanged for existing fixtures.",
+            "Only change parser behavior needed for this task and keep preservation tests green."
+          ]
+        }
+      }
+    },
+    "AHM-P2@1": {
+      "referencePatch": "reference/ahm-parser-smoke@1/AHM-P2.v1.patch",
+      "pathAllowlist": [
+        "src/**",
+        "bin/**",
+        "test/**",
+        "README.md"
+      ],
+      "definitionHash": "sha256:d5d95ae5ebff715d0d133b51b6cef432cc4c107c514676f2b0abb40085f8a5af",
+      "definition": {
+        "title": "Literal brace parsing",
+        "contractVersion": "1.0.0",
+        "requiresChange": true,
+        "api": {
+          "requiredExports": [
+            "extractBlocks"
+          ],
+          "module": "./src/index.mjs",
+          "checks": [
+            {
+              "name": "quoted-brace-values-preserved",
+              "expected": "pass"
+            }
+          ],
+          "runtimeChecks": [
+            {
+              "name": "quoted-brace-values-preserved",
+              "script": "import { extractBlocks } from './src/index.mjs'; const fence = String.fromCharCode(96).repeat(3); const md = '## braces\\n' + fence + 'mermaid {title=\\\"Order {east}\\\" subtitle=\\'brace {x}\\' legend=false}\\nflowchart TD\\nA-->B\\n' + fence + '\\n'; const block = extractBlocks(md, [])[0]; if (!block) { console.error('expected one block, got none'); process.exit(1); } const actual = { title: block.options?.title, subtitle: block.options?.subtitle, legend: block.options?.legend }; const expected = { title: 'Order {east}', subtitle: 'brace {x}', legend: false }; if (JSON.stringify(actual) !== JSON.stringify(expected)) { console.error('expected=' + JSON.stringify(expected) + ' actual=' + JSON.stringify(actual)); process.exit(1); }"
+            }
+          ]
+        },
+        "cli": {
+          "command": "node bin/diagrammo.mjs test/fixtures/torture-deep.md --list",
+          "expectedExitCode": 0,
+          "stdoutIncludes": [
+            "torture-deep.md:"
+          ],
+          "stderrExcludes": [
+            "Error",
+            "Unhandled"
+          ]
+        },
+        "preservation": {
+          "command": "node --test test/extract.test.mjs"
+        },
+        "filesystem": {
+          "requiredWrites": [
+            "src/**"
+          ],
+          "forbiddenWrites": [
+            "evals/**",
+            ".github/**",
+            "assets/**"
+          ]
+        },
+        "prompt": "Implement Literal brace parsing. Keep changes within allowed paths and preserve existing behavior.",
+        "agentContract": {
+          "requirements": [
+            "Preserve literal braces inside quoted option values while parsing mermaid options.",
+            "Do not change unquoted parsing behavior outside this task scope.",
+            "Keep CLI and preservation behavior unchanged."
+          ]
+        }
+      }
+    },
+    "AHM-P3@1": {
+      "referencePatch": "reference/ahm-parser-smoke@1/AHM-P3.v1.patch",
+      "pathAllowlist": [
+        "src/**",
+        "bin/**",
+        "test/**",
+        "README.md"
+      ],
+      "definitionHash": "sha256:ef4b3f6cd50c5aafd425e1c234eea8c4e097312a54d5811ccae9a36bdbd0b25e",
+      "definition": {
+        "title": "Quoted comma list parsing",
+        "contractVersion": "1.0.0",
+        "requiresChange": true,
+        "api": {
+          "requiredExports": [
+            "extractBlocks",
+            "parseYamlite"
+          ],
+          "module": "./src/index.mjs",
+          "checks": [
+            {
+              "name": "quoted-inline-list-commas-preserved",
+              "expected": "pass"
+            }
+          ],
+          "runtimeChecks": [
+            {
+              "name": "quoted-inline-list-commas-preserved",
+              "script": "import { extractBlocks, parseYamlite } from './src/index.mjs'; const fence = String.fromCharCode(96).repeat(3); const parsed = parseYamlite('lanes: [\\\"Root, global\\\", Apps]\\n'); const md = '## lanes\\n' + fence + 'mermaid\\n%%| lanes: [\\\"Root, global\\\", Apps]\\nflowchart TD\\nA-->B\\n' + fence + '\\n'; const block = extractBlocks(md, [])[0]; if (!block) { console.error('expected one block, got none'); process.exit(1); } const actual = { yamlLanes: parsed?.lanes, directiveLanes: block.options?.lanes }; const expected = { yamlLanes: ['Root, global', 'Apps'], directiveLanes: ['Root, global', 'Apps'] }; if (JSON.stringify(actual) !== JSON.stringify(expected)) { console.error('expected=' + JSON.stringify(expected) + ' actual=' + JSON.stringify(actual)); process.exit(1); }"
+            }
+          ]
+        },
+        "cli": {
+          "command": "node bin/diagrammo.mjs test/fixtures/torture-deep.md --list",
+          "expectedExitCode": 0,
+          "stdoutIncludes": [
+            "torture-deep.md:"
+          ],
+          "stderrExcludes": [
+            "Error",
+            "Unhandled"
+          ]
+        },
+        "preservation": {
+          "command": "node --test test/extract.test.mjs"
+        },
+        "filesystem": {
+          "requiredWrites": [
+            "src/**"
+          ],
+          "forbiddenWrites": [
+            "evals/**",
+            ".github/**",
+            "assets/**"
+          ]
+        },
+        "prompt": "Implement Quoted comma list parsing. Keep changes within allowed paths and preserve existing behavior.",
+        "agentContract": {
+          "requirements": [
+            "Preserve commas inside quoted inline list items in YAML-lite and directive parsing.",
+            "Keep parseYamlite and extractBlocks outputs aligned for quoted list values.",
+            "Keep CLI and preservation behavior unchanged."
+          ]
+        }
+      }
+    }
+  }
+}

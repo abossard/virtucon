@@ -1,0 +1,149 @@
+diff --git a/bin/diagrammo.mjs b/bin/diagrammo.mjs
+index 648fc98..5b6fe07 100644
+--- a/bin/diagrammo.mjs
++++ b/bin/diagrammo.mjs
+@@ -16,6 +16,7 @@ import { renderSwimlane } from "../src/swimlane.mjs";
+ import { getTheme, THEME_NAMES } from "../src/themes.mjs";
+ import { Diagnostics } from "../src/diag.mjs";
+ import { syncMarkdown, svgHref } from "../src/markdown-sync.mjs";
++import { checkMarkdownSync } from "../src/sync-status.mjs";
+ 
+ const HELP = `diagrammo — mermaid blocks in Markdown → themed SVGs
+ 
+@@ -33,6 +34,8 @@ Options:
+                          Mermaid source; leaves the file untouched if any of its blocks fails
+       --image-format <fmt>  visible embed for --sync-markdown: commonmark | learn   (default: commonmark)
+                             commonmark → ![alt](href); learn → Microsoft Learn :::image:::  directive
++      --check-sync       standalone, read-only: report whether the Markdown and SVGs are what
++                         --sync-markdown would produce (exit 0 current, 1 drift, 2 error)
+   -h, --help             this help
+   -V, --version          print version
+ 
+@@ -53,11 +56,12 @@ Signal rows may carry their own value and state:  P95 latency = 230 ms (degraded
+ `;
+ 
+ function parseArgs(argv) {
+-  const a = { files: [], out: "diagrams", theme: "portal", renderer: "auto", list: false, verbose: false, strict: false, syncMarkdown: false, imageFormat: "commonmark" };
++  const a = { files: [], out: "diagrams", theme: "portal", renderer: "auto", list: false, verbose: false, strict: false, syncMarkdown: false, checkSync: false, imageFormat: "commonmark" };
+   for (let i = 0; i < argv.length; i++) {
+     const v = argv[i];
+     if (v === "-h" || v === "--help") a.help = true;
+     else if (v === "-V" || v === "--version") a.version = true;
++    else if (v === "--check-sync") a.checkSync = true;
+     else if (v === "-o" || v === "--out" || v === "-t" || v === "--theme" || v === "-r" || v === "--renderer" || v === "--image-format") {
+       const value = argv[i + 1];
+       if (value == null || value.startsWith("-")) {
+@@ -97,6 +101,10 @@ if (!["commonmark", "learn"].includes(args.imageFormat)) {
+   console.error(`error: unknown image format "${args.imageFormat}" (use commonmark or learn)`); process.exit(1);
+ }
+ 
++if (args.checkSync && (args.list || args.syncMarkdown)) {
++  console.error("error: --check-sync cannot be combined with --list or --sync-markdown"); process.exit(1);
++}
++
+ // Same-directory temp file + rename: POSIX rename(2) is atomic on the same filesystem. The temp
+ // name includes this process's pid plus a random suffix so two concurrent invocations (even ones
+ // syncing the exact same target file) never share a temp path and race each other's
+@@ -123,6 +131,20 @@ for (const file of args.files) {
+   try { inputs.push({ name: file, source: readFileSync(file, "utf8") }); }
+   catch (e) { console.error(`error: cannot read ${file}: ${e.message}`); process.exitCode = 1; }
+ }
++if (args.checkSync) {
++  const readSvg = (p) => {
++    try { return readFileSync(p, "utf8"); }
++    catch (e) { if (e.code === "ENOENT") return null; throw e; }
++  };
++  const result = checkMarkdownSync(inputs, { outDir: args.out, imageFormat: args.imageFormat, theme: args.theme, renderer: args.renderer, readSvg, strict: args.strict });
++  for (const doc of result.documents) {
++    console.log(`${doc.name}: markdown ${doc.markdownStatus}`);
++    for (const a of doc.artifacts) console.log(`  ${a.slug}  ${a.path}  ${a.status}`);
++    for (const d of doc.diagnostics) if (d.level !== "info") console.error(`  ${d.level} ${doc.name}${d.line != null ? ":" + d.line : ""}  ${d.message}`);
++  }
++  console.log(`sync status: ${result.status}`);
++  process.exit(process.exitCode || result.status === "error" ? 2 : result.status === "drift" ? 1 : 0);
++}
+ const documents = prepareDocuments(inputs, { theme: args.theme, renderer: args.renderer }, { sync: args.syncMarkdown && !args.list });
+ for (const doc of documents) {
+   for (const issue of doc.diagnostics) {
+diff --git a/src/index.mjs b/src/index.mjs
+index dc3fdab..a350017 100644
+--- a/src/index.mjs
++++ b/src/index.mjs
+@@ -6,3 +6,4 @@ export { THEMES, THEME_NAMES, getTheme } from "./themes.mjs";
+ export { Diagnostics } from "./diag.mjs";
+ export { textWidth, wrapText } from "./text.mjs";
+ export { projectPositions, relaxCoordinates, assignTracks, corridorsOf, pickCorridorX } from "./layout.mjs";
++export { checkMarkdownSync } from "./sync-status.mjs";
+diff --git a/src/sync-status.mjs b/src/sync-status.mjs
+new file mode 100644
+index 0000000..40d2fb1
+--- /dev/null
++++ b/src/sync-status.mjs
+@@ -0,0 +1,67 @@
++// Read-only freshness check: what `--sync-markdown` would produce versus what exists now.
++import { join, resolve } from "node:path";
++import { prepareDocuments } from "./document.mjs";
++import { renderSwimlane } from "./swimlane.mjs";
++import { getTheme } from "./themes.mjs";
++import { Diagnostics } from "./diag.mjs";
++import { syncMarkdown, svgHref } from "./markdown-sync.mjs";
++
++const RANK = { current: 0, drift: 1, error: 2 };
++
++function checkBlock(b, { name, outDir, imageFormat, readSvg, strict }) {
++  const diagnostics = b.issues.map((i) => ({ level: i.level, message: i.message, line: i.line ?? null, slug: b.slug }));
++  const path = join(outDir, `${b.slug}.svg`);
++  const fail = (message) => {
++    diagnostics.push({ level: "error", message, line: b.line, slug: b.slug });
++    return { artifact: { slug: b.slug, path, status: "error" }, diagnostics };
++  };
++  if (diagnostics.some((d) => d.level === "error")) return fail("block has errors");
++  if (b.renderer !== "swimlane") return fail(`unsupported check: renderer "${b.renderer}" cannot be verified without a browser or mermaid-cli`);
++  let expected;
++  try {
++    const diag = new Diagnostics({ file: name });
++    const o = b.effectiveOptions;
++    expected = renderSwimlane(b.code, {
++      theme: getTheme(o.theme), title: o.title, subtitle: o.subtitle, lanes: o.lanes,
++      legend: o.legend, laneLabels: o.laneLabels, diag, baseLine: b.codeLine - 1,
++    }).svg;
++    for (const i of diag.items) if (i.level !== "info") diagnostics.push({ level: i.level, message: i.message, line: i.line, slug: b.slug });
++  } catch (e) { return fail(`render failed: ${e.message}`); }
++  if (strict && diagnostics.some((d) => d.level === "warn")) {
++    for (const d of diagnostics) if (d.level === "warn") d.level = "error";
++    return { artifact: { slug: b.slug, path, status: "error" }, diagnostics };
++  }
++  let actual;
++  try { actual = readSvg(path); }
++  catch (e) { return fail(`cannot read ${path}: ${e.message}`); }
++  const status = actual == null ? "missing" : actual === expected ? "current" : "stale";
++  return { artifact: { slug: b.slug, path, status }, diagnostics, spec: { slug: b.slug, openLine: b.line, closeLine: b.closeLine, title: b.effectiveOptions.title, alt: b.options.alt, href: svgHref(name, path, imageFormat) } };
++}
++
++export function checkMarkdownSync(inputs, { outDir = "diagrams", imageFormat = "commonmark", theme = "portal", renderer = "auto", readSvg, strict = false } = {}) {
++  const absOut = resolve(outDir);
++  const prepared = prepareDocuments(inputs, { theme, renderer }, { sync: true });
++  const documents = prepared.map((doc) => {
++    const diagnostics = doc.diagnostics.map((d) => ({ level: d.level, message: d.message, line: d.line ?? null }));
++    if (diagnostics.length) return { name: doc.name, markdownStatus: "error", artifacts: [], diagnostics };
++    const artifacts = [], specs = [];
++    for (const b of doc.blocks) {
++      const r = checkBlock(b, { name: doc.name, outDir: absOut, imageFormat, readSvg, strict });
++      artifacts.push(r.artifact);
++      diagnostics.push(...r.diagnostics);
++      if (r.spec) specs.push(r.spec);
++    }
++    const hasError = artifacts.some((a) => a.status === "error");
++    let markdownStatus = "current";
++    if (hasError) markdownStatus = "error";
++    else if (doc.blocks.length > 0 && syncMarkdown(doc.markdown, specs, { imageFormat }) !== doc.source) markdownStatus = "stale";
++    return { name: doc.name, markdownStatus, artifacts, diagnostics };
++  });
++  let status = "current";
++  for (const d of documents) {
++    const own = d.markdownStatus === "error" || d.artifacts.some((a) => a.status === "error") ? "error"
++      : d.markdownStatus === "stale" || d.artifacts.some((a) => a.status !== "current") ? "drift" : "current";
++    if (RANK[own] > RANK[status]) status = own;
++  }
++  return { status, documents };
++}

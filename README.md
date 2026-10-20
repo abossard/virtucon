@@ -72,6 +72,10 @@ Minime includes an editable blueprint view and a shared wiki browser. See the [C
 
 The [orchestration guide](assets/ORCHESTRATION.md) defines how work proceeds, how corrections take effect, and when a decision needs your input.
 
+## Evaluation harness
+
+For the promptfoo default-versus-minime benchmark harness, see [evals/promptfoo/README.md](evals/promptfoo/README.md).
+
 ## Inspiration
 
 minime's workflow draws on research into code-generation agents, human oversight, context degradation, and long-term agent memory.

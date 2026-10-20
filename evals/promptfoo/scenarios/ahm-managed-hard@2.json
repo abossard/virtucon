@@ -1,0 +1,245 @@
+{
+  "schemaVersion": "1.0.0",
+  "suite": {
+    "id": "ahm-managed-hard",
+    "version": 2,
+    "role": "hard",
+    "reportingKey": "ahm-managed-hard@2"
+  },
+  "sourcePin": {
+    "repository": "abossard/ahm-diagrammo",
+    "commit": "7f93a1eddb08c319a157d6b1a1c58bf571dc3ce7",
+    "visibility": "public",
+    "licenseSpdx": "MIT",
+    "licenseBlob": "783bbed58653a479b17be364dae3d42989aa544b",
+    "capturedAt": "2026-10-17",
+    "licensePath": "LICENSE"
+  },
+  "orderedTasks": [
+    {
+      "id": "AHM-H1",
+      "version": 2
+    },
+    {
+      "id": "AHM-H2",
+      "version": 2
+    },
+    {
+      "id": "AHM-H3",
+      "version": 2
+    }
+  ],
+  "tasks": {
+    "AHM-H1@2": {
+      "referencePatch": "reference/ahm-managed-hard@2/AHM-H1.v1.patch",
+      "wrongPatch": "reference/ahm-managed-hard@2/AHM-H1.v1.wrong.patch",
+      "pathAllowlist": [
+        "src/**",
+        "bin/**",
+        "test/**",
+        "README.md"
+      ],
+      "definition": {
+        "title": "Machine-readable batch inventory",
+        "contractVersion": "2.0.0",
+        "requiresChange": true,
+        "agentContract": {
+          "requirements": [
+            "Export inventoryDocuments(inputs, defaults = {}) from the package API. It takes the existing {name, source} document inputs and returns {schemaVersion: 1, documents: [...]} in input order.",
+            "Each document has name, blocks and diagnostics. Each block has slug, line, closeLine, location, resolved renderer, effectiveOptions and issues. Keep existing diagnostic fields, severities and raw source locations.",
+            "Add `--list --format json`: stdout is one JSON object for the whole batch with no human listing or summary. An unreadable file becomes a record with an error diagnostic and empty blocks.",
+            "Exit 1 on input, document or block errors, or on warnings under --strict. Otherwise exit 0.",
+            "Text output stays the default and `--format text` is accepted. --format is valid only with --list. Unknown formats fail before any write.",
+            "JSON inventory never renders or creates an output directory, including when combined with --sync-markdown.",
+            "Duplicate managed slugs across files stay errors and plain slug collisions keep deterministic suffixes."
+          ]
+        },
+        "api": {
+          "requiredExports": [
+            "inventoryDocuments"
+          ],
+          "module": "./src/index.mjs",
+          "oracleChecks": [
+            {
+              "name": "h1-api-projection",
+              "script": "scenarios/oracles/ahm-managed-hard@2/AHM-H1.api.projection.mjs",
+              "sha256": "cca9e8c87ddaf7efc38aa70d7d7e2688be5eefee817a9ce90983792fb2ea96fb"
+            },
+            {
+              "name": "h1-api-diagnostics",
+              "script": "scenarios/oracles/ahm-managed-hard@2/AHM-H1.api.diagnostics.mjs",
+              "sha256": "55b7a55ffc4c86a0e49d4326e7a4a75ce61b0cc3b2ada3af57597ce706b033eb"
+            }
+          ]
+        },
+        "cli": {
+          "command": "node bin/diagrammo.mjs --list --format json test/fixtures/torture-deep.md",
+          "expectedExitCode": 0,
+          "stdoutIncludes": [
+            "\"schemaVersion\""
+          ],
+          "stderrExcludes": [
+            "Unhandled"
+          ],
+          "oracleChecks": [
+            {
+              "name": "h1-cli-json",
+              "script": "scenarios/oracles/ahm-managed-hard@2/AHM-H1.cli.json.mjs",
+              "sha256": "df887eec79df573cb5bd13de264d9c206bd96a54813ceb24fc372d4d495bd115"
+            },
+            {
+              "name": "h1-cli-errors",
+              "script": "scenarios/oracles/ahm-managed-hard@2/AHM-H1.cli.errors.mjs",
+              "sha256": "18e1ecd2b36c586bba618809e6f081a78b09656bccd6360ea1ac8f40ce4cf8f6"
+            }
+          ]
+        },
+        "preservation": {
+          "command": "node --test test/extract.test.mjs test/document.test.mjs test/cli.test.mjs test/markdown-sync.test.mjs"
+        },
+        "filesystem": {
+          "requiredWrites": [
+            "src/**"
+          ],
+          "forbiddenWrites": [
+            "evals/**",
+            ".github/**",
+            "assets/**"
+          ]
+        },
+        "prompt": "Implement Machine-readable batch inventory. Satisfy the API/CLI contract and keep preservation tests green."
+      },
+      "definitionHash": "sha256:43acf7fc01942067faea2d919bae918aa66bb321dc69dad213fd40532d29ea79"
+    },
+    "AHM-H2@2": {
+      "referencePatch": "reference/ahm-managed-hard@2/AHM-H2.v1.patch",
+      "wrongPatch": "reference/ahm-managed-hard@2/AHM-H2.v1.wrong.patch",
+      "pathAllowlist": [
+        "src/**",
+        "bin/**",
+        "test/**",
+        "README.md"
+      ],
+      "definition": {
+        "title": "Reversible managed-source restoration",
+        "contractVersion": "2.0.0",
+        "requiresChange": true,
+        "agentContract": {
+          "requirements": [
+            "Export pure restoreMarkdown(source). It returns a string or throws on invalid managed structure.",
+            "Replace each managed sync span with its original Mermaid fence and decode the escaped comment terminators in the hidden source. Support the current hidden-comment form and the legacy <details> form.",
+            "Preserve prose outside spans, the fence marker, info string and body, LF or CRLF line endings, and the presence or absence of a trailing newline.",
+            "Leave ordinary fences and marker examples inside other fenced code unchanged. A second restore is byte-identical. Sources without spans are returned unchanged.",
+            "Add standalone `--restore-markdown <files...>`. Validate the whole batch before writing any file. Malformed, nested or mismatched markers, duplicate managed slugs within or across files, and spans without exactly one complete Mermaid fence exit 1 and leave every file unchanged.",
+            "Restore never renders or writes SVGs and leaves existing SVGs untouched. Reject combination with --list, --sync-markdown and explicitly supplied -o/--out, -t/--theme, -r/--renderer or --image-format."
+          ]
+        },
+        "api": {
+          "requiredExports": [
+            "restoreMarkdown"
+          ],
+          "module": "./src/index.mjs",
+          "oracleChecks": [
+            {
+              "name": "h2-api-restore",
+              "script": "scenarios/oracles/ahm-managed-hard@2/AHM-H2.api.restore.mjs",
+              "sha256": "ccc3482dcc76b4dd0b851b89f555c2b1652505a15f2be927b63210a67ed84b62"
+            }
+          ]
+        },
+        "cli": {
+          "command": "node bin/diagrammo.mjs --restore-markdown test/fixtures/torture-deep.md",
+          "expectedExitCode": 0,
+          "stdoutIncludes": [],
+          "stderrExcludes": [
+            "Unhandled"
+          ],
+          "oracleChecks": [
+            {
+              "name": "h2-cli-restore",
+              "script": "scenarios/oracles/ahm-managed-hard@2/AHM-H2.cli.restore.mjs",
+              "sha256": "03b58babd55d749e9e6a15875ca95181fe093e7154939e2d295368e6f92793da"
+            }
+          ]
+        },
+        "preservation": {
+          "command": "node --test test/extract.test.mjs test/document.test.mjs test/cli.test.mjs test/markdown-sync.test.mjs"
+        },
+        "filesystem": {
+          "requiredWrites": [
+            "src/**"
+          ],
+          "forbiddenWrites": [
+            "evals/**",
+            ".github/**",
+            "assets/**"
+          ]
+        },
+        "prompt": "Implement Reversible managed-source restoration. Satisfy the API/CLI contract and keep preservation tests green."
+      },
+      "definitionHash": "sha256:45fcb62fd31aae9e82c816163521d4296dcaad242b03eff156feb53cd1023ab0"
+    },
+    "AHM-H3@2": {
+      "referencePatch": "reference/ahm-managed-hard@2/AHM-H3.v1.patch",
+      "wrongPatch": "reference/ahm-managed-hard@2/AHM-H3.v1.wrong.patch",
+      "pathAllowlist": [
+        "src/**",
+        "bin/**",
+        "test/**",
+        "README.md"
+      ],
+      "definition": {
+        "title": "Read-only synchronization freshness check",
+        "contractVersion": "2.0.0",
+        "requiresChange": true,
+        "agentContract": {
+          "requirements": [
+            "Add standalone `--check-sync` with the existing -o, theme, renderer and --image-format choices and defaults. For each input, compute what `--sync-markdown` would produce and compare the managed Markdown and the expected SVGs with the current files.",
+            "Render swimlane blocks with the existing native renderer. An effective mermaid renderer is an unsupported-check error with no browser or install fallback.",
+            "Export checkMarkdownSync(inputs, {outDir, imageFormat, theme, renderer, readSvg}). Inputs are {name, source}. readSvg(absolutePath) returns UTF-8 SVG text, or null when the file is absent. Other read errors are errors.",
+            "Return {status, documents}. status is current, drift or error, with error dominating drift and drift dominating current. Documents keep input order with name, markdownStatus (current, stale or error), artifacts and diagnostics. Artifacts have slug, absolute path and status (current, missing, stale or error).",
+            "The CLI reports per-document and per-artifact status. Exit 0 when current, 1 on drift, 2 on invalid, unreadable, unsupported or render-error input.",
+            "Never create, overwrite or delete files. The API performs no filesystem writes; reads enter only through readSvg. Zero diagrams is current unless the markdown is malformed. Reject combination with --list, --sync-markdown and --restore-markdown."
+          ]
+        },
+        "api": {
+          "requiredExports": [
+            "checkMarkdownSync"
+          ],
+          "module": "./src/index.mjs",
+          "oracleChecks": [
+            {
+              "name": "h3-api-and-cli-check",
+              "script": "scenarios/oracles/ahm-managed-hard@2/AHM-H3.check.mjs",
+              "sha256": "7cee8f56b376ee269c71ec3ee034da153cba4b0bade69cbaa3463ddb32268a12"
+            }
+          ]
+        },
+        "cli": {
+          "command": "node bin/diagrammo.mjs --check-sync test/fixtures/torture-deep.md",
+          "expectedExitCode": 1,
+          "stdoutIncludes": [],
+          "stderrExcludes": [
+            "Unhandled"
+          ],
+          "oracleChecks": []
+        },
+        "preservation": {
+          "command": "node --test test/extract.test.mjs test/document.test.mjs test/cli.test.mjs test/markdown-sync.test.mjs"
+        },
+        "filesystem": {
+          "requiredWrites": [
+            "src/**"
+          ],
+          "forbiddenWrites": [
+            "evals/**",
+            ".github/**",
+            "assets/**"
+          ]
+        },
+        "prompt": "Implement Read-only synchronization freshness check. Satisfy the API/CLI contract and keep preservation tests green."
+      },
+      "definitionHash": "sha256:f0fbdb81c603ada4c514027d057d85ca46601aee7fe17c047e37c6c73401dbb7"
+    }
+  }
+}
