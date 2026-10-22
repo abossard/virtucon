@@ -49,37 +49,18 @@ function writeIfMissing(filePath, content) {
   }
 }
 
-function buildSchema(label) {
-  return [
-    `# Wiki schema: ${label}`,
-    '',
-    'This root uses three layers:',
-    '- `raw/` for immutable source documents.',
-    '- `wiki/` for linked markdown pages derived from those sources.',
-    '- `schema.md` for the conventions that govern the wiki.',
-    '',
-    'Allowed raw documents include curated findings, distilled results, user messages, general knowledge, and hard-won discoveries.',
-    'Do not store logs or large outputs in `raw/`.',
-  ].join('\n');
-}
-
 function buildIndex(label) {
   return [
     `# Wiki index: ${label}`,
     '',
-    'Use this page as the catalog of topic pages and their backing raw sources.',
+    '## Repositories',
     '',
-    '## Core pages',
-    '- [Wiki log](./log.md)',
+    '## Patterns',
   ].join('\n');
 }
 
 function buildLog(label) {
-  return [
-    `# Wiki log: ${label}`,
-    '',
-    'Record compact dated ingest, query, and lint updates here.',
-  ].join('\n');
+  return `# Wiki log: ${label}`;
 }
 
 function seedLegacyWiki(repoDir, repoRawDir) {
@@ -128,18 +109,14 @@ function ensureGlobalKnowledgeRoot() {
   fs.mkdirSync(path.join(VIRTUCON_HQ, 'raw'), { recursive: true });
   fs.mkdirSync(path.join(VIRTUCON_HQ, 'wiki', 'orgs'), { recursive: true });
   fs.mkdirSync(path.join(VIRTUCON_HQ, 'wiki', 'patterns'), { recursive: true });
-  writeIfMissing(path.join(VIRTUCON_HQ, 'schema.md'), buildSchema('global'));
+  copyIfMissing(path.join(PLUGIN_ROOT, 'assets', '.agent', 'wiki', 'schema.md'), path.join(VIRTUCON_HQ, 'schema.md'));
   writeIfMissing(path.join(VIRTUCON_HQ, 'wiki', 'index.md'), buildIndex('global'));
   writeIfMissing(path.join(VIRTUCON_HQ, 'wiki', 'log.md'), buildLog('global'));
 }
 
 function ensureBootstrap(orgRepo) {
-  const assets = path.join(PLUGIN_ROOT, 'assets');
-  const templateDir = path.join(VIRTUCON_HQ, 'templates');
-  fs.mkdirSync(templateDir, { recursive: true });
-
-  copyIfMissing(path.join(assets, 'blueprint.template.md'), path.join(templateDir, 'blueprint.template.md'));
-  copyIfMissing(path.join(assets, '.agent', 'wiki', '_TEMPLATE.md'), path.join(VIRTUCON_HQ, '_TEMPLATE.md'));
+  fs.mkdirSync(VIRTUCON_HQ, { recursive: true });
+  copyIfMissing(path.join(PLUGIN_ROOT, 'assets', '.agent', 'wiki', '_TEMPLATE.md'), path.join(VIRTUCON_HQ, '_TEMPLATE.md'));
   ensureGlobalKnowledgeRoot();
 
   if (!orgRepo) {
@@ -159,61 +136,23 @@ function ensureBootstrap(orgRepo) {
 }
 
 function buildNudge(orgRepo) {
-  const skills = [];
-  const skillsDir = path.join(PLUGIN_ROOT, 'skills');
-  try {
-    for (const d of fs.readdirSync(skillsDir, { withFileTypes: true })) {
-      if (!d.isDirectory()) continue;
-      const skillFile = path.join(skillsDir, d.name, 'SKILL.md');
-      if (!fs.existsSync(skillFile)) continue;
-      const content = fs.readFileSync(skillFile, 'utf8');
-      const descMatch = content.match(/^description:\s*(.+)$/m);
-      skills.push({
-        name: d.name,
-        desc: descMatch ? descMatch[1].trim() : '',
-      });
-    }
-  } catch {
-    // non-fatal
-  }
-
-  const skillList = skills
-    .map((s) => `  - **minime:${s.name}**: ${s.desc}`)
-    .join('\n');
-
   const org = orgRepo ? orgRepo.org : '<org>';
   const repo = orgRepo ? orgRepo.repo : '<repo>';
-  const repoRoot = `${VIRTUCON_HQ}/${org}/_${repo}`;
-  const repoRaw = `${VIRTUCON_HQ}/raw/${org}/${repo}/`;
-  const repoWiki = `${VIRTUCON_HQ}/wiki/orgs/${org}/${repo}/`;
+  const tool = (...parts) => `node ${path.join(PLUGIN_ROOT, 'skills', ...parts)}`;
 
   return [
     '<minime-workflow-nudge>',
-    'You have **minime** orchestration skills installed.',
-    '',
-    '**Minime paths (single source of truth. Do not hardcode; use these):**',
+    'minime paths (use these, do not hardcode):',
     `  VIRTUCON_HQ=${VIRTUCON_HQ}`,
-    `  Templates: ${VIRTUCON_HQ}/templates/`,
-    `  Global raw: ${VIRTUCON_HQ}/raw/`,
-    `  Global wiki: ${VIRTUCON_HQ}/wiki/`,
-    `  Global schema: ${VIRTUCON_HQ}/schema.md`,
-    `  Blueprints: ${repoRoot}/blueprints/`,
-    `  Repo raw: ${repoRaw}`,
-    `  Repo wiki: ${repoWiki}`,
-    `  Template: ${VIRTUCON_HQ}/_TEMPLATE.md`,
-    '',
-    'Available skills:',
-    skillList,
-    '',
-    'Usage guidance:',
-    '- Dr. Evil (minime:dr-evil) is the sole automatic phase-transition owner for the full flow. For a non-trivial task it starts a fresh native `blueprint` worker, never loading blueprint inline and implementing itself, and dispatches every later phase the same way.',
-    '- A native worker assigned a phase by Dr. Evil runs only that phase and returns its result to the caller.',
-    '- Direct phase invocation returns to its caller and never invokes another phase.',
-    '- Dr. Evil keeps extract pending through corrections and dispatches it once at the coherent task or session boundary.',
-    '- blueprint accepts inline context. No separate task file is required.',
-    '',
-    'Automatic sequencing is orchestrator-owned: blueprint -> replicate -> inspect -> extract.',
-    'Every phase returns status, blueprint_path, changed_files[], blocking_issue, and evidence_excerpts[].',
+    `  Blueprints: ${VIRTUCON_HQ}/${org}/_${repo}/blueprints/`,
+    `  Blueprint tool: ${tool('blueprint', 'scripts', 'blueprint.mjs')}`,
+    `  Wiki lint tool: ${tool('extract', 'scripts', 'wiki-lint.mjs')}`,
+    `  Wiki schema: ${VIRTUCON_HQ}/schema.md`,
+    `  Repo wiki index: ${VIRTUCON_HQ}/wiki/orgs/${org}/${repo}/index.md`,
+    `  Wiki index: ${VIRTUCON_HQ}/wiki/index.md`,
+    `  Repo raw: ${VIRTUCON_HQ}/raw/${org}/${repo}/`,
+    `  Topic template: ${VIRTUCON_HQ}/_TEMPLATE.md`,
+    'Full flow: run the minime:dr-evil agent. Phase skills work standalone and return to their caller.',
     '</minime-workflow-nudge>',
   ].join('\n');
 }

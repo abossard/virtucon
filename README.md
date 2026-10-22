@@ -24,18 +24,17 @@ You start with a task description. The `minime:dr-evil` agent manages the work a
 
 ## Features
 
-- **A living blueprint:** minime persists verifiable criteria, a visual boundary map, and design decisions across fresh contexts.
-- **Native blueprint canvas:** when capability exists, minime opens or focuses the blueprint canvas, supports section-first editing plus advanced source on the same draft, preserves section boundary newlines during replacement, and falls back to the blueprint file path when canvas support is unavailable.
-- **Visible work management:** Dr. Evil discovers available skills and plugins, aligns the blueprint with native plans, todos, and subagent work, and can keep an external tracker synchronized with your permission.
-- **Execution-grounded implementation:** replicate runs checks for the touched surface, fixes observed failures, implements approved boundaries, and returns structural drift for a decision.
+- **A verifiable blueprint:** your inputs verbatim, EARS criteria traced to them, boundary contracts, tests with runnable checks, and decisions sourced from code, research or you. `blueprint.mjs check` enforces the traceability; `verify` re-runs every check and links the logs.
+- **Visible progress:** Dr. Evil is a pure dispatcher. It keeps one todo per phase, names each task after its phase, and asks you only for decisions that code, tests and the wiki can't settle.
+- **Execution-grounded implementation:** replicate writes the blueprint's tests first, watches them fail, makes the smallest change that passes, and records the results with `blueprint.mjs verify`.
 - **Fresh inspection:** the `minime:frau` inspector starts without the implementer's context, checks the current task against its criteria, and returns evidence for human judgment.
 - **Standalone design reviews:** [minime:ousterhout-review](skills/ousterhout-review/SKILL.md) combines available architecture skills with Ousterhout's design principles; [minime:simplicity-review](skills/simplicity-review/SKILL.md) combines optional Ponytail reviews with data, calculations, actions, and effect-safety checks. Both also support the existing flow.
-- **Global wiki canvas:** minime ships a wiki canvas that searches all repositories by default, offers a removable current-repository preset, and keeps raw sources read-only.
-- **Durable project knowledge:** minime retrieves relevant cited wiki entries during planning and captures reusable lessons with links back to live code.
-- **Automatic local setup:** a session hook creates the knowledge and blueprint directories under `VIRTUCON_HQ`. The default location is `$HOME/.minime`.
+- **Optional canvases:** the blueprint and wiki canvases still ship with the plugin, but the flow no longer opens them. The blueprint canvas reads the previous section layout, so it shows no criteria for the current blueprint format. The wiki canvas searches all repositories by default, offers a removable current-repository preset, and keeps raw sources read-only.
+- **Durable project knowledge:** minime retrieves relevant cited wiki entries during planning and captures reusable lessons with links back to live code. `wiki-lint.mjs` checks every changed page against the wiki schema.
+- **Automatic local setup:** a session hook creates the knowledge and blueprint directories under `VIRTUCON_HQ` and copies the default wiki schema and topic template when they are missing. The default location is `$HOME/.minime`.
 - **Model policy:** minime respects Copilot App model defaults. It sets task-level model overrides only when you select them.
 
-The phase badges above link to each skill. See the [orchestration guide](assets/ORCHESTRATION.md) for workflow mechanics and policy.
+The phase badges above link to each skill. The [orchestration guide](assets/ORCHESTRATION.md) owns the flow; the [blueprint template](skills/blueprint/template.md) shows the contract every phase works against.
 
 ## Install
 

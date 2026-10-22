@@ -1,6 +1,6 @@
 ---
 name: simplicity-review
-description: Review code or proposed changes using Grokking Simplicity's data, calculations, actions, shared-value ownership, and effect timing across languages.
+description: Review code or proposed changes using Grokking Simplicity's data, calculations, actions, shared-value ownership, and effect timing across languages. Use when a diff or design moves side effects, mutates shared state, changes effect ordering or retries, or when the user asks for a Grokking Simplicity, functional-core, or over-engineering review.
 ---
 
 # Simplicity review

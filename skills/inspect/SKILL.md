@@ -1,85 +1,34 @@
 ---
 name: inspect
-description: Verify task-scoped changes in a fresh context against criteria and affected accepted requirements. Return evidence and a correctness-uncertainty risk tier.
-context: fork
-agent: minime:frau
+description: Independently verify a change against its minime blueprint in a fresh context. Re-runs every check, confirms the tests really prove their criteria at the named boundaries, and checks boundaries, constraints and scope. Returns evidence, never a verdict. Use after replicate, before calling a blueprint done, or when the user asks to check, verify or review work against its blueprint.
+allowed-tools: Read Grep Glob Bash Write
 ---
 
 # Inspect
 
-Read the [shared workflow](../../assets/ORCHESTRATION.md) on entry. Follow its phase-isolation and inspection-scope rules. If this is the implementing context, request a fresh inspector instead of reviewing.
+You check someone else's work. Executed proof counts; claims, summaries and earlier results don't. If you wrote this change in this context, stop and ask the caller for a fresh inspector, because a reviewer who shares the builder's context tends to share its blind spots.
 
-## Mutation boundary
+Treat source and tests as read-only. You write only the blueprint's Result cells, through the blueprint tool, and the findings file. Put scratch work outside the repository.
 
-Treat implementation source and tests as read-only. Gather evidence and run scoped checks; keep temporary investigation artifacts outside the repository and clean them up.
+The blueprint tool is `node ../blueprint/scripts/blueprint.mjs` from this skill's base directory. The session nudge prints the absolute command.
 
-Return proposed fixes, conflict resolutions, and permission needs to the owner. Do not modify, restore, revert, or stash the working tree, or perform Git mutations. The owner manages run-level progress.
+## Scope
 
-## 1. Validate the handoff
+The caller gives the blueprint, the repo and the changed files, and optionally the test IDs to recheck. Without changed files, return `blocked` and ask for them. Don't widen the review to the whole branch or repository.
 
-Read the blueprint and supplied task boundary. Check that passing criteria have proof, status matches the work, and decisions and implementation evidence are present.
+## Check
 
-Identify accepted requirements whose behavior, boundaries, or evidence the change affects. Record missing or contradictory handoff information as process gaps.
+1. **Re-run.** Run `node <blueprint tool> verify <blueprint> --by inspect` (add `--only` when you were given test IDs). These results replace the builder's.
+2. **Tests prove criteria.** For each criterion, read its tests and confirm that each one calls the boundary the blueprint names rather than a mock of it, covers the listed edge or error case, and would fail if the behavior broke. A local or mocked check doesn't prove host, browser or cloud behavior; list that as unverified.
+3. **Review checks.** Decide each `review:` check from the code. Set its Result cell to `pass (inspect <YYYY-MM-DD>) <reason>` or `fail (inspect <YYYY-MM-DD>) <reason>`, citing `path:line`.
+4. **Boundaries.** Compare the changed files with the Boundaries table. Contracts must still hold, with no new owners or dependencies, and unchanged boundaries untouched. For design concerns, use the ousterhout-review skill. For changed side effects, shared state or effect ordering, use the simplicity-review skill.
+5. **Constraints and scope.** Confirm each constraint still holds and nothing out of scope changed.
+6. **Missing requirements.** If the change reveals a requirement the criteria lack, propose it as an EARS criterion with its source. The caller decides.
 
-If the task boundary is absent or ambiguous, return `blocked` with the scope the owner must supply. Do not expand it into a branch-wide or repository-wide review.
+## Findings
 
-## 2. Verify the criteria
+Write `<name>.runs/inspect.md` next to the blueprint, replacing any earlier one. List one finding per item: the criterion or test ID, the evidence (command output excerpt or `path:line`), and what is wrong. After the findings, list what you couldn't verify and why. Write `None.` when there are no findings. Present evidence before interpretation, and give no verdict, score or reassurance; the user decides.
 
-Treat candidate findings as leads. Verify each against the real code, its callers, and relevant dependency documentation. Keep findings concrete and within the task boundary.
+## Return
 
-For each active criterion and affected accepted requirement, record:
-
-| Criterion | Evidence method | Boundary exercised | Edge/error case | Raw result | Remaining uncertainty |
-|-----------|-----------------|--------------------|-----------------|------------|-----------------------|
-
-Exercise behavior through the interface its caller uses. Distinguish internal checks from proof at the required boundary. A behavioral criterion needs a meaningful edge or failure case.
-
-Check applicable scoped knowledge against live code. Use [ousterhout-review](../ousterhout-review/SKILL.md) for structural criteria or boundary assessment, including any required or present map.
-
-Compare code with approved boundary decisions under the [shared approval rule](../../assets/ORCHESTRATION.md#boundary-approval). Report drift instead of rewriting those decisions.
-
-Use [simplicity-review](../simplicity-review/SKILL.md) for changed decisions, shared values, or action coordination. Its findings and evidence join this inspection package.
-
-When reviewing a canvas change, use the verification section in [Canvas guidance](../../assets/CANVAS.md#verify-a-changed-view). Discover current interface details from runtime schemas and source rather than treating copied inventories as requirements.
-
-Complete one bounded pass and return its findings. The owner decides whether to request fixes or another pass.
-
-## 3. Report missing requirements
-
-If review reveals a requirement that belonged in the original task, return a proposed EARS criterion with its VOI category and source. Preserve human feedback verbatim. The owner decides whether to open a correction.
-
-## 4. Assess uncertainty
-
-Risk measures correctness uncertainty in the artifact and its declared contract.
-
-For instruction changes, verify the text, applicable deployed copy, referenced paths and commands, contradictions, and existing checks. Inability to predict future model compliance is not a risk driver by itself.
-
-For each present driver, collect the corresponding mitigation:
-
-| Driver | Required mitigation |
-|--------|---------------------|
-| Changed behavior lacks tests | Inspector-executed boundary tests covering the behavior and an error case |
-| Untested conditional paths | Execution covering each reachable changed branch, or code proving an omitted branch unreachable |
-| Weak type safety | Type-check output and executed boundary tests for untyped paths |
-| Compatibility surface | Executed contract checks against prior supported inputs and outputs |
-| Unverified assumptions | Execution evidence or an exact code reference for each assumption |
-| External state | Executed integration checks with representative state and a failure path |
-| Unfamiliar patterns | An established analogous code path plus executed boundary checks |
-| New executable lacks execution proof | Independent execution with representative valid and wrong inputs |
-| Missing or stale design artifact | Verified map/code agreement under the shared approval rule; unresolved Boundary drift remains HIGH |
-
-Assign HIGH when a present driver lacks mitigation, a concrete contradiction or runtime reference is unresolved, or confidence is below high. Assign LOW only when each present driver has its mitigation and confidence is high. Explain the remaining uncertainty.
-
-## 5. Return evidence
-
-Prepare one package containing:
-
-1. Criterion traceability and the scoped diff.
-2. Raw output for criterion-proving and failing runs. A bulk passing suite that proves no active criterion may use a one-line summary.
-3. Assumptions and remaining uncertainty that affect correctness.
-4. Process gaps and out-of-scope discoveries.
-5. Inconsistencies between sources, or an explicit `None.` when they agree.
-
-Present raw proof before interpretation, following the shared evidence rules. Report concrete uncertainty without personal assurance. Do not include an approval verdict, score, or persuasion; the caller decides what to accept.
-
-Return the [shared result](../../assets/ORCHESTRATION.md#result-contract), with accepted criterion IDs, recheck outcomes, the risk tier, and package references in its excerpts. The owner handles archival and subsequent work.
+Report the blueprint and findings file paths, the verify output, and the number of findings. When the scope is missing, say what you need.

@@ -43,15 +43,12 @@ test("emits one nudge through all three hook output fields", async () => {
 
 const EXPECTED = [
     ["canonical HQ path", (t, hq) => t.includes(`VIRTUCON_HQ=${hq}`)],
-    ["templates path", (t, hq) => t.includes(`Templates: ${hq}/templates/`)],
-    ["skill inventory", (t) => /\*\*minime:blueprint\*\*/.test(t) && /\*\*minime:replicate\*\*/.test(t)],
-    ["single four-phase policy reference", (t) => t.split("blueprint -> replicate -> inspect -> extract").length === 2],
-    ["result contract line", (t) => t.includes("Every phase returns status, blueprint_path, changed_files[], blocking_issue, and evidence_excerpts[].")],
-    ["full coordinator starts a fresh native blueprint worker", (t) => /Dr\. Evil[^\n]*fresh native `?blueprint`? (worker|task)/i.test(t)],
-    ["full coordinator does not load blueprint inline", (t) => /Dr\. Evil[^\n]*(never|not|rather than)[^\n]*inline/i.test(t)],
-    ["assigned phase worker runs only its phase and returns", (t) => /assigned[^\n]*phase[^\n]*only[^\n]*return/i.test(t)],
-    ["direct phase caller returns without successor", (t) => /Direct phase invocation returns to its caller and never invokes another phase\./.test(t)],
-    ["no universal inline blueprint instruction", (t) => !/For non-trivial tasks, invoke skill\("blueprint"\) before starting implementation\./.test(t)],
+    ["blueprints path", (t, hq) => t.includes(`Blueprints: ${hq}/`) && t.includes("/blueprints/")],
+    ["absolute blueprint tool", (t) => t.includes(`Blueprint tool: node ${resolve(PLUGIN_ROOT, "skills", "blueprint", "scripts", "blueprint.mjs")}`)],
+    ["wiki paths", (t, hq) => t.includes(`Wiki index: ${hq}/wiki/index.md`) && t.includes(`Wiki schema: ${hq}/schema.md`) && /Repo wiki index: .*\/wiki\/orgs\/[^/]+\/[^/]+\/index\.md/.test(t)],
+    ["absolute wiki lint tool", (t) => t.includes(`Wiki lint tool: node ${resolve(PLUGIN_ROOT, "skills", "extract", "scripts", "wiki-lint.mjs")}`)],
+    ["full flow points to dr-evil", (t) => t.includes("minime:dr-evil")],
+    ["flow rules live in the agent, not the nudge", (t) => !/blueprint -> replicate|Every phase returns/.test(t)],
     ["no invented role selector", (t) => !/MINIME_ROLE|process\.env\.ROLE/.test(t)],
 ];
 
@@ -81,7 +78,7 @@ test("bootstrap seeds only the scratch HQ", async () => {
     await withScratch(async (dir) => {
         const hq = resolve(dir, "hq");
         runHook(hq, dir);
-        await stat(resolve(hq, "templates", "blueprint.template.md"));
+        await stat(resolve(hq, "_TEMPLATE.md"));
         await stat(resolve(hq, "schema.md"));
     });
 });
@@ -96,16 +93,10 @@ async function readAgent() {
 }
 
 const AGENT_BODY = [
-    ["coordinator, not a phase worker", (b) => /coordinator[^\n]*not[^\n]*(phase worker|implement)/i.test(b)],
-    ["new full-flow task starts a fresh native blueprint task", (b) => /fresh native `?blueprint`? task/i.test(b)],
-    ["blueprint worker invokes the phase skill", (b) => /worker[^\n]*invokes?[^\n]*skill/i.test(b)],
-    ["owner never runs a phase skill or implements inline", (b) => /never[^\n]*inline/i.test(b)],
-    ["consumes matching persisted blueprint and shared results", (b) => /matching[^\n]*blueprint/i.test(b) && /result/i.test(b)],
-    ["unavailable native capability is a blocker, not inline fallback", (b) => /blocker/i.test(b) && /fallback/i.test(b)],
-    ["unrelated completed blueprint is not the supplied plan", (b) => /unrelated[^\n]*blueprint/i.test(b)],
-    ["direct phase and question intent preserved", (b) => /direct/i.test(b) && /question/i.test(b)],
-    ["guide still owns details", (b) => b.includes("../assets/ORCHESTRATION.md")],
-    ["no duplicated four-phase order", (b) => !b.includes("blueprint -> replicate -> inspect -> extract")],
+    ["pure dispatcher", (b) => /dispatcher/i.test(b) && /don't plan, edit, run or verify/i.test(b)],
+    ["flow policy is read from the orchestration guide", (b) => b.includes("../assets/ORCHESTRATION.md")],
+    ["flow steps are not duplicated in the agent", (b) => !/dispatch \*\*blueprint\*\*/i.test(b)],
+    ["one todo per phase", (b) => /one todo per phase/i.test(b)],
     ["sign-off preserved", (b) => b.includes("`One Million Dollars!`") && /never emit another agent's sign-off/.test(b)],
 ];
 
@@ -116,15 +107,38 @@ for (const [name, check] of AGENT_BODY) {
     });
 }
 
-test("dr-evil frontmatter metadata preserved", async () => {
+const ORCHESTRATION = resolve(PLUGIN_ROOT, "assets", "ORCHESTRATION.md");
+
+const FLOW = [
+    ["new task dispatches blueprint with the message verbatim", (t) => /new task, dispatch \*\*blueprint\*\* with the user's message verbatim/i.test(t)],
+    ["open decisions come back blocked and go to the user", (t) => /returns `blocked` with open decisions, ask the user/i.test(t)],
+    ["questions use the native question tool with options, confidence and free text", (t) => /ask_user/.test(t) && /AskUserQuestion/.test(t) && /confidence/.test(t) && /free-text/.test(t)],
+    ["tasks are named after their phase", (t) => /Name each task after its phase/i.test(t)],
+    ["dispatch prompt carries the five-field result contract", (t) => /status \(done \| blocked \| failed\), blueprint_path, changed_files\[\], blocking_issue, evidence_excerpts\[\]/.test(t)],
+    ["inspect runs on frau", (t) => /\*\*inspect\*\* to `minime:frau`/.test(t)],
+    ["extract once", (t) => /\*\*extract\*\* once/.test(t)],
+    ["synchronous workers, no polling", (t) => /synchronously/i.test(t) && /don't start background workers or poll/i.test(t)],
+    ["self-contained dispatch prompt", (t) => /Use the minime <phase> skill\./.test(t)],
+    ["direct phase and question intent preserved", (t) => /question gets a short answer/i.test(t) && /single phase gets only that phase/i.test(t)],
+    ["criteria proposed by workers go through blueprint", (t) => /proposed criteria, dispatch \*\*blueprint\*\* with the proposals and their evidence/i.test(t)],
+    ["agent personas stay in the agent files", (t) => !/One Million Dollars|Laser On/.test(t)],
+];
+
+for (const [name, check] of FLOW) {
+    test(`orchestration: ${name}`, async () => {
+        const { readFile } = await import("node:fs/promises");
+        const text = await readFile(ORCHESTRATION, "utf8");
+        assert.ok(check(text), `${name} failed in:\n${text}`);
+    });
+}
+
+test("dr-evil frontmatter: dispatcher tools only", async () => {
     const { frontmatter } = await readAgent();
-    for (const line of [
-        "name: dr-evil",
-        'tools: ["*"]',
-        "model: inherit",
-        "color: purple",
-        "memory: project",
-    ]) {
+    for (const line of ["name: dr-evil", "model: inherit", "color: purple", "memory: project"]) {
         assert.ok(frontmatter.split("\n").includes(line), line);
     }
+    assert.match(frontmatter, /^initialPrompt: Accept the user's task/m);
+    const tools = JSON.parse(frontmatter.match(/^tools: (.+)$/m)[1]);
+    assert.ok(tools.includes("Task"));
+    for (const forbidden of ["*", "Edit", "Write", "Bash", "Skill"]) assert.ok(!tools.includes(forbidden), forbidden);
 });

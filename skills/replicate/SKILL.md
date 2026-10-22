@@ -1,53 +1,38 @@
 ---
 name: replicate
-description: Implement a persisted blueprint through a test-first execution loop. Return the changed surface and observed evidence.
+description: Implement a minime blueprint test-first. Writes each blueprint test at its boundary, watches it fail, makes the smallest change that passes it, and records the results with the blueprint tool. Use when a blueprint is planned and the work should be built, when inspection findings need fixing, or when the user asks to implement or continue a blueprint.
 allowed-tools: Read Edit Write Grep Glob Bash
 ---
 
 # Replicate
 
-Read the [shared workflow](../../assets/ORCHESTRATION.md) on entry. It owns phase handoffs, progress, correction handling, and permission boundaries.
+Build exactly what the blueprint specifies and prove it by running its checks. The blueprint is the contract; when it doesn't fit reality, report back instead of improvising, so the plan and the code stay in agreement.
 
-## 1. Load the work
+## Load the work
 
-Read the persisted blueprint before changing anything. Work on its active correction and any accepted requirements affected by the change.
+- Read the blueprint's Criteria, Boundaries, Tests, Decisions, Constraints and Out of scope. Read Inputs only when a criterion's wording needs its source. Don't open old run logs.
+- Work on the tests the caller names, otherwise every test that isn't `pass`.
+- The blueprint tool is `node ../blueprint/scripts/blueprint.mjs` from this skill's base directory. The session nudge prints the absolute command.
 
-Read Constraints / non-negotiables and Out of scope again after compaction, when switching criteria, and when entering a new work area. Check applicable scoped knowledge using the shared context rules.
+## Build each test
 
-Read Decisions made under the [shared approval rule](../../assets/ORCHESTRATION.md#boundary-approval). Read a Boundary map when required or present.
+1. Write the test at the boundary the blueprint names, covering its listed cases. Put variants of one behavior in one parameterized test, following the project's existing test style.
+2. Run its check and confirm it fails for the expected reason. If it already passes, either the criterion already holds or the test can't see the behavior; find out which and say so.
+3. Make the smallest change that satisfies the criterion inside the agreed boundaries, following the simplicity-review criteria (data, calculations, actions). Rerun the check and respond to the actual output.
+4. Run the existing tests next to what you touched (callers, importers, colocated files) to keep the constraints. Run the full suite only when shared infrastructure, build config or dependencies change.
 
-Use [Canvas guidance](../../assets/CANVAS.md) when presenting or updating the task view.
+## Record
 
-## 2. Run a test-first loop
+Run `node <blueprint tool> verify <blueprint> --by replicate --only <test IDs>`. It executes the checks, writes logs to `<name>.runs/`, and updates the Result cells. Don't edit Result cells by hand; `review:` checks stay `pending` for the inspector.
 
-1. Identify the files and interfaces the criterion affects.
-2. Choose a public-boundary test with a meaningful edge case for behavior, or caller/import/ownership checks for structure.
-3. Run the proof and observe the unmet requirement before implementing the change.
-4. Make the smallest complete change, rerun the proof, and respond to the actual output.
+## Stop and report instead of improvising
 
-Select tests through callers, imports, coverage, or an existing impact map. If none exists, use module and directory colocation.
+- The change needs an owner, contract or dependency the Boundaries table doesn't list.
+- You find a requirement the criteria don't cover. Propose it as an EARS criterion with its source; don't add it yourself.
+- A check still fails after three attempts with no new information. Report the last output.
 
-Broaden validation when a shared interface, schema, or contract changes. Reserve the full suite for changes to shared infrastructure, build configuration, or dependencies. Record the chosen scope and why it covers the criterion.
+Stay inside the task: no unrelated refactors, and no staging, commits or other git changes unless the user asked for that operation.
 
-Follow the shared Boundary drift rule when agreed boundaries must change.
+## Return
 
-Apply the [simplicity-review criteria](../simplicity-review/SKILL.md#review-criteria) to changed implementation. Use the skill for review when decisions, shared values, or action coordination need assessment.
-
-## 3. Record evidence as work completes
-
-Tick a criterion as soon as its proof passes. Put shortened raw output immediately below it; a checkmark alone is insufficient.
-
-Record newly resolved decisions with their sources. Report requirements discovered outside the active correction without adding them to its criteria; the owner decides how to handle them.
-
-When a correction arrives, finish the current worker boundary and return current evidence. The shared workflow governs reconciliation and successor dispatch.
-
-## 4. Complete the handoff
-
-Read the blueprint and confirm:
-
-- Passing criteria have checkmarks and inline proof.
-- The document status reflects the implementation state.
-- Work matches approved boundary decisions, or remaining Boundary drift is explicit.
-- Evidence collected names the commands, results, changed files, and remaining assumptions.
-
-Return the [shared result](../../assets/ORCHESTRATION.md#result-contract). Keep the scope and any unfinished work explicit.
+Report the blueprint path, the changed files (sorted, repo-relative), the verify output, and any proposed criteria or boundary changes. When you stop early, name the obstacle.

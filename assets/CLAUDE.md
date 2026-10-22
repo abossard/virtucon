@@ -1,7 +1,7 @@
 # Claude Code instructions
 
 This repo is the **minime** agent orchestration plugin.
-See `assets/ORCHESTRATION.md` for the flow and `assets/.agent/research/REFERENCES.md` for citations.
+See `assets/ORCHESTRATION.md` for the flow, `skills/blueprint/` for the blueprint contract, and `assets/.agent/research/REFERENCES.md` for citations.
 
 ## Style rules
 

@@ -1,6 +1,6 @@
 ---
 name: ousterhout-review
-description: Apply Ousterhout's deep modules and information hiding to architecture reviews and improvement surveys in any language.
+description: Apply Ousterhout's deep modules and information hiding to architecture reviews and improvement surveys in any language. Use when a change adds layers, pass-through methods or new module boundaries, when an interface leaks implementation details, when a boundary map is needed, or when the user asks for an architecture or Philosophy of Software Design review.
 ---
 
 # Ousterhout review
