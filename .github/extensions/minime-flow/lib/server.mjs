@@ -93,7 +93,7 @@ function correctionPrompt({ requestId, path, expectedRevision }) {
         `expectedRevision: ${expectedRevision}`,
         "Wait until active workers in this minime-flow run are drained.",
         "Then call canvas action commit_apply with requestId and expectedRevision.",
-        "Preserve original request, archive, and correction text verbatim while committing the queued draft.",
+        "Preserve recorded inputs, original request, archive, and correction text verbatim while committing the queued draft.",
         "If the draft base is stale, use read_document to read current markdown, draft markdown, and draft.baseMarkdown.",
         "Merge the requested correction with worker evidence, then call resolve_apply with that markdown, expectedRevision from the current document, and expectedDraftRevision from the queued draft.",
         "Resolution preserves the submission and does not write the blueprint. Commit the resolved request, reread it, and resume the remaining work.",

@@ -44,6 +44,7 @@ test("emits one nudge through all three hook output fields", async () => {
 const EXPECTED = [
     ["canonical HQ path", (t, hq) => t.includes(`VIRTUCON_HQ=${hq}`)],
     ["blueprints path", (t, hq) => t.includes(`Blueprints: ${hq}/`) && t.includes("/blueprints/")],
+    ["absolute orchestration guide", (t) => t.includes(`Orchestration guide: ${resolve(PLUGIN_ROOT, "assets", "ORCHESTRATION.md")}`)],
     ["absolute blueprint tool", (t) => t.includes(`Blueprint tool: node ${resolve(PLUGIN_ROOT, "skills", "blueprint", "scripts", "blueprint.mjs")}`)],
     ["wiki paths", (t, hq) => t.includes(`Wiki index: ${hq}/wiki/index.md`) && t.includes(`Wiki schema: ${hq}/schema.md`) && /Repo wiki index: .*\/wiki\/orgs\/[^/]+\/[^/]+\/index\.md/.test(t)],
     ["absolute wiki lint tool", (t) => t.includes(`Wiki lint tool: node ${resolve(PLUGIN_ROOT, "skills", "extract", "scripts", "wiki-lint.mjs")}`)],
@@ -58,6 +59,38 @@ for (const [name, check] of EXPECTED) {
             const hq = resolve(dir, "hq");
             const { json } = runHook(hq, dir);
             assert.ok(check(json.additionalContext, hq), `${name} failed in:\n${json.additionalContext}`);
+        });
+    });
+}
+
+async function makeRepo(dir, name, origin) {
+    const { mkdir } = await import("node:fs/promises");
+    const repo = resolve(dir, name);
+    await mkdir(repo, { recursive: true });
+    spawnSync("git", ["init", "-q"], { cwd: repo });
+    spawnSync("git", ["remote", "add", "origin", origin], { cwd: repo });
+    return repo;
+}
+
+for (const [name, stdin, expectedRepo] of [
+    ["uses the cwd the host reports on stdin", (repo) => JSON.stringify({ cwd: repo }), "acme/_todo"],
+    ["ignores a cwd that does not exist", () => JSON.stringify({ cwd: "/definitely/not/here" }), "local/_scratch"],
+    ["survives invalid JSON on stdin", () => "{nope", "local/_scratch"],
+    ["survives empty stdin", () => "", "local/_scratch"],
+]) {
+    test(`hook repo scope: ${name}`, async () => {
+        await withScratch(async (dir) => {
+            const hq = resolve(dir, "hq");
+            const todo = await makeRepo(dir, "todo", "git@github.com:acme/todo.git");
+            const scratch = await makeRepo(dir, "scratch", "git@github.com:local/scratch.git");
+            const result = spawnSync(process.execPath, [HOOK], {
+                cwd: scratch,
+                input: stdin(todo),
+                encoding: "utf8",
+                env: { PATH: process.env.PATH, HOME: dir, PLUGIN_ROOT, VIRTUCON_HQ: hq },
+            });
+            assert.equal(result.status, 0);
+            assert.ok(JSON.parse(result.stdout).additionalContext.includes(`Blueprints: ${hq}/${expectedRepo}/blueprints/`));
         });
     });
 }
@@ -94,6 +127,7 @@ async function readAgent() {
 
 const AGENT_BODY = [
     ["pure dispatcher", (b) => /dispatcher/i.test(b) && /don't plan, edit, run or verify/i.test(b)],
+    ["never loads a phase skill inline", (b) => /never load the blueprint, replicate, inspect or extract skills/i.test(b)],
     ["flow policy is read from the orchestration guide", (b) => b.includes("../assets/ORCHESTRATION.md")],
     ["flow steps are not duplicated in the agent", (b) => !/dispatch \*\*blueprint\*\*/i.test(b)],
     ["one todo per phase", (b) => /one todo per phase/i.test(b)],
@@ -121,6 +155,8 @@ const FLOW = [
     ["self-contained dispatch prompt", (t) => /Use the minime <phase> skill\./.test(t)],
     ["direct phase and question intent preserved", (t) => /question gets a short answer/i.test(t) && /single phase gets only that phase/i.test(t)],
     ["criteria proposed by workers go through blueprint", (t) => /proposed criteria, dispatch \*\*blueprint\*\* with the proposals and their evidence/i.test(t)],
+    ["the user's words are delimited for the blueprint worker", (t) => /User message:[\s\S]*End of user message\./.test(t)],
+    ["the final report names the blueprint path and what extract captured", (t) => /absolute blueprint path[^\n]*what extract captured/i.test(t)],
     ["agent personas stay in the agent files", (t) => !/One Million Dollars|Laser On/.test(t)],
 ];
 

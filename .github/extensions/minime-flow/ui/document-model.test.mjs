@@ -107,3 +107,83 @@ test("applying extracted sections is a lossless round-trip", () => {
 
     assert.equal(roundTripped, BASE_BLUEPRINT);
 });
+
+const CURRENT_BLUEPRINT = `# Blueprint: Demo
+
+Repo: o/r | Created: 2026-10-22
+
+## Inputs
+
+- **I1** (2026-10-22 09:14):
+  > keep this verbatim
+
+## Criteria
+
+- **C1** (I1): When this runs, preserve untouched bytes.
+
+## Boundaries
+
+| ID | Owner | Contract | Change | Criteria |
+|----|-------|----------|--------|----------|
+| B1 | x | y | new | C1 |
+
+## Decisions
+
+| ID | Question | Answer | Source |
+|----|----------|--------|--------|
+| D1 | Format? | ISO | data: a.js:1 |
+
+## Constraints
+
+- none (I1)
+
+## Out of scope
+
+None.
+`;
+
+for (const [name, markdown, layout, expected] of [
+    ["current blueprint", CURRENT_BLUEPRINT, "blueprint", { goal: "keep this verbatim", activeCriteria: "C1", planSummary: "D1" }],
+    ["legacy blueprint", BASE_BLUEPRINT, "legacy", { goal: "Keep this exact heading parser.", activeCriteria: "C0-1", planSummary: "### Design" }],
+    ["legacy blueprint with a criteria archive", `${BASE_BLUEPRINT}\n## Criteria archive\n\n- [x] Old.\n`, "legacy", { goal: "Keep this exact heading parser.", activeCriteria: "C0-1", planSummary: "### Design" }],
+]) {
+    test(`extractEditableSections fills the three slots for a ${name}`, () => {
+        const sections = extractEditableSections(markdown);
+
+        assert.equal(sections.layout, layout);
+        assert.deepEqual(sections.missing, []);
+        for (const [slot, text] of Object.entries(expected)) {
+            assert.equal(sections[slot].includes(text), true, `${slot} lacks ${text}`);
+            assert.equal(typeof sections.labels[slot], "string");
+        }
+    });
+}
+
+test("editing one section of a current blueprint changes only that section", () => {
+    const edited = applySectionEdits(CURRENT_BLUEPRINT, { activeCriteria: "\n- **C1** (I1): Edited criterion.\n" });
+    const before = extractEditableSections(CURRENT_BLUEPRINT);
+    const after = extractEditableSections(edited);
+
+    assert.equal(after.activeCriteria, "\n- **C1** (I1): Edited criterion.\n");
+    assert.equal(after.goal, before.goal);
+    assert.equal(after.planSummary, before.planSummary);
+    assert.equal(edited.includes("## Boundaries\n\n| ID | Owner"), true);
+});
+
+test("applying extracted sections of a current blueprint is a lossless round-trip", () => {
+    const extracted = extractEditableSections(CURRENT_BLUEPRINT);
+    const roundTripped = applySectionEdits(CURRENT_BLUEPRINT, {
+        goal: extracted.goal,
+        activeCriteria: extracted.activeCriteria,
+        planSummary: extracted.planSummary,
+    });
+
+    assert.equal(roundTripped, CURRENT_BLUEPRINT);
+});
+
+test("a current blueprint without Decisions reports the slot as missing and refuses to edit it", () => {
+    const markdown = CURRENT_BLUEPRINT.replace("## Decisions", "## Choices");
+
+    assert.deepEqual(extractEditableSections(markdown).missing, ["planSummary"]);
+    assert.throws(() => applySectionEdits(markdown, { planSummary: "x" }), /"Decisions" is not provided/);
+});

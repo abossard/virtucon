@@ -275,3 +275,85 @@ test("accepts explicit owner progress reports with unknown fallback", async (t) 
     assert.equal(currentWork.phase, "unknown");
     assert.equal(currentWork.criterionId, null);
 });
+
+const CURRENT_TEXT = `# Blueprint: Due dates
+
+Repo: acme/repo | Created: 2026-10-22
+
+## Inputs
+
+- **I1** (2026-10-22 09:14):
+  > add a --due flag
+
+## Criteria
+
+- **C1** (I1): When the user passes --due, the list shall sort by due date.
+- **C2** (I1): When --due is not a date, the CLI shall exit with code 2.
+
+## Boundaries
+
+| ID | Owner | Contract | Change | Criteria |
+|----|-------|----------|--------|----------|
+| B1 | cli | argv to options | changed | C1, C2 |
+
+## Decisions
+
+| ID | Question | Answer | Source |
+|----|----------|--------|--------|
+| D1 | Date format? | ISO 8601 | data: src/store.js:42 |
+
+## Constraints
+
+- none (I1)
+
+## Out of scope
+
+None.
+`;
+const CURRENT_FILENAME = "2026-10-22-due-dates.md";
+const D1_ROW = "| D1 | Date format? | ISO 8601 | data: src/store.js:42 |";
+const OPEN_ROW = "| D2 | Max rate? | open: a) 10/s b) 100/s; recommend a | user: pending |";
+
+test("a current blueprint with an open decision shows it as needing the user, and the owner's report wins", async (t) => {
+    const fixture = await createFixtureRoot("needs-you");
+    t.after(async () => rm(fixture.root, { recursive: true, force: true }));
+    const path = resolve(fixture.root, CURRENT_FILENAME);
+    await writeFile(path, CURRENT_TEXT);
+    const state = new FlowState({ root: fixture.root, repository: { org: "acme", repo: "repo" }, selectedBlueprint: CURRENT_FILENAME });
+    assert.equal(state.snapshot().currentWork.needsInput, false);
+    assert.equal(state.snapshot().currentWork.criterion, "Unknown criterion.");
+
+    await writeFile(path, CURRENT_TEXT.replace(D1_ROW, `${D1_ROW}\n${OPEN_ROW}`));
+    const waiting = state.refresh();
+    assert.deepEqual(waiting.currentWork.needsInput, { id: "D2", question: "Max rate?" });
+    assert.equal(waiting.blueprint.status, "questions");
+
+    const reported = state.reportProgress({ phase: "replicate", criterionId: "C1", criterion: "Owner text", needsInput: true }).currentWork;
+    assert.deepEqual([reported.criterionId, reported.criterion, reported.needsInput], ["C1", "Owner text", true]);
+});
+
+test("a legacy blueprint never gets needs-input from its text", async (t) => {
+    const fixture = await createFixtureRoot("legacy-needs");
+    t.after(async () => rm(fixture.root, { recursive: true, force: true }));
+    const state = new FlowState({ root: fixture.root, repository: { org: "acme", repo: "repo" }, selectedBlueprint: fixture.filename });
+    assert.equal(state.snapshot().currentWork.needsInput, false);
+});
+
+for (const [name, hint, selected, included] of [
+    ["a task for a blueprint that does not exist yet", "Blueprint: new", CURRENT_FILENAME, 1],
+    ["a task for the selected blueprint's file", `Blueprint: /hq/acme/_repo/blueprints/${CURRENT_FILENAME}`, CURRENT_FILENAME, 1],
+    ["a task for another blueprint", "Blueprint: /hq/acme/_repo/blueprints/2026-10-21-other.md", CURRENT_FILENAME, 0],
+]) {
+    test(`native tasks are bound to blueprints by the dispatch prompt: ${name}`, async (t) => {
+        const fixture = await createFixtureRoot("hint");
+        t.after(async () => rm(fixture.root, { recursive: true, force: true }));
+        await writeFile(resolve(fixture.root, CURRENT_FILENAME), CURRENT_TEXT);
+        const state = new FlowState({ root: fixture.root, repository: { org: "acme", repo: "repo" }, selectedBlueprint: selected });
+        state.syncNativeTasks([{
+            type: "agent", id: "agent-1", toolCallId: "call-1", displayName: "replicate",
+            agentType: "general-purpose", status: "running",
+            prompt: `Use the minime replicate skill.\n${hint}\nRepo: /work/repo`,
+        }], { filename: selected });
+        assert.equal(state.snapshot().phases.find((phase) => phase.id === "replicate").runs.length, included);
+    });
+}

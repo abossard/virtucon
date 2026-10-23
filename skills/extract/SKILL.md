@@ -15,6 +15,7 @@ From the blueprint, in order of value:
 2. Decisions sourced from `user:` or `research:`.
 3. Findings in `<name>.runs/inspect.md` that led to a fix.
 4. Approaches that failed, with the reason.
+5. The command that builds and runs the project's tests, when the repo's wiki pages lack it.
 
 Skip decisions sourced from `data:`; the code already says them.
 
@@ -39,10 +40,14 @@ node <wiki lint tool> <knowledge root> orgs/<org>/<repo> index.md log.md --repo 
 
 Fix every violation in the files you changed. A `cite` error means the cited code moved or is gone: update the line when the rule still holds, otherwise mark the rule `Status: stale` or `superseded by <rule>`. Pages you left alone may carry older violations: report their count and leave them.
 
+## Close
+
+Append ` | Extracted: <YYYY-MM-DD>` to the blueprint's `Repo:` line, then run the blueprint tool's `check` on it.
+
 ## Lint
 
 When asked to lint, run the tool on the requested scope, or without paths for the whole wiki, and report the `byRule` counts and errors. The tool can't see whether cited code still supports its rule, contradictions between pages or duplicate guidance; check those by opening the cited code and comparing pages. Repair only when asked.
 
 ## Return
 
-Report the candidates considered, the pages changed, the claims marked stale or superseded, and the lint result.
+Report the candidates considered, the pages changed, the claims marked stale or superseded, the lint result, and the blueprint's `check` status.

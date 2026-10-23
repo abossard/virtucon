@@ -16,9 +16,25 @@ const PLUGIN_ROOT = process.env.PLUGIN_ROOT
   || path.resolve(__dirname, '..');
 const VIRTUCON_HQ = process.env.VIRTUCON_HQ || path.join(process.env.HOME || '~', '.minime');
 
-function deriveOrgRepo() {
+function readHookInput() {
+  return new Promise((resolve) => {
+    if (process.stdin.isTTY) return resolve({});
+    let data = '';
+    const finish = () => {
+      try { resolve(data ? JSON.parse(data) : {}); } catch { resolve({}); }
+      process.stdin.pause();
+    };
+    const timer = setTimeout(finish, 300);
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk) => { data += chunk; });
+    process.stdin.on('end', () => { clearTimeout(timer); finish(); });
+    process.stdin.on('error', () => { clearTimeout(timer); finish(); });
+  });
+}
+
+function deriveOrgRepo(cwd) {
   try {
-    const origin = execSync('git remote get-url origin 2>/dev/null', { encoding: 'utf8' }).trim();
+    const origin = execSync('git remote get-url origin 2>/dev/null', { encoding: 'utf8', cwd }).trim();
     if (!origin) return null;
     const cleaned = origin
       .replace(/^https?:\/\/([^.]+)\.visualstudio\.com\/.+\/_git\/(.+)$/, '$1/$2')
@@ -145,6 +161,7 @@ function buildNudge(orgRepo) {
     'minime paths (use these, do not hardcode):',
     `  VIRTUCON_HQ=${VIRTUCON_HQ}`,
     `  Blueprints: ${VIRTUCON_HQ}/${org}/_${repo}/blueprints/`,
+    `  Orchestration guide: ${path.join(PLUGIN_ROOT, 'assets', 'ORCHESTRATION.md')}`,
     `  Blueprint tool: ${tool('blueprint', 'scripts', 'blueprint.mjs')}`,
     `  Wiki lint tool: ${tool('extract', 'scripts', 'wiki-lint.mjs')}`,
     `  Wiki schema: ${VIRTUCON_HQ}/schema.md`,
@@ -157,8 +174,11 @@ function buildNudge(orgRepo) {
   ].join('\n');
 }
 
-function main() {
-  const orgRepo = deriveOrgRepo();
+async function main() {
+  // The host reports the session's working directory on stdin; the hook's own cwd can differ (-C, plugin dir, IDE launch).
+  const input = await readHookInput();
+  const cwd = typeof input.cwd === 'string' && fs.existsSync(input.cwd) ? input.cwd : process.cwd();
+  const orgRepo = deriveOrgRepo(cwd);
   try {
     ensureBootstrap(orgRepo);
   } catch {
@@ -175,7 +195,7 @@ function main() {
     },
   };
 
-  process.stdout.write(JSON.stringify(output, null, 2) + '\n');
+  process.stdout.write(JSON.stringify(output, null, 2) + '\n', () => process.exit(0));
 }
 
-main();
+main().catch(() => process.exit(0));

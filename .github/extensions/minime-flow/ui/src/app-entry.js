@@ -407,6 +407,10 @@ function updateSectionWarnings(extracted) {
 
 function updateDesignStatus(extracted) {
     const node = byId("design-status");
+    if (extracted.layout === "blueprint") {
+        node.textContent = "Edit inputs, criteria and decisions here. Boundaries, constraints and scope live in the Markdown source.";
+        return;
+    }
     if (extracted.planSummary === null) {
         node.textContent = "Design heading status: plan summary not provided.";
         return;
@@ -439,6 +443,9 @@ function renderDocument(entry, { preserveActive }) {
     updateButtons(entry);
 
     const extracted = extractEditableSections(entry.markdown);
+    byId("goal-label").textContent = extracted.labels.goal;
+    byId("active-criteria-label").textContent = extracted.labels.activeCriteria;
+    byId("plan-summary-label").textContent = extracted.labels.planSummary;
     syncTextareaValue(byId("goal-input"), extracted.goal ?? "", preserveActive);
     syncTextareaValue(byId("active-criteria-input"), extracted.activeCriteria ?? "", preserveActive);
     syncTextareaValue(byId("plan-summary-input"), extracted.planSummary ?? "", preserveActive);

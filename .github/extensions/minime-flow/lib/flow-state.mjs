@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
-import { listOpenBlueprints, readBlueprint } from "./blueprints.mjs";
+import { listOpenBlueprints, needsInputFromBlueprint, readBlueprint } from "./blueprints.mjs";
 
 export const phaseDescriptors = JSON.parse(
     readFileSync(new URL("../phases.json", import.meta.url), "utf8"),
@@ -90,6 +90,8 @@ function phaseFromTaskListInfo(task) {
 
 function normalizeBlueprintHint(value) {
     if (typeof value !== "string" || !value.trim()) return null;
+    // The owner passes "Blueprint: new" before the file exists, so the task is not bound to one yet.
+    if (value.trim().toLowerCase() === "new") return null;
     return value.trim().replace(/\\/g, "/").replace(/^\.?\//, "");
 }
 
@@ -622,9 +624,12 @@ export class FlowState {
                 status: run.status,
                 effectiveModel: run.effectiveModel ?? "unknown",
             }));
+        const report = this.currentWorkReport;
+        const waitingOn = needsInputFromBlueprint(this.blueprint);
         const currentWork = {
             ...emptyCurrentWork(),
-            ...this.currentWorkReport,
+            ...report,
+            ...(waitingOn && !report.needsInput ? { needsInput: waitingOn } : {}),
             phase: reportPhase === "unknown" ? (latest?.phase ?? "unknown") : reportPhase,
             history: this.currentWorkReport.history?.length
                 ? this.currentWorkReport.history

@@ -1,6 +1,6 @@
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { deriveRepository, repositoryBlueprintRoot } from "./blueprints.mjs";
+import { deriveRepository, isBlueprintFilename, repositoryBlueprintRoot } from "./blueprints.mjs";
 import { readDocumentDraftState } from "./document-store.mjs";
 
 const PHASES = new Set(["blueprint", "replicate", "inspect", "extract"]);
@@ -14,7 +14,7 @@ export function guardPhaseDispatch(input, { sessionId, blueprintRoot } = {}) {
     try {
         const root = blueprintRoot ?? repositoryBlueprintRoot(deriveRepository(input.workingDirectory));
         for (const entry of readdirSync(root, { withFileTypes: true })) {
-            if (!entry.isFile() || !entry.name.endsWith(".blueprint.md")) continue;
+            if (!entry.isFile() || !isBlueprintFilename(entry.name)) continue;
             const draft = readDocumentDraftState({
                 draftRoot: root, documentPath: resolve(root, entry.name), sessionId,
             });

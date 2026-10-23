@@ -4,7 +4,7 @@ Ask Copilot to open your blueprint or Minime Wiki. These screenshots show the ca
 
 ## Edit a blueprint
 
-In **Sections**, edit the Goal, Active criteria, and Plan summary. Use **Markdown source** to edit the full document.
+In **Sections**, edit a blueprint's Inputs, Criteria, and Decisions (Goal, Active criteria, and Plan summary in older blueprints). Recorded inputs stay verbatim: add new ones below them. Use **Markdown source** to edit the full document, including boundaries, constraints and scope.
 
 ![Blueprint section editor with a saved draft and correction controls](images/blueprint-editor.png)
 

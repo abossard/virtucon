@@ -799,3 +799,94 @@ test("rechecks committed request proof and rejects stale repeat after file chang
         },
     );
 });
+
+const CURRENT_NAME = "2026-10-22-due-dates.md";
+const CURRENT_TEXT = `# Blueprint: Due dates
+
+Repo: acme/repo | Created: 2026-10-22
+
+## Inputs
+
+- **I1** (2026-10-22 09:14):
+  > add a --due flag
+
+## Criteria
+
+- **C1** (I1): When the user passes --due, the list shall sort by due date.
+
+## Boundaries
+
+| ID | Owner | Contract | Change | Criteria |
+|----|-------|----------|--------|----------|
+| B1 | cli | argv to options | changed | C1 |
+
+## Decisions
+
+| ID | Question | Answer | Source |
+|----|----------|--------|--------|
+| D1 | Date format? | ISO 8601 | data: src/store.js:42 |
+
+## Constraints
+
+- none (I1)
+
+## Out of scope
+
+None.
+`;
+
+for (const [name, edit, accepted] of [
+    [
+        "a new input and a reworded criterion are committed",
+        (text) => text
+            .replace("  > add a --due flag\n", "  > add a --due flag\n- **I2** (2026-10-22 09:20):\n  > earliest first\n")
+            .replace("(I1): When", "(I1, I2): When"),
+        true,
+    ],
+    ["a reworded recorded input is refused", (text) => text.replace("add a --due flag", "add a --due option"), false],
+]) {
+    test(`current blueprints follow the draft, apply and commit contract: ${name}`, async (t) => {
+        const fixture = await createFixtureRoot("current-contract");
+        t.after(async () => rm(fixture.root, { recursive: true, force: true }));
+        const path = resolve(fixture.root, CURRENT_NAME);
+        await writeFile(path, CURRENT_TEXT, "utf8");
+        const server = await startCanvasServer({
+            session: makeSession(),
+            selectedBlueprint: CURRENT_NAME,
+            repository: { org: "acme", repo: "repo" },
+            root: fixture.root,
+        });
+        t.after(async () => server.close());
+
+        const state = await requestJson(`${server.url}api/state`, { nonce: server.nonce });
+        assert.equal(state.payload.blueprint.format, "blueprint");
+        assert.equal(state.payload.blueprint.status, "ready");
+        assert.equal(state.payload.blueprints.some((item) => item.filename === CURRENT_NAME), true);
+        const original = await requestJson(`${server.url}api/document?blueprint=${CURRENT_NAME}`, { nonce: server.nonce });
+
+        const candidate = edit(CURRENT_TEXT);
+        const draft = await requestJson(`${server.url}api/draft`, {
+            method: "POST",
+            nonce: server.nonce,
+            body: {
+                nonce: server.nonce, blueprint: CURRENT_NAME, markdown: candidate,
+                baseRevision: original.payload.revision, expectedDraftRevision: null,
+            },
+        });
+        const applied = await requestJson(`${server.url}api/apply`, {
+            method: "POST",
+            nonce: server.nonce,
+            body: { nonce: server.nonce, blueprint: CURRENT_NAME, expectedDraftRevision: draft.payload.draft.revision },
+        });
+        assert.equal(applied.payload.status, "queued");
+
+        const commit = () => server.commitApply({ requestId: applied.payload.requestId, expectedRevision: original.payload.revision });
+        if (accepted) {
+            assert.equal((await commit()).status, "committed");
+            assert.equal(await readFile(path, "utf8"), candidate);
+        } else {
+            await assert.rejects(commit, /protected section ## Inputs/);
+            assert.equal(await readFile(path, "utf8"), CURRENT_TEXT);
+        }
+    });
+}

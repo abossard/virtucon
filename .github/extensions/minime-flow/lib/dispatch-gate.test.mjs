@@ -6,11 +6,11 @@ import { resolve } from "node:path";
 import { guardPhaseDispatch } from "./dispatch-gate.mjs";
 import { readDocumentWithDraft, saveDocumentDraft, queueDocumentApply, commitQueuedDocument } from "./document-store.mjs";
 
-test("queued corrections block phase successors until commit, independent of canvas panels", async (t) => {
+for (const filename of ["fixture.blueprint.md", "2026-10-22-fixture.md"]) test(`queued corrections block phase successors until commit, independent of canvas panels (${filename})`, async (t) => {
     const root = resolve(".github/extensions/minime-flow/lib/.test-work", `dispatch-${randomUUID()}`);
     await mkdir(root, { recursive: true });
     t.after(() => rm(root, { recursive: true, force: true }));
-    const path = resolve(root, "fixture.blueprint.md");
+    const path = resolve(root, filename);
     await writeFile(path, "# Blueprint: Fixture\n\n## Goal\n\nOriginal.\n");
     const scope = { draftRoot: root, documentPath: path, sessionId: "owner" };
     const original = readDocumentWithDraft(scope);

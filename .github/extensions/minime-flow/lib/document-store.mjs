@@ -21,6 +21,8 @@ const PRIVATE_FILE_MODE = 0o600;
 const APPLY_CONTEXT_PHASES = new Set(["blueprint", "replicate", "inspect", "extract", "unknown"]);
 const MAX_APPLY_CONTEXT_IDS = 128;
 const PROTECTED_HEADINGS = ["## Criteria archive", "## User's original request"];
+// The user's inputs are a log: recorded entries stay verbatim, new ones may follow them.
+const APPEND_ONLY_HEADINGS = ["## Inputs"];
 const DOCUMENT_POLICY_BLUEPRINT = "blueprint";
 const DOCUMENT_POLICY_GENERIC = "generic";
 
@@ -401,30 +403,34 @@ function preserveProtectedSections({ baselineMarkdown, candidateMarkdown }) {
     if (missing.length > 0) {
         throw fail(422, `Draft is malformed. Missing required headings: ${missing.join(", ")}`);
     }
-    for (const heading of PROTECTED_HEADINGS) {
+    for (const heading of [...PROTECTED_HEADINGS, ...APPEND_ONLY_HEADINGS]) {
         const baselineSection = baseline.sections.get(heading);
         const candidateSection = candidate.sections.get(heading);
         if (!baselineSection) continue;
         if (!candidateSection) {
             throw fail(422, `Draft is malformed. Missing required heading: ${heading}`);
         }
-        const original = baselineMarkdown.slice(baselineSection.start, baselineSection.end);
-        const proposed = candidateMarkdown.slice(candidateSection.start, candidateSection.end);
-        if (original.replace(/(?:\r?\n)+$/, "") !== proposed.replace(/(?:\r?\n)+$/, "")) {
+        const original = baselineMarkdown.slice(baselineSection.start, baselineSection.end).replace(/(?:\r?\n)+$/, "");
+        const proposed = candidateMarkdown.slice(candidateSection.start, candidateSection.end).replace(/(?:\r?\n)+$/, "");
+        if (APPEND_ONLY_HEADINGS.includes(heading)) {
+            if (!proposed.startsWith(original) || !/^(?:\r?\n|$)/.test(proposed.slice(original.length))) {
+                throw fail(422, `Draft changes protected section ${heading}. Keep every recorded entry unchanged and add new entries after them.`);
+            }
+        } else if (original !== proposed) {
             throw fail(422, `Draft changes protected section ${heading}. Keep it unchanged in a user correction.`);
         }
     }
     return candidateMarkdown;
 }
 
-function resolveDocumentPolicy(documentPath, explicitPolicy = null) {
+function resolveDocumentPolicy(documentPath, explicitPolicy = null, markdown = "") {
     if (explicitPolicy === DOCUMENT_POLICY_BLUEPRINT || explicitPolicy === DOCUMENT_POLICY_GENERIC) {
         return explicitPolicy;
     }
     if (explicitPolicy !== null && explicitPolicy !== undefined) {
         throw fail(422, "Document policy must be 'blueprint' or 'generic'.");
     }
-    return documentPath.endsWith(".blueprint.md")
+    return documentPath.endsWith(".blueprint.md") || /^# Blueprint:/m.test(markdown)
         ? DOCUMENT_POLICY_BLUEPRINT
         : DOCUMENT_POLICY_GENERIC;
 }
@@ -678,7 +684,7 @@ export async function resolveQueuedDocument({
         if (current.revision !== expectedRevision || draft.revision !== expectedDraftRevision) {
             throw fail(409, "Document or draft revision changed before resolution.");
         }
-        const resolvedMarkdown = document.path.endsWith(".blueprint.md")
+        const resolvedMarkdown = resolveDocumentPolicy(document.path, null, current.markdown) === DOCUMENT_POLICY_BLUEPRINT
             ? preserveProtectedSections({ baselineMarkdown: current.markdown, candidateMarkdown: markdown })
             : markdown;
         const submissionPath = draft.submissionPath ?? await retainConflict({
@@ -795,7 +801,7 @@ export async function commitQueuedDocument({
                     conflict: { status: draft.status },
                 });
             }
-            const policy = resolveDocumentPolicy(current.path, documentPolicy);
+            const policy = resolveDocumentPolicy(current.path, documentPolicy, current.markdown);
             const mergedMarkdown = current.revision && policy === DOCUMENT_POLICY_BLUEPRINT
                 ? preserveProtectedSections({
                     baselineMarkdown: current.markdown,

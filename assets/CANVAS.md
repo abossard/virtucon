@@ -8,19 +8,19 @@ The task owner opens an editable view of the persisted blueprint when the runtim
 
 Discover the available view and its current action schemas before use. If support is absent or an operation fails, keep the file workflow usable. Record the observed reason and the blueprint path in the evidence. Do not claim that a view opened when it did not.
 
-Show the current phase, criterion, required decisions, and available proof. Take these from owner reports and native execution data. Show unavailable information as unknown. Follow the [progress rules](ORCHESTRATION.md#progress-tracking) for pending or blocked work.
+Show the current phase, criterion, required decisions, and available proof. Take them from owner reports, native execution data, and the blueprint itself: the decisions still open. Show unavailable information as unknown.
 
 Keep the document central. Make supporting detail collapsible and keyboard-accessible. Background updates must preserve the user's focus and unfinished edits.
 
 ## Edit safely
 
-Use the [correction workflow](ORCHESTRATION.md#correction-queue-contract) for blueprint changes. Distinguish saved drafts, pending application, conflicts, and persisted results in the view.
+Route blueprint changes through a saved draft and a queued apply request that the task owner commits at a worker boundary. Recorded inputs stay verbatim: a draft may add inputs but not change them. Distinguish saved drafts, pending application, conflicts, and persisted results in the view.
 
 Identify documents independently of their panels so reopening or reconnecting can recover the right work. Use persistence evidence for success labels.
 
 ## Browse shared knowledge
 
-Keep the complete wiki reachable. A current-repository preset may narrow the initial view, but the user can remove it. Apply the [knowledge-layer boundaries](ORCHESTRATION.md#shared-knowledge-contract) to editing.
+Keep the complete wiki reachable. A current-repository preset may narrow the initial view, but the user can remove it. Keep raw sources read-only and apply the [wiki schema](.agent/wiki/schema.md) to edits.
 
 Resolve provider ambiguity before acting. Preserve existing personal providers and their data until the user authorizes migration or removal.
 

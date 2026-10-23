@@ -1,7 +1,14 @@
-const EDITABLE_SECTIONS = {
-    goal: "Goal",
-    activeCriteria: "Active criteria",
-    planSummary: "Plan summary",
+// The editor has three slots. Each blueprint format fills them with its own sections.
+// Current blueprints edit Inputs (append-only), Criteria and Decisions, legacy ones Goal, Active criteria and Plan summary.
+const LAYOUTS = {
+    blueprint: {
+        sections: { goal: "Inputs", activeCriteria: "Criteria", planSummary: "Decisions" },
+        labels: { goal: "Inputs (keep recorded entries, add new ones below)", activeCriteria: "Criteria", planSummary: "Decisions" },
+    },
+    legacy: {
+        sections: { goal: "Goal", activeCriteria: "Active criteria", planSummary: "Plan summary" },
+        labels: { goal: "Goal", activeCriteria: "Active criteria", planSummary: "Plan summary (includes Design)" },
+    },
 };
 
 function normalizeHeading(value) {
@@ -104,6 +111,10 @@ export function containsMermaidFence(markdown) {
     return false;
 }
 
+function layoutFor(sectionMap) {
+    return sectionMap.has(normalizeHeading("Criteria")) ? "blueprint" : "legacy";
+}
+
 export function extractEditableSections(markdown) {
     const source = String(markdown ?? "");
     const sections = findLevelTwoSections(source);
@@ -111,6 +122,7 @@ export function extractEditableSections(markdown) {
         sections.map((section) => [normalizeHeading(section.headingText), section]),
     );
     const missing = [];
+    const layout = layoutFor(sectionMap);
 
     const editable = {
         goal: null,
@@ -118,7 +130,7 @@ export function extractEditableSections(markdown) {
         planSummary: null,
     };
 
-    for (const [key, heading] of Object.entries(EDITABLE_SECTIONS)) {
+    for (const [key, heading] of Object.entries(LAYOUTS[layout].sections)) {
         const section = sectionMap.get(normalizeHeading(heading));
         if (!section) {
             missing.push(key);
@@ -127,7 +139,7 @@ export function extractEditableSections(markdown) {
         editable[key] = section.body;
     }
 
-    return { ...editable, missing };
+    return { ...editable, missing, layout, labels: LAYOUTS[layout].labels };
 }
 
 function normalizeSectionBoundaries(originalBody, editedBody) {
@@ -152,18 +164,19 @@ export function applySectionEdits(markdown, edits) {
         sections.map((section) => [normalizeHeading(section.headingText), section]),
     );
     const replacements = [];
+    const editableSections = LAYOUTS[layoutFor(sectionMap)].sections;
 
     for (const [key, value] of Object.entries(updates)) {
         if (value === undefined) continue;
-        if (!(key in EDITABLE_SECTIONS)) {
+        if (!(key in editableSections)) {
             throw new Error(`Unsupported editable section "${key}".`);
         }
         if (typeof value !== "string") {
             throw new Error(`Section "${key}" must be a string.`);
         }
-        const section = sectionMap.get(normalizeHeading(EDITABLE_SECTIONS[key]));
+        const section = sectionMap.get(normalizeHeading(editableSections[key]));
         if (!section) {
-            throw new Error(`Section "${EDITABLE_SECTIONS[key]}" is not provided in this draft.`);
+            throw new Error(`Section "${editableSections[key]}" is not provided in this draft.`);
         }
         const normalizedValue = normalizeSectionBoundaries(section.body, value);
         if (normalizedValue === section.body) continue;

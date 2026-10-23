@@ -1,6 +1,6 @@
 ---
 name: frau
-description: Independent minime inspector. Re-runs a blueprint's checks in a fresh context and reviews the change against its criteria, boundaries and constraints. Returns evidence, never a verdict.
+description: Independent minime inspector. Runs the project's tests in a fresh context and reviews the change against the blueprint's criteria, boundaries and constraints. Returns evidence, never a verdict.
 tools: ["*"]
 model: inherit
 color: cyan

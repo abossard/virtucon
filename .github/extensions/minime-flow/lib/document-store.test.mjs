@@ -307,6 +307,74 @@ test("rejects protected request and archive changes rather than silently droppin
     assert.doesNotMatch(persisted, /Tampered request block\./);
 });
 
+const INPUTS_TEXT = `# Blueprint: Due dates
+
+Repo: acme/todo | Created: 2026-10-22
+
+## Inputs
+
+- **I1** (2026-10-22 09:14):
+  > add a --due flag
+
+## Criteria
+
+- **C1** (I1): When the user passes \`--due\`, the list command shall sort by due date.
+`;
+
+async function commitCandidate({ filename, text, candidate }) {
+    const root = resolve(
+        process.cwd(),
+        `.github/extensions/minime-flow/lib/.test-work/inputs-${randomUUID()}`,
+    );
+    await mkdir(root, { recursive: true });
+    const documentPath = resolve(root, filename);
+    await writeFile(documentPath, text, "utf8");
+    const scope = { draftRoot: root, documentPath, sessionId: "owner-session" };
+    const baseline = readDocumentWithDraft(scope);
+    const draft = await saveDocumentDraft({
+        ...scope, markdown: candidate, baseRevision: baseline.revision, expectedDraftRevision: null,
+    });
+    const queued = await queueDocumentApply({ ...scope, expectedDraftRevision: draft.draft.revision });
+    return {
+        root,
+        documentPath,
+        commit: () => commitQueuedDocument({
+            ...scope, requestId: queued.requestId, expectedRevision: baseline.revision,
+        }),
+    };
+}
+
+for (const [name, edit, accepted] of [
+    ["a new input after the recorded ones", (text) => text.replace("  > add a --due flag\n", "  > add a --due flag\n- **I2** (2026-10-22 09:20):\n  > keep the storage format\n"), true],
+    ["a criterion reworded", (text) => text.replace("sort by due date", "sort by due date, earliest first"), true],
+    ["a recorded input reworded", (text) => text.replace("add a --due flag", "add a --due option"), false],
+    ["a recorded input extended on its last line", (text) => text.replace("add a --due flag", "add a --due flag please"), false],
+    ["a recorded input removed", (text) => text.replace("- **I1** (2026-10-22 09:14):\n  > add a --due flag\n", ""), false],
+]) {
+    test(`current blueprints keep recorded inputs verbatim and accept new ones: ${name}`, async (t) => {
+        const candidate = edit(INPUTS_TEXT);
+        assert.notEqual(candidate, INPUTS_TEXT);
+        const fixture = await commitCandidate({ filename: "2026-10-22-due-dates.md", text: INPUTS_TEXT, candidate });
+        t.after(async () => rm(fixture.root, { recursive: true, force: true }));
+        if (accepted) {
+            await fixture.commit();
+            assert.equal(await readFile(fixture.documentPath, "utf8"), candidate);
+        } else {
+            await assert.rejects(fixture.commit, /protected section ## Inputs/);
+            assert.equal(await readFile(fixture.documentPath, "utf8"), INPUTS_TEXT);
+        }
+    });
+}
+
+test("documents that are not blueprints keep an Inputs section editable", async (t) => {
+    const text = "# Notes\n\n## Inputs\n\nold\n";
+    const candidate = text.replace("old", "new");
+    const fixture = await commitCandidate({ filename: "notes.md", text, candidate });
+    t.after(async () => rm(fixture.root, { recursive: true, force: true }));
+    await fixture.commit();
+    assert.equal(await readFile(fixture.documentPath, "utf8"), candidate);
+});
+
 test("rejects malformed commit candidates missing mandatory headings", async (t) => {
     const fixture = await createFixtureRoot("mandatory-headings");
     t.after(async () => rm(fixture.root, { recursive: true, force: true }));
