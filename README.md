@@ -20,21 +20,35 @@
 
 minime is a GitHub Copilot CLI plugin that carries a coding task through planning, implementation, independent inspection, and knowledge capture. It addresses requirements drift in long agent sessions, reviews built on summaries instead of executed proof, and useful lessons that disappear when a session ends.
 
-You start with a task description. The `minime:dr-evil` agent manages the work and coordinates four phases: blueprint, replicate, inspect, and extract. It dispatches one native task worker per phase, keeps criterion-linked runtime reporting, and asks you to judge choices it cannot resolve from data.
+You start with a task description. The conductor (or the `minime:dr-evil` agent inside a chat) runs four phases: blueprint, replicate, inspect, and extract. Each phase is a fresh Copilot worker. Large builds split into groups that run in waves, follow-up rounds stay scoped to the criteria they touch, and you only judge choices that data can't settle. A board on `127.0.0.1` shows the proof as it builds up and lets you answer questions, steer, pause or stop.
 
 ## Features
 
-- **A short blueprint:** your inputs verbatim, EARS criteria that quote them, boundary contracts and decisions sourced from code, research or you. Facts, references and values only: `blueprint.mjs check` rejects prose and enforces the traceability. Tests stay in your code.
-- **Visible progress:** Dr. Evil is a pure dispatcher. It keeps one todo per phase, names each task after its phase, and asks you only for decisions that code, tests and the wiki can't settle.
-- **Execution-grounded implementation:** replicate writes a test in your own suite for each criterion, named with its ID, watches it fail and makes the smallest change that passes. `blueprint.mjs coverage` lists the test files that name each criterion.
-- **Fresh inspection:** the `minime:frau` inspector starts without the implementer's context, checks the current task against its criteria, and returns evidence for human judgment.
+- **A short blueprint:** your inputs verbatim, EARS criteria that quote them and carry their evidence in brackets, and narrow boundary interfaces. Smaller is better: `check` warns above 2 KB without the inputs. No history: corrections replace text and the old version goes to raw. `blueprint.mjs check` rejects prose and enforces the traceability. Tests stay in your code.
+- **Predictions, not assumptions:** every unknown becomes a prediction that a worker checks by running code, reading the repo, research or the wiki, strongest first. A run that contradicts its prediction is a surprise, and surprises are what the wiki learns first. A recommendation you accept unchanged is recorded as `default:`, not as your decision.
+- **A conductor with a board:** `node conductor/minime.mjs` runs the flow as code, so every run follows the same steps. Its board shows each phase with live worker activity, a proof board (criterion, quote, tests, state), scores (proven criteria, net lines, copied blocks, surprises, requests, minutes), one-click answers for open decisions and a box for feedback. Dr. Evil follows the same flow inside a Copilot or Claude Code chat.
+- **Execution-grounded implementation:** replicate starts from a reproduction (bug) or the thinnest end-to-end slice through the planned boundaries (feature), then writes a test in your own suite for each criterion, named with its ID, watches it fail and makes the smallest change behind a narrow interface that passes. `blueprint.mjs coverage` lists the test files that name each criterion.
+- **Fresh inspection against the text:** the `minime:frau` inspector starts without the implementer's context and checks the code against what the blueprint says. It reports failing tests, failing realistic inputs and quoted deviations, never opinions. A diff ratchet (`blueprint.mjs diff`) flags interface changes outside the boundaries, functions with one caller and copied blocks.
 - **Standalone design reviews:** [minime:ousterhout-review](skills/ousterhout-review/SKILL.md) combines available architecture skills with Ousterhout's design principles; [minime:simplicity-review](skills/simplicity-review/SKILL.md) combines optional Ponytail reviews with data, calculations, actions, and effect-safety checks. Both also support the existing flow.
-- **Optional canvases:** the blueprint and wiki canvases still ship with the plugin, but the flow no longer opens them. The blueprint canvas reads the current blueprint format and the previous one: it shows the status and the open decisions, and edits inputs, criteria and decisions. The wiki canvas searches all repositories by default, offers a removable current-repository preset, and keeps raw sources read-only.
-- **Durable project knowledge:** minime retrieves relevant cited wiki entries during planning and captures reusable lessons with links back to live code. `wiki-lint.mjs` checks every changed page against the wiki schema.
+- **The board as a Copilot canvas:** the `minime-flow` canvas in the Copilot app is the conductor board. It owns a conductor run: start a task, answer questions, send feedback, pause or stop, and watch the phases, scores and proof board. Closing the canvas stops its workers. It is the same page and code as `node conductor/minime.mjs`. The wiki canvas searches all repositories by default, offers a removable current-repository preset, and keeps raw sources read-only.
+- **A wiki that learns:** minime retrieves relevant cited wiki entries during planning and captures verified lessons (a test, a command output or your words) as small deltas. It also learns from your own edits of earlier agent code. `wiki-lint.mjs` checks every changed page and lists pages no blueprint cited, which a health check retires to raw.
 - **Automatic local setup:** a session hook creates the knowledge and blueprint directories under `VIRTUCON_HQ` and copies the default wiki schema and topic template when they are missing. The default location is `$HOME/.minime`.
 - **Model policy:** minime respects Copilot App model defaults. It sets task-level model overrides only when you select them.
 
 The phase badges above link to each skill. The [orchestration guide](assets/ORCHESTRATION.md) owns the flow; the [blueprint template](skills/blueprint/template.md) shows the contract every phase works against.
+
+## What changed in 0.5.0b
+
+Since 0.3.1b (2026-10-23):
+
+- **Conductor and board.** `node conductor/minime.mjs` runs the flow as code with a board on `127.0.0.1`; the `minime-flow` canvas is that board inside the Copilot app. The blueprint editor canvas, its server and its UI bundle are gone; the wiki canvas keeps blueprints read-only and opens the board instead. The session nudge prints the conductor command.
+- **Lean blueprint.** Three sections: Inputs, Criteria, Boundaries. Decisions, Flows, Constraints, Out of scope and Tests are gone; every value a criterion states ends with the evidence that settled it (`ran:`, `data:`, `research:`, `user:`, `default:` or an `open:` question), and `check` rejects the old sections, a criterion without evidence and `(D1)` references. The size goal is 2 KB without the inputs. An existing blueprint with a Decisions or Flows section fails `check`: fold its facts into the criteria and boundary rows.
+- **No review before the build.** A blueprint that returns done is built at once; inspect runs after replicate only. Workers reply with one JSON object and nothing else, and the report is one line per item.
+- **Existing tests are the contract.** Removed or rewritten lines of existing tests are counted mechanically and need your answer once per blueprint, with keep recommended. Replicate starts from a reproduction or the thinnest end-to-end slice.
+- **Groups and splits.** A round that touches more than three boundary rows builds in groups and waves; a blueprint past the size goal splits into a tree of children, built before the root.
+- **Wiki.** A rule needs a receipt (a test, a command with its output, your words); one rule changes at a time; pages no blueprint cited retire to `raw/_retired/` after 60 days (`wiki-lint.mjs` lists them as unused); each repository scope keeps `process-<phase>.md` pages with rules the phases read.
+- **Worker guard rails.** The conductor denies workers the `git` commands that stage, commit, push or rewrite the tree, and GitHub writes (`gh repo fork`, `gh pr create` and the like).
+- **Benchmark record.** Three rounds of the flow measured against hidden tests on SWE-bench and the author's own tasks, with the decisions for the next variant, in [docs/autoresearch.md](docs/autoresearch.md). Those decisions (one build per blueprint, defaults instead of asks, process pages parked) are not in this version.
 
 ## Install
 
@@ -55,7 +69,15 @@ minime does not ship a copy installer. Use `copilot plugin update` when you want
 
 ## Use
 
-Start Copilot CLI with Dr. Evil:
+Run the conductor from your repository and open the board link it prints:
+
+```bash
+node ~/.copilot/installed-plugins/virtucon/minime/conductor/minime.mjs --repo . "describe the change"
+```
+
+Options: `--port <n>` (default 4177), `--model <id>`, `--open` to open the board in the browser. Without a task, the board asks for one. The session nudge prints the exact path of your installed copy.
+
+Or start Copilot CLI with Dr. Evil:
 
 ```bash
 copilot --agent minime:dr-evil
@@ -67,13 +89,15 @@ The standalone reviews optionally reuse [Matt Pocock's skills](https://github.co
 
 ## Copilot App
 
-Minime includes an editable blueprint view and a shared wiki browser. See the [Canvas tour](docs/canvases.md) for screenshots and controls, or [Canvas guidance](assets/CANVAS.md) for agent behavior.
+The minime board opens as a canvas (`minime-flow`): the same page and conductor as `node conductor/minime.mjs`, run for the session's repository. Next to it, the wiki canvas browses the shared knowledge. See the [Canvas tour](docs/canvases.md) for screenshots and controls, or [Canvas guidance](assets/CANVAS.md) for agent behavior.
 
 The [orchestration guide](assets/ORCHESTRATION.md) defines how work proceeds, how corrections take effect, and when a decision needs your input.
 
 ## Evaluation harness
 
 For the promptfoo default-versus-minime benchmark harness, see [evals/promptfoo/README.md](evals/promptfoo/README.md).
+
+The benchmark that drives the flow's changes, with three rounds so far, the decisions for the next variant and how to continue, is recorded in [docs/autoresearch.md](docs/autoresearch.md).
 
 ## Inspiration
 
@@ -84,6 +108,8 @@ Studies of code-generation agents found that execution-grounded debugging loops 
 A 2025 Google DeepMind study found that AI verdicts can increase reviewer over-reliance. Raw evidence helped reviewers without hurting them when the AI was wrong. minime gives a fresh inspector the job of gathering test output, diffs, assumptions, and inconsistencies for human judgment.
 
 Research on multi-turn degradation and context rot motivates short phase handoffs through a persisted blueprint. GitHub's agentic memory work and Karpathy's LLM wiki pattern inspired the cited raw and wiki knowledge store.
+
+The proof-first design follows recent work on how agent code degrades over iterations (SlopCodeBench), reward hacking on tests (METR, ImpossibleBench), reproduction tests (SWT-Bench), property-based testing agents, single-writer orchestration (Cognition), context rot (Chroma), repository instruction files (ETH AGENTS.md study), incremental context updates (ACE) and verified agent memory (VibeMemBench).
 
 Read the [research basis and full citations](assets/.agent/research/REFERENCES.md).
 

@@ -1121,7 +1121,7 @@ function clientMain() {
         for (const [k, v] of meta) { if (!v) continue; const r = el("div", "prow"); r.appendChild(el("div", "k", k)); r.appendChild(el("div", "v", v)); box.appendChild(r); }
         host.appendChild(box);
         if (bp.goal) { const g = el("div", "bpgoal", bp.goal); host.appendChild(g); }
-        const open = el("button", "btn primary block", "Open in blueprint canvas");
+        const open = el("button", "btn primary block", "Open in the minime board");
         open.onclick = openBlueprintCanvas;
         host.appendChild(open);
     }
@@ -1129,9 +1129,9 @@ function clientMain() {
         if (!S.active || !isBlueprint(S.active)) return;
         try {
             const out = await api.post("/api/open-blueprint", { path: S.active });
-            if (out.opened) toast("Opened blueprint canvas", { kind: "good" });
+            if (out.opened) toast("Opened the minime board", { kind: "good" });
             else if (out.delegated) toast(out.message || "Requested blueprint open in chat", { kind: "good", timeout: 5000 });
-            else toast("Blueprint canvas unavailable", { kind: "bad", timeout: 5000 });
+            else toast("Minime board unavailable", { kind: "bad", timeout: 5000 });
         } catch (error) {
             toast(error.message, { kind: "bad", timeout: 5000 });
         }
@@ -1263,7 +1263,7 @@ function clientMain() {
             { id: "rate", title: "Suggest rating for this note", ico: "★", run: llmRate },
             { id: "ask", title: "Ask the wiki…", ico: "?", run: llmAsk },
             { id: "scope", title: S.scope === "current" ? "Show all repositories" : "Use current repository preset", ico: "◎", run: toggleScope },
-            { id: "open-bp", title: "Open current blueprint in flow canvas", ico: "↗", run: openBlueprintCanvas },
+            { id: "open-bp", title: "Open current blueprint in the minime board", ico: "↗", run: openBlueprintCanvas },
             { id: "blueprints", title: "Browse blueprints", ico: "⊟", run: () => setView("blueprints") },
             { id: "vault", title: "Browse vault files", ico: "▤", run: () => setView("vault") },
             { id: "dups", title: "Show duplicate candidates", ico: "⇄", run: () => { $("s-dups").open = true; $("s-dups").scrollIntoView(); } },

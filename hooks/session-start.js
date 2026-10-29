@@ -169,7 +169,9 @@ function buildNudge(orgRepo) {
     `  Wiki index: ${VIRTUCON_HQ}/wiki/index.md`,
     `  Repo raw: ${VIRTUCON_HQ}/raw/${org}/${repo}/`,
     `  Topic template: ${VIRTUCON_HQ}/_TEMPLATE.md`,
-    'Full flow: run the minime:dr-evil agent. Phase skills work standalone and return to their caller.',
+    `  Conductor (flow with a board): node ${path.join(PLUGIN_ROOT, 'conductor', 'minime.mjs')} --repo <repo> "<task>"`,
+    `  Boundaries board (a blueprint's owners as boxes, editable, any host with a browser): node ${path.join(PLUGIN_ROOT, 'conductor', 'minime.mjs')} --blueprint <blueprint> --open`,
+    'Full flow: run the conductor, or the minime:dr-evil agent in a chat. Phase skills work standalone and return to their caller.',
     '</minime-workflow-nudge>',
   ].join('\n');
 }

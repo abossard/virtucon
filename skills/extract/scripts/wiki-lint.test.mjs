@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { LIMITS, lint, lintCitations, linksTo } from "./wiki-lint.mjs";
+import { LIMITS, lint, lintCitations, linksTo, usage } from "./wiki-lint.mjs";
 
 const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), "wiki-lint.mjs");
 
@@ -168,4 +168,56 @@ test("CLI prints JSON and exits 1 on violations, 0 when clean, 2 without a wiki"
     assert.equal(withRepo.status, 1);
     assert.deepEqual(Object.keys(JSON.parse(withRepo.stdout).byRule), ["cite"]);
     assert.equal(spawnSync(process.execPath, [SCRIPT, makeHq(), "--repo"], { encoding: "utf8" }).status, 2);
+});
+
+/* ── process pages ── */
+
+// A page listed where the lint expects it, so only its name can be wrong.
+const withPage = (rel) => (h) => {
+    const inScope = rel.startsWith("orgs/acme/todo/");
+    h.write(`wiki/${rel}`, inScope ? PAGE : PAGE.replace("../../../../raw", "../../raw"));
+    h.change(inScope ? "wiki/orgs/acme/todo/index.md" : "wiki/index.md", (t) => `${t}- [Page](./${inScope ? rel.split("/").pop() : rel}): Read when a phase starts.\n`);
+};
+
+for (const [name, rel, expected] of [
+    ["process-blueprint.md is a phase page", "orgs/acme/todo/process-blueprint.md", []],
+    ["process-replicate.md is a phase page", "orgs/acme/todo/process-replicate.md", []],
+    ["process-inspect.md is a phase page", "orgs/acme/todo/process-inspect.md", []],
+    ["process-extract.md is a phase page", "orgs/acme/todo/process-extract.md", []],
+    ["a page named for a topic is refused", "orgs/acme/todo/process-date-parsing.md", ["process"]],
+    ["a phase name with a suffix is refused", "orgs/acme/todo/process-blueprint-dates.md", ["process"]],
+    ["a plural phase name is refused", "orgs/acme/todo/process-blueprints.md", ["process"]],
+    ["a pattern page with such a name is a topic page", "patterns/process-blueprint.md", []],
+    ["a pattern page about process substitution is a topic page", "patterns/process-substitution.md", []],
+    ["a topic page that only starts with the same letters is fine", "orgs/acme/todo/processing.md", []],
+]) {
+    test(`process pages: ${name}`, () => assert.deepEqual(rules(makeHq(withPage(rel))), expected));
+}
+
+/* ── usage ── */
+
+const CITING = '- **C1** (I1 "date compare"): When two dates compare, the CLI shall use string order. [research: wiki orgs/acme/todo/due.md]';
+
+for (const [name, page, blueprints, today, expected] of [
+    ["a page one blueprint cites", PAGE, [CITING, '- **C2** (I1 "x"): When x, y shall z. [data: a.js:1]'], "2027-06-01", { citations: 1, unused: false }],
+    ["a page nobody cited for more than 60 days", PAGE, [], "2026-12-22", { citations: 0, unused: true }],
+    ["a page nobody cited yet, verified within 60 days", PAGE, [], "2026-12-21", { citations: 0, unused: false }],
+    ["a page without LastVerified that nobody cites", PAGE.replace(/^- \*\*LastVerified.*\n/m, ""), [], "2026-10-23", { citations: 0, unused: true }],
+]) {
+    test(`usage: ${name}`, () => assert.deepEqual(usage(page, "orgs/acme/todo/due.md", blueprints, today), expected));
+}
+
+for (const [name, rel, unused] of [
+    ["a phase page", "orgs/acme/todo/process-blueprint.md", false],
+    ["a pattern page that only starts with process-", "patterns/process-substitution.md", true],
+]) {
+    test(`usage: ${name} nobody cited`, () => assert.deepEqual(usage(PAGE, rel, [], "2026-12-22"), { citations: 0, unused }));
+}
+
+test("lint counts blueprint citations per topic page and lists the unused ones", () => {
+    const hq = makeHq((h) => h.write("acme/_todo/blueprints/2026-10-22-due.md", `# Blueprint: due\n\n${CITING}\n`));
+    const out = lint(hq, [], { today: "2027-01-01" });
+    assert.deepEqual(out.usage, { "orgs/acme/todo/due.md": 1, "patterns/csv.md": 0 });
+    assert.deepEqual(out.unused, ["patterns/csv.md"]);
+    assert.equal(out.total, 0, "unused pages are not violations");
 });

@@ -252,8 +252,8 @@ async function openBlueprintCanvas(relPath) {
             };
         } catch (error) {
             await sessionRef.send({
-                prompt: `Open the Minime flow canvas for blueprint file ${filename} (path ${normalized}).`,
-                displayPrompt: `Open blueprint canvas: ${filename}`,
+                prompt: `Open the minime board canvas for blueprint file ${filename} (path ${normalized}).`,
+                displayPrompt: `Open minime board: ${filename}`,
             });
             return {
                 opened: false,
@@ -264,8 +264,8 @@ async function openBlueprintCanvas(relPath) {
         }
     }
     await sessionRef.send({
-        prompt: `Open the Minime flow canvas for blueprint file ${filename} (path ${normalized}).`,
-        displayPrompt: `Open blueprint canvas: ${filename}`,
+        prompt: `Open the minime board canvas for blueprint file ${filename} (path ${normalized}).`,
+        displayPrompt: `Open minime board: ${filename}`,
     });
     return {
         opened: false,
@@ -585,7 +585,7 @@ const actions = [
     },
     {
         name: "open_blueprint",
-        description: "Open a blueprint in the Minime flow canvas. Falls back to chat request when canvas RPC is unavailable.",
+        description: "Open the minime board for a blueprint. Falls back to chat request when canvas RPC is unavailable.",
         inputSchema: {
             type: "object",
             properties: { path: { type: "string" } },

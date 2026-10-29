@@ -1,222 +1,92 @@
-import { joinSession, createCanvas } from "@github/copilot-sdk/extension";
-import { startCanvasServer } from "./lib/server.mjs";
-import { guardPhaseDispatch } from "./lib/dispatch-gate.mjs";
+// minime-flow canvas: the conductor board inside Copilot.
+//
+// Wiring only. The canvas opens the same board as `node conductor/minime.mjs`: one conductor per open
+// canvas for the session's repository, with the same page and run files. The actions let the agent
+// steer the run the way the page does. stdout is reserved for JSON-RPC: never console.log.
 
-const instances = new Map();
-let session;
-const pendingListeners = new Set();
+import { joinSession, createCanvas, CanvasError } from "@github/copilot-sdk/extension";
+import { startBoard } from "../../../conductor/minime.mjs";
 
-function runtimeFor(sessionId) {
-    if (session) return session;
+const boards = new Map(); // instanceId -> { url, conductor, close }
+
+function conductorFor(instanceId) {
+    const board = boards.get(instanceId);
+    if (!board) throw new CanvasError("not_open", "the minime board is not open");
+    return board.conductor;
+}
+
+function text(input, field) {
+    const value = String(input?.[field] ?? "").trim();
+    if (!value) throw new CanvasError("bad_input", `${field} is required`);
+    return value;
+}
+
+// What the agent needs to steer the run, without the page's details.
+function summary({ state, scores }) {
+    if (!state) return { status: "idle" };
     return {
-        sessionId,
-        send: async (input) => (await sessionReady).send(input),
-        rpc: { tasks: { list: async () => (await sessionReady).rpc.tasks.list() } },
-        on(type, handler) {
-            const entry = { type, handler, unsubscribe: null };
-            pendingListeners.add(entry);
-            return () => {
-                pendingListeners.delete(entry);
-                entry.unsubscribe?.();
-            };
-        },
+        status: state.paused ? "paused" : state.status,
+        phase: state.stage?.phase ?? null,
+        blueprint: state.blueprint,
+        ask: state.ask,
+        pending: state.pending.length,
+        jobs: state.jobs.map((j) => ({ phase: j.phase, group: j.group, status: j.ended ? j.status : "running" })),
+        scores,
     };
 }
 
-function instanceFor(instanceId) {
-    const instance = instances.get(instanceId);
-    if (!instance) throw new Error("Canvas instance is not open.");
-    return instance;
-}
-
-const sessionReady = joinSession({
-    hooks: {
-        onPreToolUse: (input, invocation) =>
-            guardPhaseDispatch(input, { sessionId: invocation.sessionId }),
+const steer = (name, description, run, inputSchema) => ({
+    name,
+    description,
+    ...(inputSchema ? { inputSchema } : {}),
+    handler: ({ instanceId, input }) => {
+        run(conductorFor(instanceId), input);
+        return summary(conductorFor(instanceId).view());
     },
+});
+
+joinSession({
     canvases: [
         createCanvas({
             id: "minime-flow",
-            displayName: "Minime flow",
-            description: "View live minime phases, edit blueprint drafts, and apply guarded corrections.",
+            displayName: "Minime board",
+            description: "Run a minime task (blueprint, replicate, inspect, extract) with fresh Copilot workers and watch its proof board.",
             inputSchema: {
                 type: "object",
-                properties: {
-                    blueprint: { type: "string" },
-                    blueprintPath: { type: "string" },
-                },
-                additionalProperties: false,
+                properties: { task: { type: "string", description: "Start this task when the board opens." } },
+                additionalProperties: true,
             },
             actions: [
                 {
-                    name: "refresh",
-                    description: "Refresh blueprint and live flow state.",
-                    handler: ({ instanceId }) => {
-                        return instanceFor(instanceId).refresh();
-                    },
+                    name: "state",
+                    description: "Read the run: status, phase, open questions, jobs and scores.",
+                    handler: ({ instanceId }) => summary(conductorFor(instanceId).view()),
                 },
-                {
-                    name: "select_blueprint",
-                    description: "Select an open repository blueprint by filename.",
-                    inputSchema: {
-                        type: "object",
-                        required: ["blueprint"],
-                        properties: { blueprint: { type: "string" } },
-                        additionalProperties: false,
-                    },
-                    handler: ({ instanceId, input }) => {
-                        return instanceFor(instanceId).select(input?.blueprint);
-                    },
-                },
-                {
-                    name: "read_document",
-                    description: "Read the selected blueprint with revision and draft metadata.",
-                    inputSchema: {
-                        type: "object",
-                        properties: { blueprint: { type: "string" } },
-                        additionalProperties: false,
-                    },
-                    handler: ({ instanceId, input }) =>
-                        instanceFor(instanceId).readDocument({ blueprint: input?.blueprint }),
-                },
-                {
-                    name: "save_draft",
-                    description: "Save a draft without mutating the applied blueprint revision.",
-                    inputSchema: {
-                        type: "object",
-                        required: ["blueprint", "markdown", "baseRevision", "expectedDraftRevision"],
-                        properties: {
-                            blueprint: { type: "string" },
-                            markdown: { type: "string" },
-                            baseRevision: { type: "string" },
-                            expectedDraftRevision: { type: ["string", "null"] },
-                        },
-                        additionalProperties: false,
-                    },
-                    handler: ({ instanceId, input }) =>
-                        instanceFor(instanceId).saveDraft({
-                            blueprint: input?.blueprint,
-                            markdown: input?.markdown,
-                            baseRevision: input?.baseRevision,
-                            expectedDraftRevision: input?.expectedDraftRevision,
-                        }),
-                },
-                {
-                    name: "apply_draft",
-                    description: "Queue an apply request for the saved draft and notify the owner asynchronously.",
-                    inputSchema: {
-                        type: "object",
-                        required: ["blueprint", "expectedDraftRevision"],
-                        properties: {
-                            blueprint: { type: "string" },
-                            expectedDraftRevision: { type: "string" },
-                        },
-                        additionalProperties: false,
-                    },
-                    handler: ({ instanceId, input }) =>
-                        instanceFor(instanceId).queueApply({
-                            blueprint: input?.blueprint,
-                            expectedDraftRevision: input?.expectedDraftRevision,
-                        }),
-                },
-                {
-                    name: "resolve_apply",
-                    description: "Reconcile a queued correction with newer worker changes after reading current, draft, and base markdown. Does not modify the applied blueprint.",
-                    inputSchema: {
-                        type: "object",
-                        required: ["requestId", "expectedRevision", "expectedDraftRevision", "markdown"],
-                        properties: {
-                            requestId: { type: "string" },
-                            blueprint: { type: "string" },
-                            expectedRevision: { type: "string" },
-                            expectedDraftRevision: { type: "string" },
-                            markdown: { type: "string" },
-                        },
-                        additionalProperties: false,
-                    },
-                    handler: ({ instanceId, input }) => instanceFor(instanceId).resolveApply(input),
-                },
-                {
-                    name: "commit_apply",
-                    description: "Commit a queued apply request after flow workers are drained.",
-                    inputSchema: {
-                        type: "object",
-                        required: ["requestId"],
-                        properties: {
-                            requestId: { type: "string" },
-                            blueprint: { type: "string" },
-                            expectedRevision: { type: "string" },
-                        },
-                        additionalProperties: false,
-                    },
-                    handler: ({ instanceId, input }) =>
-                        instanceFor(instanceId).commitApply({
-                            requestId: input?.requestId,
-                            blueprint: input?.blueprint,
-                            expectedRevision: input?.expectedRevision,
-                        }),
-                },
-                {
-                    name: "report_progress",
-                    description: "Report current phase, criterion, needs-you status, and evidence links.",
-                    inputSchema: {
-                        type: "object",
-                        properties: {
-                            phase: { type: "string" },
-                            toolCallId: { type: "string" },
-                            agentId: { type: "string" },
-                            criterionId: { type: "string" },
-                            criterion: { type: "string" },
-                            needsInput: { type: "boolean" },
-                            status: { type: "string" },
-                            requestId: { type: "string" },
-                            evidence: {
-                                type: "array",
-                                items: {
-                                    type: "object",
-                                    properties: {
-                                        label: { type: "string" },
-                                        detail: { type: "string" },
-                                        url: { type: "string" },
-                                    },
-                                    additionalProperties: true,
-                                },
-                            },
-                        },
-                        additionalProperties: true,
-                    },
-                    handler: ({ instanceId, input }) =>
-                        instanceFor(instanceId).reportProgress(input),
-                },
+                steer("start", "Start a new task in the user's words.", (c, input) => c.start(text(input, "task")),
+                    { type: "object", required: ["task"], properties: { task: { type: "string" } } }),
+                steer("feedback", "Send the user's correction or follow-up; it applies after the running worker.", (c, input) => c.feedback(text(input, "text")),
+                    { type: "object", required: ["text"], properties: { text: { type: "string" } } }),
+                steer("answer", "Answer the open questions: answers by decision ID ({ choice, text }), or text when there are none.", (c, input) => c.answer(input?.answers ?? { text: text(input, "text") }),
+                    { type: "object", properties: { answers: { type: "object" }, text: { type: "string" } } }),
+                steer("pause", "Pause before the next worker starts.", (c) => c.pause()),
+                steer("resume", "Resume a paused run.", (c) => c.resume()),
+                steer("stop", "Stop the running workers.", (c) => c.stop()),
             ],
-            open: async ({ instanceId, sessionId, input }) => {
-                let instance = instances.get(instanceId);
-                if (!instance) {
-                    instance = await startCanvasServer({
-                        session: runtimeFor(sessionId),
-                        selectedBlueprint: input?.blueprint,
-                        selectedBlueprintPath: input?.blueprintPath,
-                    });
-
-                    session = await sessionReady;
-                    for (const entry of pendingListeners) {
-                        entry.unsubscribe = session.on(entry.type, entry.handler);
-                    }
-                    pendingListeners.clear();
-                    instances.set(instanceId, instance);
-                } else if (input?.blueprint || input?.blueprintPath) {
-                    instance.select({
-                        blueprint: input?.blueprint,
-                        blueprintPath: input?.blueprintPath,
-                    });
+            open: async ({ instanceId, input }) => {
+                let board = boards.get(instanceId);
+                if (!board) {
+                    board = await startBoard({ repo: process.cwd(), task: input?.task });
+                    boards.set(instanceId, board);
+                } else if (input?.task) {
+                    board.conductor.start(input.task);
                 }
-                return { title: "Minime flow", url: instance.url, status: "ready" };
+                return { title: "Minime board", url: board.url, status: "ready" };
             },
             onClose: async ({ instanceId }) => {
-                const instance = instances.get(instanceId);
-                if (!instance) return;
-                instances.delete(instanceId);
-                await instance.close();
+                const board = boards.get(instanceId);
+                if (!board) return;
+                boards.delete(instanceId);
+                await board.close();
             },
         }),
     ],

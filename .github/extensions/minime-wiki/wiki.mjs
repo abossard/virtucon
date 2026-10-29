@@ -124,7 +124,7 @@ function assertWritablePath(relPath) {
         throw fail("read_only", "raw sources are read-only", 403, { relPath: normalized });
     }
     if (isBlueprintFolderPath(normalized)) {
-        throw fail("read_only", "blueprints are read-only in wiki canvas. open the blueprint canvas to apply corrections.", 403, { relPath: normalized });
+        throw fail("read_only", "blueprints are read-only in the wiki canvas. send corrections through the minime board.", 403, { relPath: normalized });
     }
     if (!normalized.startsWith("wiki/")) {
         throw fail("read_only", "write path must be inside wiki/", 403, { relPath: normalized });

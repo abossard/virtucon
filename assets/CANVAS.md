@@ -1,22 +1,25 @@
 # Canvas guidance
 
-Use this guide when presenting, editing, or verifying work through a canvas. The [orchestration guide](ORCHESTRATION.md) owns workflow decisions and handoffs.
+Use this guide when presenting or steering work through a canvas. The [orchestration guide](ORCHESTRATION.md) owns workflow decisions and handoffs.
 
-## Present the work
+## Run work on the board
 
-The task owner opens an editable view of the persisted blueprint when the runtime supports one. A direct phase caller acts as the owner; workers in an orchestrated run update the existing work rather than opening competing views.
+The `minime-flow` canvas is the minime board: the same page and conductor as `node conductor/minime.mjs`, one run per open canvas for the session's repository. Open it with `task` to start a run, or start one later with the `start` action. Closing the canvas stops its workers.
 
-Discover the available view and its current action schemas before use. If support is absent or an operation fails, keep the file workflow usable. Record the observed reason and the blueprint path in the evidence. Do not claim that a view opened when it did not.
+Steer the run with the canvas actions, in the user's words:
 
-Show the current phase, criterion, required decisions, and available proof. Take them from owner reports, native execution data, and the blueprint itself: the decisions still open. Show unavailable information as unknown.
+- `state` reads the status, the phase, open questions, jobs and scores.
+- `start` begins a new task; `feedback` sends a correction or follow-up, which applies after the running worker.
+- `answer` answers open questions by decision ID (`{ "C2": { "choice": "…" } }`), or with `text` when there are none. An unchanged recommendation is recorded as `default:`.
+- `pause`, `resume` and `stop` control the workers.
 
-Keep the document central. Make supporting detail collapsible and keyboard-accessible. Background updates must preserve the user's focus and unfinished edits.
+Report what the board shows. Don't claim a phase finished, a question was answered or the canvas opened when the state doesn't say so. If the canvas is unavailable, run the conductor from the command line or follow the flow in chat, and say which one you used.
 
-## Edit safely
+## Change a blueprint
 
-Route blueprint changes through a saved draft and a queued apply request that the task owner commits at a worker boundary. Recorded inputs stay verbatim: a draft may add inputs but not change them. Distinguish saved drafts, pending application, conflicts, and persisted results in the view.
+Criteria, their evidence and inputs change through the flow, not by hand: send the correction as `feedback`, and the next blueprint pass records it as an input and rewrites the plan. Recorded inputs stay verbatim.
 
-Identify documents independently of their panels so reopening or reconnecting can recover the right work. Use persistence evidence for success labels.
+Boundaries can be edited on the board's Boundaries panel while no worker runs (the run is asking, done, stopped or failed). Saving rewrites that table, refuses an edit that adds a `check` error, keeps the old blueprint in raw and clears `Extracted:`. Ask for a new round to rebuild against the edit.
 
 ## Browse shared knowledge
 
@@ -26,6 +29,4 @@ Resolve provider ambiguity before acting. Preserve existing personal providers a
 
 ## Verify a changed view
 
-Exercise the actual host for claims about navigation, keyboard behavior, focus, layout, or reconnection. Include a meaningful failure path.
-
-For editing changes, prove persistence and conflict handling without losing either version. For status changes, verify that the view identifies the right work and distinguishes missing data from completion. When reviewing diagrams, use the [visual-design guidance](../skills/ousterhout-review/visual-design.md).
+Exercise the actual host for claims about navigation, keyboard behavior, focus, layout, or reconnection. Include a meaningful failure path. For status changes, verify that the view identifies the right work and distinguishes missing data from completion. When reviewing diagrams, use the [visual-design guidance](../skills/ousterhout-review/visual-design.md).

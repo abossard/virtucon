@@ -9,24 +9,10 @@ Repo: <org>/<repo> | Created: <YYYY-MM-DD>
 
 ## Criteria
 
-- **C1** (I1 "<words from the user's message>"): When <trigger>, <owner> shall <observable response>.
+- **C1** (I1 "<words from the user's message>"): When <trigger>, <owner> shall <observable response>. [<ran, data, research, user, default or open>: <command → observed, path:line, wiki page, URL or input ID>]
 
 ## Boundaries
 
 | ID | Owner | Contract | Change | Criteria |
 |----|-------|----------|--------|----------|
 | B1 | `<path>` <function or module> | <input> → <output>; <error behavior> | <new, changed or unchanged> | C1 |
-
-## Decisions
-
-| ID | Question | Answer | Source |
-|----|----------|--------|--------|
-| D1 | <unknown> | <value> | <data, research or user>: <path:line, wiki page, URL or input ID> |
-
-## Constraints
-
-- <fact> (<source>)
-
-## Out of scope
-
-- <fact> (<source>)

@@ -3,6 +3,7 @@
 //   node wiki-lint.mjs <VIRTUCON_HQ> [wiki-relative path ...] [--repo <checkout>]
 // Without paths it checks the whole wiki; a path selects one file or directory.
 // With --repo it also checks that cited `path:line` locations still exist in that checkout.
+// It also counts how many blueprints cite each topic page; `unused` lists pages nobody cited for a while.
 // Prints one JSON object. Exit 0 = clean, 1 = violations, 2 = usage.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -10,9 +11,10 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 // Numbers come from schema.md "Page rules" and "Navigation".
-export const LIMITS = { bytes: 6144, lines: 80, rules: 8, logLines: 100, logWords: 20, citeWindow: 3 };
+export const LIMITS = { bytes: 6144, lines: 80, rules: 8, logLines: 100, logWords: 20, citeWindow: 3, unusedDays: 60 };
 const ORIGINS = ["human-correction", "failed-approach", "observation"];
 const FIELDS = ["Summary", "Read when", "Scope", "LastVerified"];
+export const PROCESS_PAGES = ["process-blueprint.md", "process-replicate.md", "process-inspect.md", "process-extract.md"];
 const MAX_REPORTED = 40;
 
 const err = (rule, message) => ({ rule, message });
@@ -43,6 +45,14 @@ export function lintPage(text) {
     }
     if (text.includes("—")) errors.push(err("em-dash", "the schema bans em dashes"));
     return errors;
+}
+
+// Process rules live on the four phase pages of a repo scope; a `process-*.md` there under any other name splits them by topic.
+// Elsewhere (a pattern page, say) the name is just a topic.
+const inRepoScope = (rel) => rel.split("/").length === 4 && rel.startsWith("orgs/");
+export function lintProcessName(rel) {
+    const name = rel.split("/").at(-1);
+    return inRepoScope(rel) && /^process-.*\.md$/.test(name) && !PROCESS_PAGES.includes(name) ? [err("process", `process rules live on the phase page: ${PROCESS_PAGES.join(", ")}`)] : [];
 }
 
 export function lintLog(text) {
@@ -83,6 +93,16 @@ export function lintCitations(text, readRepoFile) {
     return errors;
 }
 
+// A page is used when a blueprint cites its wiki-relative path, as in `research: wiki orgs/acme/todo/due.md`.
+export function usage(pageText, rel, blueprintTexts, today) {
+    const citations = blueprintTexts.filter((t) => t.includes(rel)).length;
+    const verified = pageText.match(/^- \*\*LastVerified:\*\*\s*(\d{4}-\d{2}-\d{2})/m)?.[1];
+    const age = verified ? (Date.parse(today) - Date.parse(verified)) / 86400000 : Infinity;
+    // Process pages are read by the phases, and blueprints link them by file name, so a cited path can't show their use.
+    const phasePage = inRepoScope(rel) && PROCESS_PAGES.includes(rel.split("/").at(-1));
+    return { citations, unused: citations === 0 && age > LIMITS.unusedDays && !phasePage };
+}
+
 export const linksTo = (indexText, target) => new RegExp(`\\]\\((?:\\./)?${escapeRe(target)}(?:#[^)\\s]*)?\\)`).test(indexText);
 
 /* ── actions ── */
@@ -90,7 +110,14 @@ export const linksTo = (indexText, target) => new RegExp(`\\]\\((?:\\./)?${escap
 const walk = (dir) =>
     readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : e.name.endsWith(".md") ? [path.join(dir, e.name)] : []));
 
-export function lint(hq, paths = [], { repo } = {}) {
+const blueprintFiles = (hq) =>
+    readdirSync(hq, { withFileTypes: true })
+        .filter((org) => org.isDirectory() && !["raw", "wiki"].includes(org.name))
+        .flatMap((org) => readdirSync(path.join(hq, org.name), { withFileTypes: true })
+            .filter((r) => r.isDirectory() && r.name.startsWith("_") && existsSync(path.join(hq, org.name, r.name, "blueprints")))
+            .flatMap((r) => walk(path.join(hq, org.name, r.name, "blueprints"))));
+
+export function lint(hq, paths = [], { repo, today = new Date().toISOString().slice(0, 10) } = {}) {
     const wiki = path.join(hq, "wiki");
     const files = walk(wiki).map((p) => path.relative(wiki, p).split(path.sep).join("/"));
     const selected = (rel) => !paths.length || paths.some((p) => rel === p || rel.startsWith(p.replace(/\/?$/, "/")));
@@ -103,6 +130,9 @@ export function lint(hq, paths = [], { repo } = {}) {
         return full.startsWith(path.resolve(repo) + path.sep) && existsSync(full) ? readFileSync(full, "utf8") : null;
     };
     let checked = 0;
+    const blueprints = blueprintFiles(hq).map((f) => readFileSync(f, "utf8"));
+    const used = {};
+    const unused = [];
 
     for (const rel of files.filter((f) => selected(f) && !f.startsWith("log/"))) {
         const text = read(rel);
@@ -110,7 +140,13 @@ export function lint(hq, paths = [], { repo } = {}) {
         const isIndex = parts.at(-1) === "index.md";
         checked++;
         if (rel === "log.md") add(rel, lintLog(text));
-        else if (!isIndex) add(rel, lintPage(text));
+        else if (!isIndex) {
+            add(rel, lintPage(text));
+            add(rel, lintProcessName(rel));
+            const u = usage(text, rel, blueprints, today);
+            used[rel] = u.citations;
+            if (u.unused) unused.push(rel);
+        }
         if (repo && !isIndex && rel !== "log.md") add(rel, lintCitations(text, readRepoFile));
 
         for (const m of text.matchAll(/\]\(([^)\s#]+\.md)(?:#[^)\s]*)?\)/g)) {
@@ -128,7 +164,7 @@ export function lint(hq, paths = [], { repo } = {}) {
 
     const byRule = {};
     for (const e of errors) byRule[e.rule] = (byRule[e.rule] ?? 0) + 1;
-    return { checked, errors: errors.slice(0, MAX_REPORTED), truncated: Math.max(0, errors.length - MAX_REPORTED), byRule, total: errors.length };
+    return { checked, errors: errors.slice(0, MAX_REPORTED), truncated: Math.max(0, errors.length - MAX_REPORTED), byRule, total: errors.length, usage: used, unused };
 }
 
 function main(argv) {

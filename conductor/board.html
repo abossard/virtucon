@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>minime board</title>
+<style>
+:root {
+    --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1b19; --muted: #6b665f; --line: #e3dfd8;
+    --evil: #b3261e; --ok: #1e7a46; --warn: #a15c00; --run: #2754c5; --chip: #efece6;
+}
+@media (prefers-color-scheme: dark) {
+    :root { --bg: #151413; --panel: #1f1d1b; --ink: #eeeae4; --muted: #a39d95; --line: #34312d;
+        --evil: #ff6b5e; --ok: #4cc884; --warn: #f0a540; --run: #7aa2ff; --chip: #2a2724; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+h1 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+h1 span { color: var(--evil); }
+h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.task { color: var(--muted); max-width: 70ch; }
+.chip { display: inline-block; padding: 2px 9px; border-radius: 999px; background: var(--chip); font-size: 12px; font-weight: 600; }
+.chip.running { color: var(--run); } .chip.done { color: var(--ok); } .chip.asking { color: var(--warn); }
+.chip.failed, .chip.stopped { color: var(--evil); }
+button { font: inherit; border: 1px solid var(--line); background: var(--chip); color: var(--ink); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+button.primary { background: var(--evil); border-color: var(--evil); color: #fff; }
+button:disabled { opacity: 0.5; cursor: default; }
+.rail { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .rail { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.phase { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 120px; background: var(--panel); }
+.phase.active { border-color: var(--run); box-shadow: 0 0 0 1px var(--run) inset; }
+.phase.done { border-color: var(--ok); }
+.phase .name { font-weight: 700; } .phase .who { color: var(--muted); font-size: 12px; }
+.phase .act { font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); margin-top: 6px; word-break: break-all; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.tile b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+.tile small { color: var(--muted); }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+table { width: 100%; border-collapse: collapse; }
+td, th { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; }
+td.id, td.state { font-weight: 700; white-space: nowrap; }
+td.tests code { word-break: break-all; }
+td code, .mono { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.quote { color: var(--muted); font-style: italic; }
+.ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--evil); }
+textarea { width: 100%; min-height: 70px; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.decision { border-top: 1px solid var(--line); padding: 10px 0; }
+.decision label { display: block; padding: 2px 0; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.hidden { display: none; }
+.mt6 { margin-top: 6px; } .mt8 { margin-top: 8px; } .mt14 { margin-top: 14px; }
+input.own { width: 100%; margin-top: 4px; }
+.log li { margin: 4px 0; }
+.row h2 { margin: 0; }
+button.on { border-color: var(--run); color: var(--run); }
+.scroll { overflow-x: auto; }
+svg text { font: 12px ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--ink); }
+svg .dim { fill: var(--muted); font-size: 11px; }
+svg .bold { font-weight: 700; }
+.node { cursor: pointer; }
+.node rect { fill: var(--panel); stroke: var(--muted); stroke-width: 1.5; }
+.node.b-new rect { stroke: var(--ok); stroke-width: 2.5; }
+.node.b-changed rect { stroke: var(--warn); stroke-width: 2.5; }
+.node.b-unchanged rect { stroke-dasharray: 4 3; }
+.node.n-drafting rect { stroke: var(--warn); stroke-width: 2.5; }
+.node.n-building rect, .node.n-inspecting rect { stroke: var(--run); stroke-width: 2.5; stroke-dasharray: 5 3; }
+.node.n-done rect { stroke: var(--ok); stroke-width: 2.5; }
+.node.pick rect { fill: var(--chip); }
+.node.sel rect { stroke: var(--run); stroke-width: 3.5; }
+.node .rule { stroke: var(--line); }
+.arrow { stroke: var(--ink); stroke-width: 1.5; fill: none; }
+.head { fill: var(--ink); }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.fields label { display: block; font-size: 12px; color: var(--muted); }
+.fields input, .fields select { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.fields label.crit { display: block; padding: 2px 0; font-size: inherit; color: var(--ink); }
+.fields input[type=checkbox] { width: auto; }
+.wide2 { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<main>
+    <header>
+        <div>
+            <h1>mini<span>me</span> board</h1>
+            <div class="task" id="task">No task yet.</div>
+        </div>
+        <div class="row">
+            <span class="chip" id="status">idle</span>
+            <button id="pause">Pause</button>
+            <button id="resume" class="hidden">Resume</button>
+            <button id="stop">Stop</button>
+        </div>
+    </header>
+
+    <section class="panel hidden" id="start">
+        <h2 id="startTitle">What should Dr. Evil build?</h2>
+        <textarea id="startText" placeholder="Describe the change in your own words"></textarea>
+        <div class="row mt8"><button class="primary" id="startBtn">Start</button></div>
+    </section>
+
+    <section class="rail" id="rail"></section>
+
+    <section class="panel hidden" id="ask">
+        <h2>Your call</h2>
+        <div id="askBody"></div>
+        <div class="row mt8"><button class="primary" id="answerBtn">Answer</button></div>
+    </section>
+
+    <section class="panel">
+        <h2>Score</h2>
+        <div class="tiles" id="tiles"></div>
+        <div class="badges" id="badges"></div>
+    </section>
+
+    <section class="panel hidden" id="nodesPanel">
+        <h2>Blueprints</h2>
+        <div class="scroll" id="nodeMap"></div>
+        <div class="quote mt6">The root and the children its rows name. Click one to show and edit its boundaries and proof. Border: amber drafting, dashed blue building or inspection, green done.</div>
+    </section>
+
+    <section class="panel hidden" id="design">
+        <div class="row">
+            <h2>Boundaries</h2>
+            <span class="chip asking hidden" id="draftChip">unsaved edits</span>
+            <button class="primary hidden" id="saveDraft">Save to blueprint</button>
+            <button class="hidden" id="discardDraft">Discard</button>
+            <button class="hidden" id="addB">+ Boundary</button>
+        </div>
+        <div class="quote mt6" id="designHint"></div>
+        <div class="scroll mt8" id="diagram"></div>
+        <div class="quote mt6">Border: green new, amber changed, dashed unchanged.</div>
+        <div class="mt8" id="inspector"></div>
+        <ul class="bad" id="designErr"></ul>
+    </section>
+
+    <section class="panel">
+        <h2>Proof board</h2>
+        <div id="proof" class="quote">The blueprint appears here once Dr. Evil has drafted it.</div>
+    </section>
+
+    <section class="panel">
+        <h2>Tell Dr. Evil</h2>
+        <textarea id="feedbackText" placeholder="A correction or a small change. It applies after the running worker, together with anything else you send."></textarea>
+        <div class="row mt8"><button id="feedbackBtn">Send</button><span class="quote" id="pending"></span></div>
+    </section>
+
+    <section class="panel">
+        <h2>Workers</h2>
+        <ul class="log" id="log"></ul>
+        <div id="report"></div>
+    </section>
+</main>
+<script>
+const token = new URLSearchParams(location.search).get("t") ?? "";
+const PHASES = [
+    { id: "blueprint", who: "Dr. Evil drafts the scheme" },
+    { id: "replicate", who: "Mini-Me builds it" },
+    { id: "inspect", who: "Frau checks it. Laser on!" },
+    { id: "extract", who: "Number Two files the lessons" },
+];
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const call = (p, body) => fetch(p, { method: "POST", headers: { "content-type": "application/json", "x-minime-token": token }, body: JSON.stringify(body ?? {}) });
+let current = null;
+
+function rail(state) {
+    const jobs = state?.jobs ?? [];
+    $("rail").innerHTML = PHASES.map((p) => {
+        const mine = jobs.filter((j) => j.phase === p.id);
+        const running = mine.filter((j) => !j.ended);
+        const last = mine.at(-1);
+        const active = running.length > 0;
+        const done = !active && last;
+        const secs = last ? Math.round(((last.ended ?? Date.now()) - last.started) / 1000) : 0;
+        const acts = running.flatMap((j) => (j.activity ?? []).slice(-2).map((a) => `${j.group ? `[${j.group}] ` : ""}${a}`));
+        return `<div class="phase ${active ? "active" : done ? "done" : ""}">
+            <div class="name">${p.id}</div><div class="who">${p.who}</div>
+            <div class="row mt6">${mine.length ? `<span class="chip ${active ? "running" : last.status === "done" ? "done" : "asking"}">${active ? `running ${secs}s` : `${last.status} · ${secs}s`}</span>` : ""}${mine.length > 1 ? `<span class="chip">×${mine.length}</span>` : ""}</div>
+            <div class="act">${acts.map(esc).join("<br>")}</div></div>`;
+    }).join("");
+}
+
+function tiles(scores, view) {
+    const s = scores ?? {};
+    const t = [
+        ["Proven", `${s.proven ?? 0}/${s.criteria ?? 0}`, "criteria with a test, no finding"],
+        ["Net lines", s.netLines ?? 0, "added minus removed"],
+        ["Copied blocks", s.copiedBlocks ?? 0, "from the diff"],
+        ["Surprises", s.surprises ?? 0, "predictions that ran wrong"],
+        ["Defaults", s.defaults ?? 0, "your picks of a recommendation"],
+        ["Rounds", s.rounds ?? 0, "blueprint passes"],
+        ["Requests", s.requests ?? 0, "premium requests"],
+        ["Minutes", s.minutes ?? 0, "worker time"],
+    ];
+    $("tiles").innerHTML = t.map(([k, v, h]) => `<div class="tile"><small>${k}</small><b>${esc(v)}</b><small>${h}</small></div>`).join("");
+    const b = [];
+    const bytes = view?.board?.bytes;
+    if (bytes !== undefined) b.push(`<span class="chip ${bytes <= 2048 ? "done" : "asking"}">blueprint ${bytes} bytes${bytes <= 2048 ? ", compact" : ", over the 2048 goal"}</span>`);
+    if ((s.netLines ?? 0) < 0) b.push(`<span class="chip done">net negative</span>`);
+    if (s.criteria && s.proven === s.criteria && view?.state?.findings === 0) b.push(`<span class="chip done">every criterion proven</span>`);
+    if (view?.state?.status === "done" && view?.state?.size === "small") b.push(`<span class="chip done">small change, fast lane</span>`);
+    if (s.surprises) b.push(`<span class="chip asking">learned from ${s.surprises} surprise${s.surprises > 1 ? "s" : ""}</span>`);
+    const r = view?.state?.ratchet;
+    if (r) b.push(`<span class="chip ${r.interface_changes_outside_boundaries || r.single_caller_functions || r.copied_blocks || r.test_lines_removed ? "asking" : "done"}">ratchet: ${r.interface_changes_outside_boundaries ?? 0} interface, ${r.single_caller_functions ?? 0} single-caller, ${r.copied_blocks ?? 0} copied, ${r.test_lines_removed ?? 0} test lines removed</span>`);
+    $("badges").innerHTML = b.join("");
+}
+
+function proof(node) {
+    if (!node?.criteria) return;
+    const rows = node.criteria.map((c) => {
+        const mark = c.finding ? `<span class="bad">finding</span>` : c.tests.length ? `<span class="ok">tested</span>` : `<span class="warn">no test yet</span>`;
+        const evidence = (c.evidence ?? []).map((e) => `<div class="mono quote">${esc(e)}</div>`).join("");
+        return `<tr><td class="id">${c.id}</td><td>${esc(c.text)}<div class="quote">"${esc(c.quote)}"</div>${evidence}</td><td class="tests">${c.tests.map((f) => `<code>${esc(f)}</code>`).join("<br>")}</td><td class="state">${mark}</td></tr>`;
+    }).join("");
+    $("proof").innerHTML = `<table><tr><th>Criterion</th><th>Says and rests on</th><th>Tests</th><th>State</th></tr>${rows}</table>`;
+}
+
+function ask(state) {
+    const a = state?.status === "asking" ? state.ask : null;
+    $("ask").classList.toggle("hidden", !a);
+    if (!a || $("ask").dataset.for === JSON.stringify(a)) return;
+    $("ask").dataset.for = JSON.stringify(a);
+    const issue = a.issue ? `<p class="quote">${esc(a.issue)}</p>` : "";
+    if (!a.decisions.length) {
+        $("askBody").innerHTML = `${issue}<textarea id="askText" placeholder="How should Dr. Evil proceed?"></textarea>`;
+        return;
+    }
+    $("askBody").innerHTML = issue + a.decisions.map((d) => `<div class="decision" data-id="${esc(d.id)}">
+        <b>${esc(d.id)}</b> ${esc(d.question)}
+        ${d.reason ? `<div class="quote">${esc(d.reason)}${d.confidence ? ` (confidence ${esc(d.confidence)})` : ""}</div>` : ""}
+        ${(d.options ?? []).map((o) => `<label><input type="radio" name="${esc(d.id)}" value="${esc(o)}" ${o === d.recommend ? "checked" : ""}> ${esc(o)}${o === d.recommend ? ` <span class="chip">recommended</span>` : ""}</label>`).join("")}
+        <input type="text" placeholder="or in your own words" class="own"></div>`).join("");
+}
+
+function log(view) {
+    const jobs = view.state?.jobs ?? [];
+    $("log").innerHTML = jobs.map((j) => {
+        const secs = Math.round(((j.ended ?? Date.now()) - j.started) / 1000);
+        const ev = (j.result?.evidence_excerpts ?? []).slice(0, 2).map((e) => `<div class="mono quote">${esc(typeof e === "string" ? e : JSON.stringify(e))}</div>`).join("");
+        return `<li><b>${j.phase}</b>${j.group ? ` ${esc(j.group)}` : ""} <span class="chip ${j.ended ? (j.status === "done" ? "done" : "asking") : "running"}">${j.ended ? j.status : "running"}</span> ${secs}s · ${j.usage?.premiumRequests ?? "…"} requests${j.result?.blocking_issue ? `<div class="warn">${esc(j.result.blocking_issue)}</div>` : ""}${ev}</li>`;
+    }).join("");
+    const s = view.state;
+    $("report").innerHTML = s?.status === "done" ? `<p><b>One Million Dollars!</b> Blueprint <code>${esc(s.blueprint)}</code>, changed ${s.changed.map((f) => `<code>${esc(f)}</code>`).join(", ") || "nothing"}.
+        ${s.report?.skippedExtract ? "Small change: extract waits for the next full round." : `Extract captured ${(s.report?.captured ?? []).length} lessons.`}</p>` : "";
+}
+
+/* ── boundaries: the blueprint's Boundaries rows as boxes, edited as a draft ── */
+let draft = null; // { boundaries } once the first edit starts; the poll never redraws over it
+let sel = null; // the selected boundary id
+let lastSig = "";
+let nodeSig = "";
+let selNode = null; // the blueprint file shown; the root until a node is clicked
+const EDITABLE = ["asking", "done", "stopped", "failed"]; // no worker can be writing the blueprint
+const nodeList = () => current?.state?.nodes ?? [];
+const nodeView = () => { const all = current?.board?.nodes ?? []; return all.find((n) => n.file === selNode) ?? all.find((n) => !n.parent) ?? null; };
+const base = () => ({ boundaries: nodeView()?.boundaries ?? [] });
+const data = () => draft ?? base();
+const own = () => { $("designErr").innerHTML = ""; return (draft ??= structuredClone(base())); };
+const editable = () => EDITABLE.includes(current?.state?.status);
+const cut = (t, n) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+const nextId = (list, p) => p + (Math.max(0, ...list.map((x) => Number(x.id.slice(1)) || 0)) + 1);
+const proofOf = (cid) => { const c = nodeView()?.criteria?.find((x) => x.id === cid); return !c ? "none" : c.finding ? "bad" : c.tests.length ? "ok" : "none"; };
+
+// Owner cells read `path` symbol.
+function who(b) {
+    const m = String(b.owner).match(/^`([^`]*)`\s*(.*)$/);
+    return m ? { path: m[1], symbol: m[2] || m[1].split("/").pop() } : { path: "", symbol: String(b.owner) };
+}
+function head(tx, ty, ux, uy) {
+    const n = [-uy, ux];
+    return `<polygon class="head" points="${tx},${ty} ${tx - ux * 9 + n[0] * 4},${ty - uy * 9 + n[1] * 4} ${tx - ux * 9 - n[0] * 4},${ty - uy * 9 - n[1] * 4}"/>`;
+}
+const classOf = (a) => `node b-${a.change} ${sel === a.id ? "sel" : ""}`;
+
+// The rows as boxes, three to a line.
+function map(d) {
+    const A = d.boundaries, w = 220, h = 88, gx = 20, gy = 20, cols = Math.min(3, Math.max(A.length, 1));
+    const W = 40 + cols * (w + gx) - gx, H = 20 + Math.ceil(Math.max(A.length, 1) / cols) * (h + gy) - gy;
+    const boxes = A.map((a, i) => {
+        const bx = 20 + (i % cols) * (w + gx), by = 10 + Math.floor(i / cols) * (h + gy), t = who(a);
+        return `<g class="${classOf(a)}" data-b="${esc(a.id)}"><rect x="${bx}" y="${by}" width="${w}" height="${h}" rx="6"/>
+            <text class="dim" x="${bx + w / 2}" y="${by + 16}" text-anchor="middle">«${esc(a.change)}»</text>
+            <text class="bold" x="${bx + w / 2}" y="${by + 34}" text-anchor="middle">${esc(a.id)} ${esc(cut(t.symbol, 22))}</text>
+            <text class="dim" x="${bx + w / 2}" y="${by + 49}" text-anchor="middle">${esc(cut(t.path, 30))}</text>
+            <line class="rule" x1="${bx}" y1="${by + 58}" x2="${bx + w}" y2="${by + 58}"/>
+            <text class="dim" x="${bx + w / 2}" y="${by + 76}" text-anchor="middle">${esc(cut(a.contract, 32))}</text><title>${esc(a.owner)} | ${esc(a.contract)}</title></g>`;
+    }).join("");
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="The boundaries of the blueprint">${boxes}</svg>`;
+}
+
+function inspector() {
+    const d = data(), item = sel && d.boundaries.find((x) => x.id === sel);
+    if (!item) { $("inspector").innerHTML = `<div class="quote">Select a box to ${editable() ? "edit" : "read"} it.</div>`; return; }
+    const off = editable() ? "" : "disabled";
+    const field = (k, label, value) => `<label>${label}<input data-k="${k}" value="${esc(value)}" ${off}></label>`;
+    const pick = (k, label, value, options) => `<label>${label}<select data-k="${k}" ${off}>${options.map((o) => `<option ${o === value ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></label>`;
+    const fields = field("owner", "Owner (`path` symbol)", item.owner) + field("contract", "Contract (input → output; error behavior)", item.contract) + pick("change", "Change", item.change, ["new", "changed", "unchanged"]);
+    const crit = (nodeView()?.criteria ?? []).map((c) => `<label class="crit"><input type="checkbox" data-c="${esc(c.id)}" ${item.criteria.includes(c.id) ? "checked" : ""} ${off}> <b>${esc(c.id)}</b> ${esc(cut(c.text, 90))} <span class="${{ ok: "ok", bad: "bad", none: "warn" }[proofOf(c.id)]}">${{ ok: "tested", bad: "finding", none: "no test yet" }[proofOf(c.id)]}</span></label>`).join("");
+    const acts = editable() ? `<div class="row mt8"><button data-act="del">Delete ${esc(item.id)}</button></div>` : "";
+    $("inspector").innerHTML = `<h2>${esc(item.id)}</h2><div class="fields">${fields}<div class="wide2"><label>Criteria it serves</label>${crit}</div></div>${acts}`;
+}
+
+function bar() {
+    const ed = editable();
+    for (const id of ["draftChip", "saveDraft", "discardDraft"]) $(id).classList.toggle("hidden", !draft);
+    $("addB").classList.toggle("hidden", !ed);
+    const which = nodeList().length > 1 && nodeView() ? `${nodeLabel(nodeView())}: ` : "";
+    $("designHint").textContent = which + (ed ? "Edits rewrite the Boundaries table, and the old blueprint goes to raw. Ask Dr. Evil for a new round to rebuild." : current?.state ? "Read-only while a worker runs." : "");
+}
+function draw() { $("diagram").innerHTML = map(data()); bar(); }
+function drawAll() { draw(); inspector(); }
+
+function design() {
+    const shown = !!draft || (nodeView()?.boundaries?.length ?? 0) > 0;
+    $("design").classList.toggle("hidden", !shown);
+    if (draft) return bar();
+    const sig = JSON.stringify([base(), editable(), nodeView()?.file, nodeView()?.criteria?.map((c) => [c.id, c.finding, c.tests.length])]);
+    if (sig === lastSig) return;
+    lastSig = sig;
+    const d = data();
+    if (sel && !d.boundaries.some((x) => x.id === sel)) sel = null;
+    drawAll();
+}
+
+// The root and its children as boxes, parent → child, one column per depth.
+const nodeLabel = (n) => {
+    const name = (f) => f.split(/[\\/]/).pop().replace(/\.md$/, "");
+    const parent = nodeList().find((p) => p.file === n.parent);
+    return parent && name(n.file).startsWith(`${name(parent.file)}.`) ? name(n.file).slice(name(parent.file).length + 1) : name(n.file);
+};
+function nodeMap() {
+    const list = nodeList();
+    $("nodesPanel").classList.toggle("hidden", list.length < 2);
+    const picked = nodeView()?.file;
+    const nsig = JSON.stringify([list.map((n) => [n.file, n.parent, n.status]), picked]);
+    if (list.length < 2 || nsig === nodeSig) return;
+    nodeSig = nsig;
+    const w = 190, h = 54, gx = 70, gy = 14;
+    const byFile = Object.fromEntries(list.map((n) => [n.file, n]));
+    const depth = (n) => (byFile[n.parent] ? depth(byFile[n.parent]) + 1 : 0);
+    const rows = {};
+    const at = Object.fromEntries(list.map((n) => { const k = depth(n), r = (rows[k] = (rows[k] ?? -1) + 1); return [n.file, { x: 20 + k * (w + gx), y: 10 + r * (h + gy) }]; }));
+    const W = 40 + (Math.max(...Object.keys(rows).map(Number)) + 1) * (w + gx) - gx, H = 20 + (Math.max(...Object.values(rows)) + 1) * (h + gy) - gy;
+    const edges = list.filter((n) => byFile[n.parent]).map((n) => {
+        const p = at[n.parent], q = at[n.file], y1 = p.y + h / 2, y2 = q.y + h / 2, x1 = p.x + w;
+        return `<path class="arrow" d="M${x1} ${y1} C${x1 + gx / 2} ${y1} ${q.x - gx / 2} ${y2} ${q.x} ${y2}"/>${head(q.x, y2, 1, 0)}`;
+    }).join("");
+    const boxes = list.map((n) => {
+        const { x, y } = at[n.file];
+        return `<g class="node n-${esc(n.status)} ${n.file === picked ? "pick" : ""}" data-n="${esc(n.file)}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/>
+            <text class="bold" x="${x + w / 2}" y="${y + 24}" text-anchor="middle">${esc(cut(nodeLabel(n), 24))}</text>
+            <text class="dim" x="${x + w / 2}" y="${y + 41}" text-anchor="middle">${esc(n.status)}${n.parent ? "" : " · root"}</text><title>${esc(n.file)}</title></g>`;
+    }).join("");
+    $("nodeMap").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="The root blueprint and its children">${edges}${boxes}</svg>`;
+}
+$("nodeMap").onclick = (e) => {
+    const t = e.target.closest("[data-n]");
+    if (!t || t.dataset.n === nodeView()?.file) return;
+    if (draft) { $("designErr").innerHTML = "<li>Save or discard the unsaved edits first.</li>"; return; }
+    selNode = t.dataset.n;
+    sel = null;
+    lastSig = "";
+    nodeSig = "";
+    $("designErr").innerHTML = "";
+    nodeMap();
+    design();
+    proof(nodeView());
+};
+
+const lookup = () => sel && own().boundaries.find((x) => x.id === sel);
+$("diagram").onclick = (e) => {
+    const t = e.target.closest("[data-b]");
+    if (!t) return;
+    sel = t.dataset.b;
+    drawAll();
+};
+$("inspector").oninput = $("inspector").onchange = (e) => {
+    const t = e.target, item = lookup();
+    if (!item || !editable()) return;
+    if (t.dataset.k) item[t.dataset.k] = t.value;
+    else if (t.dataset.c) item.criteria = (nodeView()?.criteria ?? []).map((c) => c.id).filter((id) => (id === t.dataset.c ? t.checked : item.criteria.includes(id)));
+    draw();
+};
+$("inspector").onclick = (e) => {
+    if (e.target.dataset.act !== "del" || !editable()) return;
+    const d = own();
+    d.boundaries = d.boundaries.filter((b) => b.id !== sel);
+    sel = null;
+    drawAll();
+};
+$("addB").onclick = () => {
+    const d = own(), id = nextId(d.boundaries, "B");
+    d.boundaries.push({ id, owner: "`path/to/file` symbol", contract: "input → output; error behavior", change: "new", criteria: [] });
+    sel = id;
+    drawAll();
+    $("inspector").querySelector("input").select();
+};
+$("discardDraft").onclick = () => { draft = null; lastSig = ""; $("designErr").innerHTML = ""; design(); };
+$("saveDraft").onclick = async () => {
+    const res = await call("/blueprint", { ...draft, node: nodeView()?.file });
+    const out = await res.json();
+    $("designErr").innerHTML = (out.errors ?? []).map((m) => `<li>${esc(m)}</li>`).join("");
+    if (!res.ok) return;
+    draft = null;
+    lastSig = "";
+    await refresh();
+};
+
+async function refresh() {
+    try {
+        const res = await fetch("/state", { headers: { "x-minime-token": token } });
+        const view = await res.json();
+        current = view;
+        const s = view.state;
+        // A finished run takes follow-ups below; a new task starts a new run here.
+        $("start").classList.toggle("hidden", !!s && !["done", "stopped", "failed"].includes(s.status));
+        $("startTitle").textContent = s ? "Start a new task" : "What should Dr. Evil build?";
+        $("task").textContent = s ? s.task : "No task yet.";
+        $("status").textContent = s ? (s.paused ? "paused" : s.status) : "idle";
+        $("status").className = `chip ${s?.status ?? ""}`;
+        $("pause").classList.toggle("hidden", !!s?.paused);
+        $("resume").classList.toggle("hidden", !s?.paused);
+        $("pending").textContent = s?.pending?.length ? `${s.pending.length} message${s.pending.length > 1 ? "s" : ""} waiting for the next blueprint pass` : "";
+        rail(s);
+        tiles(view.scores, view);
+        proof(nodeView());
+        nodeMap();
+        design();
+        ask(s);
+        log(view);
+    } catch { /* the conductor restarts or stopped */ }
+}
+
+$("startBtn").onclick = () => call("/start", { text: $("startText").value }).then(refresh);
+$("feedbackBtn").onclick = () => { const text = $("feedbackText").value.trim(); if (text) call("/feedback", { text }).then(() => { $("feedbackText").value = ""; refresh(); }); };
+$("pause").onclick = () => call("/pause").then(refresh);
+$("resume").onclick = () => call("/resume").then(refresh);
+$("stop").onclick = () => confirm("Stop the running workers?") && call("/stop").then(refresh);
+$("answerBtn").onclick = () => {
+    const free = document.getElementById("askText");
+    if (free) return call("/answer", { text: free.value }).then(refresh);
+    const answers = {};
+    for (const el of document.querySelectorAll(".decision")) {
+        const id = el.dataset.id;
+        answers[id] = { choice: el.querySelector("input[type=radio]:checked")?.value ?? "", text: el.querySelector(".own").value };
+    }
+    call("/answer", { answers }).then(refresh);
+};
+refresh();
+setInterval(refresh, 1500);
+</script>
+</body>
+</html>
