@@ -8,12 +8,18 @@ The owner runs the flow. Phase workers do the work in fresh contexts and return 
 2. For a new task, dispatch **blueprint** with the user's message verbatim.
 3. If blueprint returns `blocked` with open decisions, ask the user (see Ask), then dispatch **blueprint** again with the answers in `User message:` as `Q: <question> A: <answer>` pairs, without form field names or option tags. Mark an answer that keeps the recommendation unchanged as `A (default):`, so blueprint cites it as `default:`. The blueprint already holds the earlier message, so don't send it again. Repeat until it returns `done`.
 4. A blueprint that returns `done` is built at once; its text gets no review. Dispatch **replicate** with the criterion IDs blueprint added or changed. When blueprint returns groups, dispatch them as described in Groups; when it returns children, build as described in Splits. If replicate returns `blocked`, dispatch **blueprint** once with its blocking issue as input, then replicate again; a second block ends the run.
-5. Dispatch **inspect** to `minime:frau` with all changed files. After a feedback round, add the criterion IDs that round touched. In a split tree each inspect covers every criterion of its blueprint.
+5. Dispatch **inspect** to `minime:frau` with all changed files and replicate's preflight line (the project's tests on untouched HEAD) as `Baseline:`. After a feedback round, add the criterion IDs that round touched. In a split tree each inspect covers every criterion of its blueprint.
 
    Existing tests are the contract. When the change removes or rewrites lines of existing tests and inspect is otherwise clean, the user decides once per blueprint whether to keep them (recommended) or confirm the removal (see Ask). The conductor counts the lines with the blueprint tool's `diff` (`testLinesRemoved`); a chat dispatcher, which has no diff tool, takes `ratchet.test_lines_removed` from inspect's result. The answer goes to **blueprint** as the user's answer, then to **replicate** as a fix round (restoring the tests on `keep`), and **inspect** runs again.
 6. If inspect reports proposed criteria, dispatch **blueprint** with the proposals and their evidence first. Then dispatch **replicate** with the findings file and **inspect** again. After two rounds without fewer findings, show the user the evidence and ask how to proceed; if the next round still shows no fewer findings, stop and report the findings file.
 7. When inspect reports no findings, dispatch **extract** once. Skip it when blueprint returned `size: small`: a later extract reads the whole blueprint, including these inputs.
-8. Report one line each: the absolute blueprint path (and its children's), the test counts, the changed files, what extract captured.
+8. Report one line each: the verdict, the absolute blueprint path (and its children's), the test counts, the changed files, what extract captured.
+
+The verdict is computed, never reported: proven when every criterion names a test file and has no finding, inspect ran on the tree as it is now and found nothing, and the ratchet is clean; otherwise the gaps, one per line. A worker's `status` only says what happens next.
+
+## Fuel
+
+A run stops with what it has, and the board keeps the proof so far, when it passes a cap: premium requests (`--requests`), worker minutes (`--minutes`), or the same blocking issue returned twice (`--repeats`, default 2; an ask answered with the same issue returning counts). A file named `PAUSED` in `VIRTUCON_HQ` holds every run before its next dispatch until the file is removed; the guard hook reads the same file. A chat dispatcher stops at the same repeat.
 
 ## Feedback
 

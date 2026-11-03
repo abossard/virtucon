@@ -57,6 +57,14 @@ Round 4 harness:
 
 Rejected: the request outranking repository instructions and the existing-tests rule; dependency-ordered groups and children; mining replacement tasks before round 4; a benchmark kit committed to this repository (it stays local).
 
+## Additions (2026-11-03)
+
+From the harness and self-improvement survey in `research/harness-trends-2026-11-03/README.md`, applied to the method:
+
+- Cost is a score. The round table carries premium requests and worker minutes per arm beside the resolve count; at an equal majority count the cheaper arm wins. Nine tasks cannot separate accuracy by a few points (the interval at 80 tasks is about ±9); they can separate cost.
+- Every variant predicts. Before its round, a variant's spec names the pool tasks it expects to flip and why; the table marks each prediction held or missed. A variant whose misses outnumber its hits is not applied, whatever its total.
+- The conductor now computes a verdict from the proof board (`verdict` in the run file: proven, or the gaps) and stops on a budget (`--requests`, `--minutes`, `--repeats`). The kit grades by hidden tests as before; the verdict is a second column to compare against them, since the flow's own status predicted nothing in round 3.
+
 ## How to continue
 
 1. Kit, about 30 lines, none done yet: `kit/round.sh` takes the run count (r1 to r3); `kit/round3_table.py` counts a majority and takes an uncounted list; `kit/watch.py` stops a run on an ask without a recommendation instead of answering it, and grades after the conductor has exited; `kit/pools/round4.main` (9 tasks) and `round4.authority` (3). The venv clone and the HQ-hosted instructions in `run.sh` are tested in isolation only: run one task first.

@@ -1,24 +1,24 @@
 #!/usr/bin/env node
 // The minime conductor: runs blueprint → replicate → inspect → extract as fresh Copilot CLI workers
 // and serves a board on 127.0.0.1 to watch and steer the run. No dependencies.
-//   node conductor/minime.mjs [--repo <dir>] [--port <n>] [--model <id>] [--open] ["task"]
+//   node conductor/minime.mjs [--repo <dir>] [--port <n>] [--model <id>] [--requests <n>] [--minutes <n>] [--repeats <n>] [--open] ["task"]
 //   node conductor/minime.mjs --blueprint <file> [--open]   the board for an existing blueprint, to view and edit its boundaries
+// A file named PAUSED in VIRTUCON_HQ holds every run until it is removed (the guard hook reads the same file).
 
-import { spawn } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { spawn, spawnSync } from "node:child_process";
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { DENIED } from "../hooks/guard-rules.mjs";
 import { applyEdit, check, checkFile, coverage, diff, parse } from "../skills/blueprint/scripts/blueprint.mjs";
 import * as flow from "./flow.mjs";
 
 const PLUGIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-// Unattended workers never change history or anything outside the machine: no git history commands, no GitHub writes.
-const DENIED = ["git push", "git commit", "git add", "git stash", "git reset", "git checkout", "git restore", "git rebase",
-    "gh repo fork", "gh repo create", "gh repo delete", "gh pr create", "gh pr merge", "gh release create", "gh issue create", "gh api -X", "gh api --method"];
+// Unattended workers never change history or anything outside the machine: the guard hook's list, denied to the worker's shell too.
 
 /* ── workers ── */
 
@@ -108,16 +108,34 @@ export function removedTestLines(repo, result) {
     }
 }
 
+/* ── the working tree ── */
+
+// What the repository looks like right now: the diff against HEAD plus every untracked file. Evidence a worker
+// returned belongs to the tree it saw; when the hash moves, that evidence is stale.
+export function treeHash(repo) {
+    const git = (...args) => {
+        const run = spawnSync("git", ["-C", repo, ...args], { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+        if (run.status !== 0 || run.error) throw new Error(`git ${args[0]} failed in ${repo}: ${String(run.stderr || run.error).trim()}`);
+        return run.stdout;
+    };
+    const hash = createHash("sha1").update(git("rev-parse", "HEAD")).update(git("diff", "HEAD", "--no-color"));
+    for (const file of git("ls-files", "--others", "--exclude-standard").split("\n").filter(Boolean)) hash.update(`\n${file}\n`).update(readFileSync(path.join(repo, file)));
+    return hash.digest("hex").slice(0, 12);
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 /* ── the run ── */
 
-export function createConductor({ repo, hq, model, store, state: seeded = null }) {
+export function createConductor({ repo, hq, model, budget, store, state: seeded = null }) {
     const template = flow.templateFrom(readFileSync(path.join(PLUGIN, "assets", "ORCHESTRATION.md"), "utf8"));
     const children = new Set();
+    const pausedFile = path.join(hq, "PAUSED");
     // A blueprint opened without a run is a tree of finished nodes.
     let state = seeded?.blueprint && !seeded.nodes?.length ? { ...seeded, nodes: flow.grow([], seeded.blueprint, readFacts(seeded.blueprint)).map((n) => ({ ...n, status: "done" })) } : seeded;
     let board = null;
     let driving = false;
-    let resume = null;
+    const tree = () => { try { return treeHash(state.repo); } catch { return null; } };
 
     const save = () => state && store(state);
     const set = (next) => {
@@ -175,7 +193,7 @@ export function createConductor({ repo, hq, model, store, state: seeded = null }
             result = flow.parseResult(run.text);
         }
         if (!run.text) result = { ...result, status: "failed", blocking_issue: `copilot exited ${run.code} without a result: ${run.stderr.trim().slice(-300)}` };
-        Object.assign(record, { ended: Date.now(), status: result.status, usage: run.usage, sessionId: run.sessionId, result });
+        Object.assign(record, { ended: Date.now(), status: result.status, usage: run.usage, sessionId: run.sessionId, result, tree: tree() });
         set({ ...state, jobs: state.jobs.map((j) => (j.id === record.id ? record : j)) });
         // The flow matches a result to its node.
         return job.node ? { ...result, node: job.node } : result;
@@ -186,7 +204,8 @@ export function createConductor({ repo, hq, model, store, state: seeded = null }
         driving = true;
         try {
             while (state.status === "running" && state.stage) {
-                if (state.paused) await new Promise((r) => { resume = r; });
+                // The Pause button and the PAUSED file hold the run before the next dispatch; Stop ends the wait.
+                while (state.status === "running" && (state.paused || existsSync(pausedFile))) await sleep(500);
                 if (state.status !== "running") break;
                 const phase = state.stage.phase;
                 const results = [];
@@ -205,7 +224,11 @@ export function createConductor({ repo, hq, model, store, state: seeded = null }
                 const checkOpen = phase === "blueprint" && file && existsSync(file) ? check(readFileSync(file, "utf8")).open : [];
                 const tests = phase === "inspect" ? removedTestLines(state.repo, results[0]) : {};
                 set(flow.advance(state, phase, results, { checkOpen, facts: root ? readFacts(root) : {}, ...tests }));
+                const fuel = flow.overBudget(state);
+                if (fuel) set(flow.stopped(state, fuel));
                 refreshBoard();
+                // A run that ends, however it ends, records what the proof board says; the run file is the record.
+                if (!state.stage) set({ ...state, verdict: flow.verdict(state, board, tree()) });
                 save();
             }
         } finally {
@@ -216,7 +239,7 @@ export function createConductor({ repo, hq, model, store, state: seeded = null }
     if (state) refreshBoard();
     return {
         start(task) {
-            set(flow.newRun({ task, repo, hq, plugin: PLUGIN, model, now: Date.now() }));
+            set(flow.newRun({ task, repo, hq, plugin: PLUGIN, model, budget, now: Date.now() }));
             drive();
         },
         feedback(text) {
@@ -233,15 +256,10 @@ export function createConductor({ repo, hq, model, store, state: seeded = null }
             drive();
         },
         pause() { set({ ...state, paused: true }); },
-        resume() {
-            set({ ...state, paused: false });
-            resume?.();
-            resume = null;
-        },
+        resume() { set({ ...state, paused: false }); },
         stop() {
             for (const child of children) child.kill("SIGTERM");
-            if (state) set({ ...state, status: "stopped", stage: null, paused: false });
-            resume?.();
+            if (state) set(flow.stopped(state, "stopped from the board"));
         },
         // Boundaries of one node (the root without `node`), and only while no worker can be writing the blueprint.
         edit(rows) {
@@ -260,7 +278,8 @@ export function createConductor({ repo, hq, model, store, state: seeded = null }
         },
         view() {
             if (!state) return { state: null };
-            return { state, board, scores: flow.scores(state, board) };
+            const now = tree();
+            return { state, board, scores: flow.scores(state, board), tree: now, verdict: flow.verdict(state, board, now), pausedByFile: existsSync(pausedFile) };
         },
     };
 }
@@ -319,11 +338,11 @@ function serve(conductor, { token }) {
 // Copilot canvas both start it here, so they share the flow, the page and the run files.
 const defaultHq = () => path.resolve(process.env.VIRTUCON_HQ ?? path.join(os.homedir(), ".minime"));
 
-export async function startBoard({ repo, hq = defaultHq(), model, port = 0, task, state }) {
+export async function startBoard({ repo, hq = defaultHq(), model, budget, port = 0, task, state }) {
     const runs = path.join(hq, "conductor");
     mkdirSync(runs, { recursive: true });
     const runFile = path.join(runs, `${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
-    const conductor = createConductor({ repo, hq, model, state, store: (run) => writeFileSync(runFile, JSON.stringify(run, null, 2)) });
+    const conductor = createConductor({ repo, hq, model, budget, state, store: (run) => writeFileSync(runFile, JSON.stringify(run, null, 2)) });
     const token = randomBytes(12).toString("hex");
     const server = serve(conductor, { token });
     await new Promise((resolve, reject) => server.once("error", reject).listen(port, "127.0.0.1", resolve));
@@ -343,14 +362,16 @@ async function main(argv) {
         const i = argv.indexOf(`--${name}`);
         return i >= 0 ? argv[i + 1] : undefined;
     };
-    const valued = new Set(["--repo", "--port", "--model", "--blueprint"]);
+    const valued = new Set(["--repo", "--port", "--model", "--blueprint", "--requests", "--minutes", "--repeats"]);
     const repo = path.resolve(opt("repo") ?? process.cwd());
     const hq = defaultHq();
     const blueprint = opt("blueprint");
+    const cap = (name) => (opt(name) === undefined ? undefined : Number(opt(name)));
     const board = await startBoard({
         repo,
         hq,
         model: opt("model"),
+        budget: { requests: cap("requests"), minutes: cap("minutes"), repeats: cap("repeats") },
         // No run yet: the blueprint is open for reading and editing, and a task typed on the page starts a run.
         state: blueprint && {
             ...flow.newRun({ task: `Blueprint ${path.basename(blueprint, ".md")}`, repo, hq, plugin: PLUGIN, model: opt("model"), now: Date.now() }),

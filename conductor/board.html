@@ -186,6 +186,9 @@ function rail(state) {
     }).join("");
 }
 
+// The fuel gauge: what is used of a cap, or the plain count without one.
+const gauge = (used, cap) => (cap == null ? used ?? 0 : `${used ?? 0}/${cap}`);
+
 function tiles(scores, view) {
     const s = scores ?? {};
     const t = [
@@ -195,15 +198,16 @@ function tiles(scores, view) {
         ["Surprises", s.surprises ?? 0, "predictions that ran wrong"],
         ["Defaults", s.defaults ?? 0, "your picks of a recommendation"],
         ["Rounds", s.rounds ?? 0, "blueprint passes"],
-        ["Requests", s.requests ?? 0, "premium requests"],
-        ["Minutes", s.minutes ?? 0, "worker time"],
+        ["Requests", gauge(s.requests, view?.state?.budget?.requests), "premium requests"],
+        ["Minutes", gauge(s.minutes, view?.state?.budget?.minutes), "worker time"],
     ];
     $("tiles").innerHTML = t.map(([k, v, h]) => `<div class="tile"><small>${k}</small><b>${esc(v)}</b><small>${h}</small></div>`).join("");
     const b = [];
     const bytes = view?.board?.bytes;
     if (bytes !== undefined) b.push(`<span class="chip ${bytes <= 2048 ? "done" : "asking"}">blueprint ${bytes} bytes${bytes <= 2048 ? ", compact" : ", over the 2048 goal"}</span>`);
     if ((s.netLines ?? 0) < 0) b.push(`<span class="chip done">net negative</span>`);
-    if (s.criteria && s.proven === s.criteria && view?.state?.findings === 0) b.push(`<span class="chip done">every criterion proven</span>`);
+    const v = view?.verdict;
+    if (v && view?.board) b.push(v.proven ? `<span class="chip done">proven</span>` : `<span class="chip asking">unproven: ${esc(v.gaps[0])}${v.gaps.length > 1 ? ` +${v.gaps.length - 1}` : ""}</span>`);
     if (view?.state?.status === "done" && view?.state?.size === "small") b.push(`<span class="chip done">small change, fast lane</span>`);
     if (s.surprises) b.push(`<span class="chip asking">learned from ${s.surprises} surprise${s.surprises > 1 ? "s" : ""}</span>`);
     const r = view?.state?.ratchet;
@@ -243,11 +247,16 @@ function log(view) {
     $("log").innerHTML = jobs.map((j) => {
         const secs = Math.round(((j.ended ?? Date.now()) - j.started) / 1000);
         const ev = (j.result?.evidence_excerpts ?? []).slice(0, 2).map((e) => `<div class="mono quote">${esc(typeof e === "string" ? e : JSON.stringify(e))}</div>`).join("");
-        return `<li><b>${j.phase}</b>${j.group ? ` ${esc(j.group)}` : ""} <span class="chip ${j.ended ? (j.status === "done" ? "done" : "asking") : "running"}">${j.ended ? j.status : "running"}</span> ${secs}s · ${j.usage?.premiumRequests ?? "…"} requests${j.result?.blocking_issue ? `<div class="warn">${esc(j.result.blocking_issue)}</div>` : ""}${ev}</li>`;
+        // Evidence belongs to the tree the worker saw; once the tree moves, the reply is stale.
+        const stale = j.tree && view.tree && j.tree !== view.tree ? ` <span class="chip asking">stale</span>` : "";
+        return `<li><b>${j.phase}</b>${j.group ? ` ${esc(j.group)}` : ""} <span class="chip ${j.ended ? (j.status === "done" ? "done" : "asking") : "running"}">${j.ended ? j.status : "running"}</span>${stale} ${secs}s · ${j.usage?.premiumRequests ?? "…"} requests${j.result?.blocking_issue ? `<div class="warn">${esc(j.result.blocking_issue)}</div>` : ""}${ev}</li>`;
     }).join("");
     const s = view.state;
-    $("report").innerHTML = s?.status === "done" ? `<p><b>One Million Dollars!</b> Blueprint <code>${esc(s.blueprint)}</code>, changed ${s.changed.map((f) => `<code>${esc(f)}</code>`).join(", ") || "nothing"}.
-        ${s.report?.skippedExtract ? "Small change: extract waits for the next full round." : `Extract captured ${(s.report?.captured ?? []).length} lessons.`}</p>` : "";
+    const v = view.verdict;
+    // The headline is the verdict, computed from the proof board, never the flow's own status.
+    const headline = !v ? "" : v.proven ? `<b>One Million Dollars!</b> Proven.` : `<b>Unproven.</b> ${esc(v.gaps.join("; "))}.`;
+    $("report").innerHTML = s && !s.stage && ["done", "stopped", "failed"].includes(s.status) && s.blueprint ? `<p>${headline} Blueprint <code>${esc(s.blueprint)}</code>, changed ${s.changed.map((f) => `<code>${esc(f)}</code>`).join(", ") || "nothing"}.
+        ${s.stopReason ? `Stopped: ${esc(s.stopReason)}.` : s.report?.skippedExtract ? "Small change: extract waits for the next full round." : s.status === "done" ? `Extract captured ${(s.report?.captured ?? []).length} lessons.` : ""}</p>` : "";
 }
 
 /* ── boundaries: the blueprint's Boundaries rows as boxes, edited as a draft ── */
@@ -422,7 +431,7 @@ async function refresh() {
         $("start").classList.toggle("hidden", !!s && !["done", "stopped", "failed"].includes(s.status));
         $("startTitle").textContent = s ? "Start a new task" : "What should Dr. Evil build?";
         $("task").textContent = s ? s.task : "No task yet.";
-        $("status").textContent = s ? (s.paused ? "paused" : s.status) : "idle";
+        $("status").textContent = s ? (s.paused ? "paused" : view.pausedByFile && s.status === "running" ? "paused by the PAUSED file" : s.status) : "idle";
         $("status").className = `chip ${s?.status ?? ""}`;
         $("pause").classList.toggle("hidden", !!s?.paused);
         $("resume").classList.toggle("hidden", !s?.paused);

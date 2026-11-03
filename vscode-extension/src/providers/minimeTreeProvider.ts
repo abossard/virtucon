@@ -163,7 +163,7 @@ export class MinimeTreeProvider implements vscode.TreeDataProvider<TreeNodeData>
     if (children.length === 0) {
       children.push({
         type: 'empty',
-        label: 'No minime data found. Run /minime:lab',
+        label: 'No minime data found. Start a session with the minime plugin',
       });
     }
 

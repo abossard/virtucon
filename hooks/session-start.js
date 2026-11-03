@@ -12,7 +12,6 @@ import { execSync } from 'node:child_process';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = process.env.PLUGIN_ROOT
   || process.env.CLAUDE_PLUGIN_ROOT
-  || process.env.CLAUDE_SKILL_DIR && path.resolve(process.env.CLAUDE_SKILL_DIR, '..', '..')
   || path.resolve(__dirname, '..');
 const VIRTUCON_HQ = process.env.VIRTUCON_HQ || path.join(process.env.HOME || '~', '.minime');
 
@@ -79,48 +78,6 @@ function buildLog(label) {
   return `# Wiki log: ${label}`;
 }
 
-function seedLegacyWiki(repoDir, repoRawDir) {
-  const legacyWiki = path.join(repoDir, 'wiki.md');
-  const rawLegacy = path.join(repoRawDir, 'legacy-wiki.md');
-  if (fs.existsSync(legacyWiki) && !fs.existsSync(rawLegacy)) {
-    fs.copyFileSync(legacyWiki, rawLegacy);
-  }
-}
-
-function directoryHasContent(dirPath) {
-  try {
-    return fs.readdirSync(dirPath).length > 0;
-  } catch {
-    return false;
-  }
-}
-
-function copyDirectoryContents(srcDir, dstDir) {
-  for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
-    const srcPath = path.join(srcDir, entry.name);
-    const dstPath = path.join(dstDir, entry.name);
-    if (entry.isDirectory()) {
-      fs.mkdirSync(dstPath, { recursive: true });
-      copyDirectoryContents(srcPath, dstPath);
-      continue;
-    }
-    if (!fs.existsSync(dstPath)) {
-      fs.copyFileSync(srcPath, dstPath);
-    }
-  }
-}
-
-function migrateLegacyWiki(repoDir, repoWikiDir) {
-  const legacyWikiDir = path.join(repoDir, 'wiki');
-  if (!fs.existsSync(legacyWikiDir) || !fs.statSync(legacyWikiDir).isDirectory()) {
-    return;
-  }
-  if (directoryHasContent(repoWikiDir)) {
-    return;
-  }
-  copyDirectoryContents(legacyWikiDir, repoWikiDir);
-}
-
 function ensureGlobalKnowledgeRoot() {
   fs.mkdirSync(path.join(VIRTUCON_HQ, 'raw'), { recursive: true });
   fs.mkdirSync(path.join(VIRTUCON_HQ, 'wiki', 'orgs'), { recursive: true });
@@ -146,9 +103,6 @@ function ensureBootstrap(orgRepo) {
   fs.mkdirSync(path.join(repoDir, 'blueprints'), { recursive: true });
   fs.mkdirSync(repoRawDir, { recursive: true });
   fs.mkdirSync(repoWikiDir, { recursive: true });
-
-  seedLegacyWiki(repoDir, repoRawDir);
-  migrateLegacyWiki(repoDir, repoWikiDir);
 }
 
 function buildNudge(orgRepo) {
@@ -164,6 +118,7 @@ function buildNudge(orgRepo) {
     `  Orchestration guide: ${path.join(PLUGIN_ROOT, 'assets', 'ORCHESTRATION.md')}`,
     `  Blueprint tool: ${tool('blueprint', 'scripts', 'blueprint.mjs')}`,
     `  Wiki lint tool: ${tool('extract', 'scripts', 'wiki-lint.mjs')}`,
+    `  Session red pen tool: ${tool('extract', 'scripts', 'redpen.mjs')} --since <date> --repo <repo>`,
     `  Wiki schema: ${VIRTUCON_HQ}/schema.md`,
     `  Repo wiki index: ${VIRTUCON_HQ}/wiki/orgs/${org}/${repo}/index.md`,
     `  Wiki index: ${VIRTUCON_HQ}/wiki/index.md`,

@@ -491,6 +491,64 @@ for (const [name, text, expected] of [
     test(`criteriaWithFindings: ${name}`, () => assert.deepEqual(flow.criteriaWithFindings(text), expected));
 }
 
+/* ── fuel and verdict ── */
+
+const job = (phase, { issue = null, requests = 1, minutes = 1, tree = "t1" } = {}) => ({ phase, started: 0, ended: minutes * 60_000, usage: { premiumRequests: requests }, result: { status: issue ? "blocked" : "done", blocking_issue: issue }, tree });
+
+for (const [name, state, expected] of [
+    ["no caps and no repeat", { ...base(), jobs: [job("blueprint", { requests: 40 })] }, null],
+    ["requests at the cap", { ...base(), budget: { requests: 10 }, jobs: [job("blueprint", { requests: 4 }), job("replicate", { requests: 6 })] }, "10 premium requests, cap 10"],
+    ["requests under the cap", { ...base(), budget: { requests: 10 }, jobs: [job("blueprint", { requests: 9 })] }, null],
+    ["minutes past the cap", { ...base(), budget: { minutes: 30 }, jobs: [job("replicate", { minutes: 31 })] }, "31 worker minutes, cap 30"],
+    ["a running job does not count yet", { ...base(), budget: { requests: 1 }, jobs: [{ ...job("blueprint"), ended: null }] }, null],
+    ["the same blocking issue twice", { ...base(), jobs: [job("blueprint", { issue: "which Azure target?" }), job("blueprint", { issue: "which Azure target?" })] }, "the same blocking issue 2 times: which Azure target?"],
+    ["two different issues", { ...base(), jobs: [job("blueprint", { issue: "a" }), job("blueprint", { issue: "b" })] }, null],
+    ["a done pass between two identical issues", { ...base(), jobs: [job("replicate", { issue: "a" }), job("blueprint"), job("replicate", { issue: "a" })] }, null],
+    ["repeats raised to three", { ...base(), budget: { repeats: 3 }, jobs: [job("blueprint", { issue: "a" }), job("blueprint", { issue: "a" })] }, null],
+    ["repeats off", { ...base(), budget: { repeats: 0 }, jobs: [job("blueprint", { issue: "a" }), job("blueprint", { issue: "a" })] }, null],
+]) {
+    test(`overBudget: ${name}`, () => assert.equal(flow.overBudget(state), expected));
+}
+
+test("a run out of fuel stops with its reason and no stage, ask or pause", () => {
+    const s = flow.stopped({ ...base(), status: "asking", ask: { decisions: [] }, paused: true }, "10 premium requests, cap 10");
+    assert.deepEqual([s.status, s.stopReason, s.stage, s.ask, s.paused], ["stopped", "10 premium requests, cap 10", null, null, false]);
+});
+
+const proven = { criteria: [{ id: "C1", tests: ["t.js"], finding: false }, { id: "C2", tests: ["t.js"], finding: false }] };
+const tidy = { ...base(), findings: 0, ratchet: { interface_changes_outside_boundaries: 0, single_caller_functions: 0, copied_blocks: 0, test_lines_removed: 0 }, jobs: [job("inspect", { tree: "t1" })] };
+for (const [name, state, board, tree, expected] of [
+    ["everything proven", tidy, proven, "t1", { proven: true, gaps: [] }],
+    ["no tree hash at hand still proves", tidy, proven, null, { proven: true, gaps: [] }],
+    ["no blueprint yet", tidy, null, "t1", { proven: false, gaps: ["no criteria"] }],
+    ["a criterion without a test and one with a finding", tidy, { criteria: [{ id: "C1", tests: [], finding: false }, { id: "C2", tests: ["t.js"], finding: true }] }, "t1", { proven: false, gaps: ["C1: no test", "C2: finding"] }],
+    ["no inspection ran", { ...tidy, jobs: [] }, proven, "t1", { proven: false, gaps: ["no inspection"] }],
+    ["the tree moved after the inspection", tidy, proven, "t2", { proven: false, gaps: ["the tree changed after the last inspection"] }],
+    ["findings open", { ...tidy, findings: 2 }, proven, "t1", { proven: false, gaps: ["2 findings"] }],
+    ["inspect gave no count", { ...tidy, findings: null }, proven, "t1", { proven: false, gaps: ["no findings count"] }],
+    ["a dirty ratchet", { ...tidy, ratchet: { interface_changes_outside_boundaries: 1, single_caller_functions: 2, copied_blocks: 0, test_lines_removed: 3 } }, proven, "t1", { proven: false, gaps: ["ratchet: 1 interface changes outside the boundaries", "ratchet: 2 single-caller functions", "ratchet: 3 test lines removed"] }],
+    ["removed test lines the user decided on", { ...tidy, testsDecided: true, ratchet: { ...tidy.ratchet, test_lines_removed: 3 } }, proven, "t1", { proven: true, gaps: [] }],
+    ["a worker's done status proves nothing by itself", { ...tidy, status: "done", findings: null, jobs: [] }, { criteria: [{ id: "C1", tests: [], finding: false }] }, "t1", { proven: false, gaps: ["C1: no test", "no inspection", "no findings count"] }],
+]) {
+    test(`verdict: ${name}`, () => assert.deepEqual(flow.verdict(state, board, tree), expected));
+}
+
+test("replicate's preflight line becomes inspect's baseline", () => {
+    const line = "ran: npm test on HEAD 1a2b3c4 → 73/1";
+    const next = flow.advance(at({ phase: "replicate", input: [] }, { rounds: 1 }), "replicate", [done({ evidence_excerpts: [line, "npm test → 75/0"] })]);
+    assert.equal(next.baseline, line);
+    assert.ok(flow.waves(next)[0].jobs[0].input.includes(`Baseline: ${line}`));
+    const blocked = flow.advance(at({ phase: "replicate", input: [] }), "replicate", [{ ...done({ evidence_excerpts: [line] }), status: "blocked", blocking_issue: "server down" }]);
+    assert.equal(blocked.baseline, line);
+});
+
+test("a replicate reply without a preflight line keeps the earlier baseline and inspect gets none when there is none", () => {
+    const kept = flow.advance(at({ phase: "replicate", input: [] }, { baseline: "ran: x on HEAD a → 1/0" }), "replicate", [done({ evidence_excerpts: ["npm test → 2/0"] })]);
+    assert.equal(kept.baseline, "ran: x on HEAD a → 1/0");
+    const none = flow.advance(at({ phase: "replicate", input: [] }), "replicate", [done()]);
+    assert.ok(!flow.waves(none)[0].jobs[0].input.some((l) => l.startsWith("Baseline:")));
+});
+
 test("scores add up the board and the finished jobs", () => {
     const state = { ...base(), rounds: 2, jobs: [{ started: 0, ended: 90_000, usage: { premiumRequests: 3 } }, { started: 0, ended: null }] };
     const board = { criteria: [{ tests: ["t.js"], finding: false }, { tests: ["t.js"], finding: true }, { tests: [], finding: false }], diff: { added: 10, removed: 14, duplicates: [{}] }, check: { sources: { surprise: 1, default: 2 } } };

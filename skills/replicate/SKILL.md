@@ -16,6 +16,10 @@ Build exactly what the blueprint specifies and prove it with tests in the projec
 - Find the project's test command in its README, CI config, build files or package scripts, or in the repo's wiki pages, and run tests the way the project does.
 - The blueprint tool is `node ../blueprint/scripts/blueprint.mjs` from this skill's base directory. The session nudge prints the absolute command.
 
+## Preflight
+
+Before the first edit, run the project's test command on the untouched tree and record it as the first evidence excerpt: `ran: <command> on HEAD <short sha> → <pass>/<fail>`. Check in the same pass that what the criteria need is there: a local server a test talks to is up, the test runner is the project's one, a tool a boundary names (a browser, a sandbox) answers. A test command that is missing or fails to start, a server that is down or a tool that is absent is a block with the obstacle named, not a code failure; a test already failing on HEAD is the baseline the inspector compares against. A wrong belief formed here costs the whole run.
+
 ## Start running, then grow
 
 - **Bug:** first write the test that reproduces it at the boundary the blueprint names, and watch it fail for the reported reason. No fix before the reproduction fails.
@@ -45,4 +49,4 @@ Stay inside the task: no unrelated refactors, no new rules in the repo's AGENTS.
 
 ## Return
 
-Reply with one JSON object in a `json` code block and nothing else: `status`, `blueprint_path`, `changed_files` (sorted, repo-relative), `blocking_issue`, `evidence_excerpts` (the test command with its pass and fail counts, and the coverage result), and `proposed_criteria` (EARS sentences with their source, or an empty list). When you stop early, name the obstacle in `blocking_issue`.
+Reply with one JSON object in a `json` code block and nothing else: `status`, `blueprint_path`, `changed_files` (sorted, repo-relative), `blocking_issue`, `evidence_excerpts` (the preflight line first, then the test command with its pass and fail counts, and the coverage result), and `proposed_criteria` (EARS sentences with their source, or an empty list). When you stop early, name the obstacle in `blocking_issue`.

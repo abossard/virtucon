@@ -10,7 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { newRun } from "./flow.mjs";
-import { removedTestLines, startBoard } from "./minime.mjs";
+import { removedTestLines, startBoard, treeHash } from "./minime.mjs";
 
 async function board(t, seed) {
     const repo = mkdtempSync(path.join(tmpdir(), "board-repo-"));
@@ -48,6 +48,32 @@ for (const [name, method, pathname, headers] of [
         assert.equal(res.status, 403);
     });
 }
+
+test("the tree hash is stable until a tracked or an untracked file changes", async (t) => {
+    const { repo } = await board(t);
+    writeFileSync(path.join(repo, "a.js"), "1");
+    spawnSync("git", ["-C", repo, "add", "a.js"], { cwd: repo });
+    spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "a"], { cwd: repo });
+    const clean = treeHash(repo);
+    assert.equal(treeHash(repo), clean);
+    writeFileSync(path.join(repo, "a.js"), "2");
+    const edited = treeHash(repo);
+    assert.notEqual(edited, clean);
+    writeFileSync(path.join(repo, "new.js"), "3");
+    assert.notEqual(treeHash(repo), edited);
+    assert.match(clean, /^[0-9a-f]{12}$/);
+});
+
+test("the view carries the tree, the verdict and whether a PAUSED file holds the run", async (t) => {
+    const { origin, token, hq, b } = await board(t, (hq, repo) => ({ ...newRun({ task: "x", repo, hq, plugin: "p", now: 0 }), status: "stopped", stage: null }));
+    const headers = { "x-minime-token": token };
+    const view = await (await fetch(`${origin}/state`, { headers })).json();
+    assert.match(view.tree, /^[0-9a-f]{12}$/);
+    assert.deepEqual(view.verdict, { proven: false, gaps: ["no criteria", "no inspection", "no findings count"] });
+    assert.equal(view.pausedByFile, false);
+    writeFileSync(path.join(hq, "PAUSED"), "");
+    assert.equal(b.conductor.view().pausedByFile, true);
+});
 
 test("with the token, the board reads an idle run and accepts stop before any task", async (t) => {
     const { origin, token } = await board(t);

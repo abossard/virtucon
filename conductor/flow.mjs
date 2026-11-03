@@ -4,15 +4,20 @@
 export const PHASES = ["blueprint", "replicate", "inspect", "extract"];
 const AGENTS = { inspect: "minime:frau" };
 export const STALL_LIMIT = 2;
+export const REPEAT_LIMIT = 2;
 
 /* ── state ── */
 
-export function newRun({ task, repo, hq, plugin, model, now }) {
+// `budget` is the fuel gauge: premium requests, worker minutes, and how often the same blocking issue may return. null is no cap.
+export function newRun({ task, repo, hq, plugin, model, now, budget = {} }) {
     return {
         task, repo, hq, plugin, model: model ?? null, started: now,
+        budget: { requests: null, minutes: null, repeats: REPEAT_LIMIT, ...budget },
+        stopReason: null,
         status: "running", // running | asking | paused | done | stopped | failed
         stage: { phase: "blueprint", message: task, input: [] },
         blueprint: null,
+        baseline: null, // replicate's run of the project's tests on untouched HEAD, handed to inspect
         size: "full",
         criteria: [],
         groups: [],
@@ -238,14 +243,16 @@ export function advance(state, phase, results, { checkOpen = [], facts = {}, tes
             return mine.length ? { ...n, changed: union(n.changed ?? [], mine) } : n;
         });
         const finished = results.filter((r) => r.status !== "blocked").map((r) => r.node);
+        // The preflight line (the tests on untouched HEAD) is inspect's baseline for the rest of the run.
+        const baseline = results.flatMap((r) => r.evidence_excerpts).find((e) => /\bon HEAD\b/.test(e)) ?? state.baseline;
         // Only the blueprint can settle what replicate stops on; a second stop in the round ends the run.
         if (blocked) {
-            if (state.blocks >= 1) return { ...state, changed, nodes, status: "failed", stage: null, report: { phase, blocking_issue: blocked.blocking_issue } };
-            return { ...state, changed, nodes: setStatus(nodes, finished, "inspecting"), blocks: state.blocks + 1, stage: { phase: "blueprint", message: null, input: [`Replicate stopped; settle this in the blueprint: ${blocked.blocking_issue}`], ...(stage.fix && { fix: true }), ...pick(blocked, "node") } };
+            if (state.blocks >= 1) return { ...state, changed, nodes, baseline, status: "failed", stage: null, report: { phase, blocking_issue: blocked.blocking_issue } };
+            return { ...state, changed, nodes: setStatus(nodes, finished, "inspecting"), baseline, blocks: state.blocks + 1, stage: { phase: "blueprint", message: null, input: [`Replicate stopped; settle this in the blueprint: ${blocked.blocking_issue}`], ...(stage.fix && { fix: true }), ...pick(blocked, "node") } };
         }
         // A feedback round rechecks only its criteria; a fix round rechecks everything.
         const recheck = state.rounds > 1 && !stage.fix ? state.criteria : [];
-        const built = { ...state, changed, blocks: 0, groups: [] };
+        const built = { ...state, changed, baseline, blocks: 0, groups: [] };
         if (state.nodes.length > 1 && !stage.fix) return withPending(state, { ...built, ...walk(state, setStatus(nodes, ready(nodes).map((n) => n.file), "inspecting"), facts) });
         return withPending(state, { ...built, nodes: setStatus(nodes, [here(state)], "inspecting"), stage: { phase: "inspect", input: [], recheck, ...pick(stage, "node") } });
     }
@@ -340,6 +347,7 @@ export function waves(state, { boundaryCriteria = {}, facts = {} } = {}) {
         const node = state.nodes.find((n) => n.file === stage.node);
         input.push(`Changed files: ${(node?.parent ? node.changed ?? [] : state.changed).join(", ") || "none reported"}`);
         if (stage.recheck?.length) input.push(`Criterion IDs to recheck: ${stage.recheck.join(", ")}`);
+        if (state.baseline) input.push(`Baseline: ${state.baseline}`);
     }
     return [{ parallel: false, jobs: [{ phase: stage.phase, input, message: stage.phase === "blueprint" ? stage.message : null, ...pick(stage, "node") }] }];
 }
@@ -413,4 +421,48 @@ export function scores(state, board) {
         requests: jobs.reduce((n, j) => n + (j.usage?.premiumRequests ?? 0), 0),
         minutes: Math.round(jobs.reduce((n, j) => n + (j.ended - j.started), 0) / 6000) / 10,
     };
+}
+
+/* ── the fuel gauge ── */
+
+// The blocking issue the last n finished jobs all returned, if they did.
+function repeatedIssue(jobs, n) {
+    const last = jobs.filter((j) => j.ended).slice(-n).map((j) => j.result?.blocking_issue ?? null);
+    return n > 0 && last.length === n && last[0] && last.every((i) => i === last[0]) ? last[0] : null;
+}
+
+// Why the run is out of fuel, or null. Checked after every wave; a run that stops keeps the proof it has.
+export function overBudget(state) {
+    const { requests, minutes } = scores(state);
+    const b = state.budget ?? {};
+    if (b.requests != null && requests >= b.requests) return `${requests} premium requests, cap ${b.requests}`;
+    if (b.minutes != null && minutes >= b.minutes) return `${minutes} worker minutes, cap ${b.minutes}`;
+    const issue = repeatedIssue(state.jobs, b.repeats ?? REPEAT_LIMIT);
+    return issue ? `the same blocking issue ${b.repeats ?? REPEAT_LIMIT} times: ${issue}` : null;
+}
+
+export const stopped = (state, reason) => ({ ...state, status: "stopped", stopReason: reason, stage: null, ask: null, paused: false });
+
+/* ── the verdict ── */
+
+const RATCHET = [["interface_changes_outside_boundaries", "interface changes outside the boundaries"], ["single_caller_functions", "single-caller functions"], ["copied_blocks", "copied blocks"]];
+
+// Done is computed, never reported. Proven means: every criterion names a test file and has no finding, inspect
+// ran on this exact tree and found nothing, and the ratchet is clean. A worker's status only says what to do next.
+export function verdict(state, board, tree = null) {
+    const gaps = [];
+    const criteria = board?.criteria ?? [];
+    if (!criteria.length) gaps.push("no criteria");
+    for (const c of criteria) {
+        if (!c.tests.length) gaps.push(`${c.id}: no test`);
+        else if (c.finding) gaps.push(`${c.id}: finding`);
+    }
+    const inspect = [...state.jobs].reverse().find((j) => j.phase === "inspect" && j.ended);
+    if (!inspect) gaps.push("no inspection");
+    else if (tree && inspect.tree && inspect.tree !== tree) gaps.push("the tree changed after the last inspection");
+    if (state.findings !== 0) gaps.push(state.findings === null ? "no findings count" : `${state.findings} findings`);
+    const r = state.ratchet ?? {};
+    for (const [key, label] of RATCHET) if (Number(r[key]) > 0) gaps.push(`ratchet: ${r[key]} ${label}`);
+    if (Number(r.test_lines_removed) > 0 && !state.testsDecided) gaps.push(`ratchet: ${r.test_lines_removed} test lines removed`);
+    return { proven: gaps.length === 0, gaps };
 }
