@@ -38,6 +38,15 @@ You start with a task description. The conductor (or the `minime:dr-evil` agent 
 
 The phase badges above link to each skill. The [orchestration guide](assets/ORCHESTRATION.md) owns the flow; the [blueprint template](skills/blueprint/template.md) shows the contract every phase works against.
 
+## What changed in 0.6.0b
+
+Since 0.5.0b (2026-10-29):
+
+- **Fuel gauge and computed verdict.** `--requests`, `--minutes` and `--repeats` stop a run that burns fuel without progress; a `PAUSED` file in `VIRTUCON_HQ` holds every run. The verdict comes from the proof board, the tree hash and the ratchet, never from a worker's reply. Replicate runs the project's tests on untouched HEAD first and hands the baseline to inspect.
+- **Guard hook.** One hook for Claude Code and Copilot CLI denies the git and GitHub write commands the conductor denies its workers, rejects AI attribution in commits, honours the `PAUSED` file and trips a circuit breaker on repeated identical replies.
+- **Session red pen.** `redpen.mjs` lists the rules you restated in past Claude Code and Copilot sessions, each with your quote as its receipt; extract reads it. `sessions-watch.mjs` lists sessions that died on a network error.
+- **Removed.** The lab skill and the legacy wiki migration in the session hook.
+
 ## What changed in 0.5.0b
 
 Since 0.3.1b (2026-10-23):
