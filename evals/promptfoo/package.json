@@ -17,6 +17,9 @@
   },
   "dependencies": {
     "@github/copilot": "1.0.99-3",
-    "promptfoo": "0.124.1"
+    "promptfoo": "0.125.1"
+  },
+  "overrides": {
+    "basic-ftp": "6.2.1"
   }
 }
