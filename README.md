@@ -38,6 +38,15 @@ You start with a task description. The conductor (or the `minime:dr-evil` agent 
 
 The phase badges above link to each skill. The [orchestration guide](assets/ORCHESTRATION.md) owns the flow; the [blueprint template](skills/blueprint/template.md) shows the contract every phase works against.
 
+## What changed in 0.7.0b
+
+Since 0.6.0b (2026-11-04):
+
+- **The loop closes.** The dispatcher pastes the repo's wiki index and its past run receipts into the blueprint input; the blueprint cites the wiki rule it applies and takes the preflight command from the last proven run. Every run ends with a receipt line in `raw/<org>/<repo>/runs.md`: verdict, jobs, cost, test command, what stopped it.
+- **One build per blueprint.** Groups, waves and child blueprints are gone: one replicate job per blueprint, whatever its size. Round 7 of the benchmark: 7 of 9 tasks against 6 of 9, 6.2 against 9.1 requests per run, no group fights (`docs/autoresearch.md`).
+- **Repeat cap by decision.** The fuel gauge counts a reworded ask on the same open decision IDs as a repeat.
+- **Fuel budget from the flags given.** A missing cap keeps its default instead of switching the budget off.
+
 ## What changed in 0.6.0b
 
 Since 0.5.0b (2026-10-29):
