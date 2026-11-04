@@ -6,7 +6,7 @@
 // Prints one JSON object. Exit 0 = ok, 1 = errors or criteria without a test, 2 = usage.
 
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -24,8 +24,9 @@ const BRACKET_KINDS = [...SOURCE_KINDS, "open"];
 const PROCESS_PAGES = ["process-blueprint.md", "process-replicate.md", "process-inspect.md", "process-extract.md"];
 const PROCESS_LINK = /(?<![\w-])process-[\w-]*\.md(?:#([\p{L}\p{N}_-]+))?/gu;
 const CHANGES = ["new", "changed", "unchanged"];
-const HEADER = /^Repo: (\S+) \| Created: (\d{4}-\d{2}-\d{2})(?: \| Parent: ([^\s|]+))?(?: \| Extracted: (\d{4}-\d{2}-\d{2}))?$/;
-// A Boundaries row whose owner is a child blueprint, `<parent name>.<short-name>.md`, delegates its criteria to that file.
+const HEADER = /^Repo: (\S+) \| Created: (\d{4}-\d{2}-\d{2})(?: \| Extracted: (\d{4}-\d{2}-\d{2}))?$/;
+// Blueprints are not split: a row whose owner is another blueprint file, `<name>.<short-name>.md`, is an error.
+const SPLIT_HEADER = /^Repo: \S+ \| Created: \d{4}-\d{2}-\d{2} \| Parent: /;
 const CHILD_OWNER = /^`([^`/\s]+\.[^`/\s.]+\.md)`$/;
 const TEMPLATE = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "template.md");
 
@@ -142,7 +143,8 @@ export function parse(text) {
         headings,
         sections,
         preamble,
-        header: header && { repo: header[1], created: header[2], parent: header[3] ?? null, extracted: header[4] ?? null },
+        header: header && { repo: header[1], created: header[2], extracted: header[3] ?? null },
+        split: preamble.some((l) => SPLIT_HEADER.test(l.text)),
         inputs: bullets("Inputs", "I").map((m) => ({ id: m[1], text: inputTexts[m[1]] ?? "", body: inputBodies[m[1]] ?? "" })),
         criteria: bullets("Criteria", "C").map((m) => ({ id: m[1], ...criterionRefs(m[2] ?? ""), ...evidenceOf(m[3]) })),
         boundaries: rows("Boundaries").map(({ n, cells: c }) => ({ n, id: c[0], owner: c[1] ?? "", contract: c[2] ?? "", change: c[3] ?? "", criteria: refs(c[4] ?? "", "C"), cells: c.length, child: (c[1] ?? "").match(CHILD_OWNER)?.[1] ?? null })),
@@ -193,15 +195,15 @@ function proseErrors(bp) {
     return errors;
 }
 
-// `siblings` are the file names next to the blueprint: given, a child file that a row names must be among them.
-export function check(text, templatePlaceholders = [], siblings = null) {
+export function check(text, templatePlaceholders = []) {
     const bp = parse(text);
     const errors = [];
     const has = (list, id) => list.some((x) => x.id === id);
     const tooLong = (id, what, value, limit) => value.length > limit && errors.push(`${id} ${what} is ${value.length} characters, max ${limit}: keep the value and its reference, drop the explanation`);
 
     if (!bp.preamble.some((l) => /^# Blueprint: \S/.test(l.text))) errors.push("missing title: # Blueprint: <short-name>");
-    if (!bp.header) errors.push("missing header: Repo: <org>/<repo> | Created: <YYYY-MM-DD>");
+    if (bp.split) errors.push("the header names a Parent: blueprints are not split, fold the child into this file");
+    else if (!bp.header) errors.push("missing header: Repo: <org>/<repo> | Created: <YYYY-MM-DD>");
     for (const name of SECTIONS) if (!bp.headings.includes(name)) errors.push(`missing section: ## ${name}`);
     for (const name of new Set(bp.headings)) {
         if (FORBIDDEN_SECTIONS.includes(name)) errors.push(`section ## ${name} is not allowed: fold its facts into the criterion or boundary row that needs them`);
@@ -227,8 +229,7 @@ export function check(text, templatePlaceholders = [], siblings = null) {
     if (!bp.criteria.length) errors.push("no criteria");
     for (const i of bp.inputs) {
         if (/Use the minime \w+ skill|Return: status \(/i.test(i.text)) errors.push(`${i.id} contains the dispatcher's prompt: record only the user's words`);
-        // A child copies all of its parent's inputs, and the parent traces the ones the child's criteria don't use.
-        if (!bp.header?.parent && !bp.tracedInputs.has(i.id)) errors.push(`${i.id} is not traced to any criterion or boundary`);
+        if (!bp.tracedInputs.has(i.id)) errors.push(`${i.id} is not traced to any criterion or boundary`);
     }
     for (const c of bp.criteria) {
         if (!c.inputs.length) errors.push(`${c.id} names no origin, write ${c.id} (I1 "words from the input")`);
@@ -260,7 +261,7 @@ export function check(text, templatePlaceholders = [], siblings = null) {
         if (!b.criteria.length) errors.push(`${b.id} names no criterion`);
         for (const c of b.criteria) if (!has(bp.criteria, c)) errors.push(`${b.id} references unknown criterion ${c}`);
         tooLong(b.id, "contract", b.contract, LIMITS.contract);
-        if (b.child && siblings && !siblings.includes(b.child)) errors.push(`${b.id} delegates to ${b.child}, which does not exist next to the blueprint`);
+        if (b.child) errors.push(`${b.id} names the blueprint file ${b.child} as its owner: blueprints are not split, keep the row's real owner`);
     }
 
     const questions = openOf(bp);
@@ -281,14 +282,11 @@ export function check(text, templatePlaceholders = [], siblings = null) {
         processCited: brackets.filter((e) => processLinks(e.body).length).length,
         counts: { inputs: bp.inputs.length, criteria: bp.criteria.length, boundaries: bp.boundaries.length },
         extracted: bp.header?.extracted ?? null,
-        parent: bp.header?.parent ?? null,
-        children: [...new Set(bp.boundaries.filter((b) => b.child).map((b) => b.child))],
     };
 }
 
-// check() on a file, with the file names next to it for the child files its rows name.
 export function checkFile(file, templatePlaceholders = []) {
-    return check(readFileSync(file, "utf8"), templatePlaceholders, readdirSync(path.dirname(path.resolve(file))));
+    return check(readFileSync(file, "utf8"), templatePlaceholders);
 }
 
 // `|` splits a cell unless it sits in a code span or is escaped, as in splitRow.
@@ -327,7 +325,7 @@ function withTable(text, section, rows) {
 export function applyEdit(text, { boundaries = [] }) {
     const rows = (Array.isArray(boundaries) ? boundaries : []).map((b) => [b.id, b.owner, b.contract, b.change, [].concat(b.criteria ?? []).join(", ")]);
     const next = withTable(text, "Boundaries", rows.length ? table(["ID", "Owner", "Contract", "Change", "Criteria"], rows) : [])
-        .replace(/^(Repo: \S+ \| Created: \d{4}-\d{2}-\d{2}(?: \| Parent: [^\s|]+)?) \| Extracted: \d{4}-\d{2}-\d{2}$/m, "$1");
+        .replace(/^(Repo: \S+ \| Created: \d{4}-\d{2}-\d{2}) \| Extracted: \d{4}-\d{2}-\d{2}$/m, "$1");
     const before = new Set(check(text).errors);
     const errors = check(next).errors.filter((e) => !before.has(e));
     return errors.length ? { ok: false, errors } : { ok: true, text: next };

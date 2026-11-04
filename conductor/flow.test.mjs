@@ -89,19 +89,17 @@ const at = (stage, extra = {}) => ({ ...base(), stage, ...extra });
 
 for (const [name, state, phase, results, expected] of [
     ["blueprint done → replicate", base(), "blueprint", [done({ criteria: ["C1", "C2"] })],
-        { status: "running", stage: { phase: "replicate", input: [] }, criteria: ["C1", "C2"], blueprint: "/hq/bp.md", rounds: 1, nodes: [{ file: "/hq/bp.md", parent: null, status: "building" }] }],
-    ["blueprint with open decisions asks the user and keeps what it planned", base(), "blueprint", [done({ status: "blocked", blocking_issue: "C2", criteria: ["C1", "C2"], groups: [{ id: "G1" }], open_decisions: [{ id: "C2", question: "Max?", options: ["a", "b"], recommend: "a" }] })],
-        { status: "asking", criteria: ["C1", "C2"], groups: [{ id: "G1" }], size: "full" }],
-    ["the pass after an answer adds to the round instead of replacing it", at({ phase: "blueprint", message: "Q: Max? A: a", input: [] }, { criteria: ["C1", "C2"], groups: [{ id: "G1" }], size: "full" }), "blueprint", [done({ criteria: ["C2", "C3"], size: "small" })],
-        { criteria: ["C1", "C2", "C3"], groups: [{ id: "G1" }], size: "full", stage: { phase: "replicate", input: [] } }],
-    ["a small round stays small", at({ phase: "blueprint", message: "rename it", input: [] }, { size: "small" }), "blueprint", [done({ criteria: ["C4"], size: "small" })],
-        { size: "small" }],
-    ["a round that adds a boundary row turns full", at({ phase: "blueprint", message: "add export", input: [] }, { size: "small" }), "blueprint", [done({ criteria: ["C4"], size: "full" })],
-        { size: "full" }],
+        { status: "running", stage: { phase: "replicate", input: [] }, criteria: ["C1", "C2"], blueprint: "/hq/bp.md", rounds: 1 }],
+    ["blueprint with open decisions asks the user and keeps what it planned", base(), "blueprint", [done({ status: "blocked", blocking_issue: "C2", criteria: ["C1", "C2"], open_decisions: [{ id: "C2", question: "Max?", options: ["a", "b"], recommend: "a" }] })],
+        { status: "asking", criteria: ["C1", "C2"] }],
+    ["the pass after an answer adds to the round instead of replacing it", at({ phase: "blueprint", message: "Q: Max? A: a", input: [] }, { criteria: ["C1", "C2"] }), "blueprint", [done({ criteria: ["C2", "C3"] })],
+        { criteria: ["C1", "C2", "C3"], stage: { phase: "replicate", input: [] } }],
+    ["a blueprint pass after a replicate block goes straight back to one replicate job", at({ phase: "blueprint", message: null, input: ["Replicate stopped; settle this in the blueprint: x"] }, { blocks: 1, criteria: ["C1"] }), "blueprint", [done({ criteria: ["C1"] })],
+        { stage: { phase: "replicate", input: [] }, blocks: 1 }],
     ["blueprint after a fix round goes to replicate with the findings file", at({ phase: "blueprint", message: null, input: [], fix: true }, { findingsFile: "/hq/bp.runs/inspect.md", rounds: 1 }), "blueprint", [done({ criteria: ["C3"] })],
         { stage: { phase: "replicate", input: ["Findings file: /hq/bp.runs/inspect.md"], fix: true } }],
     ["replicate goes to inspect and collects changed files", at({ phase: "replicate", input: [] }, { rounds: 1, changed: ["b.js"] }), "replicate", [done({ changed_files: ["a.js"] }), done({ changed_files: ["c.js", "a.js"] })],
-        { stage: { phase: "inspect", input: [], recheck: [] }, changed: ["a.js", "b.js", "c.js"], groups: [] }],
+        { stage: { phase: "inspect", input: [], recheck: [] }, changed: ["a.js", "b.js", "c.js"], blocks: 0 }],
     ["a feedback round rechecks only its criteria", at({ phase: "replicate", input: [] }, { rounds: 2, criteria: ["C4"] }), "replicate", [done()],
         { stage: { phase: "inspect", input: [], recheck: ["C4"] } }],
     ["a fix round rechecks everything", at({ phase: "replicate", input: [], fix: true }, { rounds: 2, criteria: ["C4"] }), "replicate", [done()],
@@ -112,8 +110,6 @@ for (const [name, state, phase, results, expected] of [
         { stage: { phase: "blueprint", message: null, input: ["Proposed criteria from inspect, with evidence in /f.md:", "When x, y shall z (data: a.js:1)"], fix: true } }],
     ["a clean inspect goes to extract", at({ phase: "inspect", input: [] }), "inspect", [done({ findings: 0 })],
         { findings: 0, stage: { phase: "extract", input: [] } }],
-    ["a clean inspect after a small change skips extract", at({ phase: "inspect", input: [] }, { size: "small" }), "inspect", [done({ findings: 0 })],
-        { status: "done", stage: null, report: { skippedExtract: true } }],
     ["no fewer findings twice asks the user", at({ phase: "inspect", input: [] }, { findings: 2, stalls: 1 }), "inspect", [done({ findings: 2, findings_file: "/f.md" })],
         { status: "asking", stalls: 2, stallAsked: true }],
     ["no fewer findings after the stall answer ends the run", at({ phase: "inspect", input: [] }, { findings: 2, stalls: 2, stallAsked: true }), "inspect", [done({ findings: 2, findings_file: "/f.md" })],
@@ -145,7 +141,7 @@ for (const [name, state, phase, results, expected] of [
 
 for (const [name, status, expected] of [
     ["while workers run, feedback waits", "running", { status: "running", pending: [{ text: "rename it", at: 5 }] }],
-    ["after the report, feedback starts a new small round", "done", { status: "running", pending: [], stage: { phase: "blueprint", message: "rename it", input: [] }, criteria: [], groups: [], size: "small" }],
+    ["after the report, feedback starts a new round", "done", { status: "running", pending: [], stage: { phase: "blueprint", message: "rename it", input: [] }, criteria: [], blocks: 0 }],
     ["instead of an answer, feedback starts a blueprint round", "asking", { status: "running", ask: null, stage: { phase: "blueprint", message: "rename it", input: [] } }],
 ]) {
     test(`feedback: ${name}`, () => {
@@ -164,11 +160,6 @@ test("answer sends the Q/A pairs to blueprint", () => {
         { phase: "blueprint", message: "Q: Max rate? A: 100/s", input: [], fix: true });
 });
 
-test("answer: a blueprint ask keeps the node", () => {
-    const open = { ...base(), status: "asking", stage: replicateStopped, ask: { decisions: D } };
-    assert.deepEqual(flow.answer(open, { C2: { choice: "100/s" } }).stage, { phase: "blueprint", message: "Q: Max rate? A: 100/s", input: [], node: ROOT });
-});
-
 for (const [name, status, expected] of [
     ["after the report, a correction goes to extract alone", "done", { status: "running", stage: { phase: "extract", input: ["Correction after the report:", "The maintainer's fix is at raw/x.diff", "CI: 2 tests failing, see raw/x-ci.md"] } }],
     ["after a failed run too", "failed", { status: "running" }],
@@ -185,88 +176,8 @@ test("feedback after a failed run starts the bounds afresh", () => {
     assert.deepEqual([next.blocks, next.stallAsked, next.status], [0, false, "running"]);
 });
 
-/* ── the blueprint tree ── */
-
 const ROOT = "/hq/bp.md";
-const A = "/hq/bp.a.md";
-const B = "/hq/bp.b.md";
-const node = (file, status, extra = {}) => ({ file, parent: file === ROOT ? null : ROOT, status, ...extra });
-const tree = (...statuses) => [ROOT, A, B].map((file, i) => node(file, statuses[i]));
-const inspecting = (file) => ({ phase: "inspect", input: [], recheck: [], node: file });
-const facts = (own = { boundaries: ["B1"], criteria: ["C1"] }) => ({
-    [ROOT]: { children: [A, B], criteria: ["C1", "C2", "C3", "C4"], own },
-    [A]: { children: [], criteria: ["C2", "C3"], own: { boundaries: ["B1"], criteria: ["C2", "C3"] } },
-    [B]: { children: [], criteria: ["C4"], own: { boundaries: ["B1"], criteria: ["C4"] } },
-});
-const replicateStopped = { phase: "blueprint", message: null, input: ["Replicate stopped; settle this in the blueprint: x"], node: ROOT };
-
-// A blueprint that is done is built at once: its nodes go from drafting straight to building, with no review in between.
-for (const [name, state, result, expected, withFacts = {}] of [
-    ["a pass that names children builds the children first, the root after them", at({ phase: "blueprint", message: "t", input: [] }), done(),
-        { stage: { phase: "replicate", input: [] }, nodes: tree("building", "building", "building") }, facts()],
-    ["feedback after a finished tree builds every blueprint again", at({ phase: "blueprint", message: "also B", input: [] }, { nodes: tree("done", "done", "done") }), done(),
-        { stage: { phase: "replicate", input: [] }, nodes: tree("building", "building", "building") }, facts()],
-    ["a small feedback round lets a child without a criterion of the round sit out", at({ phase: "blueprint", message: "fix C4", input: [] }, { nodes: tree("done", "done", "done"), size: "small", criteria: [] }), done({ criteria: ["C4"], size: "small" }),
-        { stage: { phase: "replicate", input: [] }, nodes: tree("building", "done", "building") }, facts()],
-    ["feedback waiting during the pass goes to blueprint first", at({ phase: "blueprint", message: "t", input: [] }, { pending: [{ text: "also B", at: 1 }] }), done(),
-        { stage: { phase: "blueprint", message: "also B", input: [] }, pending: [] }],
-]) {
-    test(`advance: build at once: ${name}`, () => {
-        const next = flow.advance({ ...state, blueprint: ROOT }, "blueprint", [result], { facts: withFacts });
-        for (const [k, v] of Object.entries(expected)) assert.deepEqual(next[k], v, k);
-    });
-}
-
-const block = (extra) => ({ ...done({ changed_files: [] }), status: "blocked", blocking_issue: "x", ...extra });
-
-for (const [name, state, phase, results, expected] of [
-    ["each child's result goes to its node, and the first child is inspected", at({ phase: "replicate", input: [] }, { nodes: tree("building", "building", "building"), rounds: 1 }), "replicate",
-        [{ ...done({ changed_files: ["src/a.js"] }), node: A }, { ...done({ changed_files: ["src/b.js", "test/b.test.js"] }), node: B }],
-        { stage: inspecting(A), changed: ["src/a.js", "src/b.js", "test/b.test.js"], nodes: [node(ROOT, "building"), node(A, "inspecting", { changed: ["src/a.js"] }), node(B, "inspecting", { changed: ["src/b.js", "test/b.test.js"] })] }],
-    ["a clean child goes to its own extract", at(inspecting(A), { nodes: tree("building", "inspecting", "inspecting") }), "inspect", [done({ findings: 0 })],
-        { stage: { phase: "extract", input: [], node: A }, findings: 0 }],
-    ["findings in a child go to a fix round on that child", at(inspecting(A), { nodes: tree("building", "inspecting", "inspecting") }), "inspect", [done({ findings: 2, findings_file: "/hq/bp.a.runs/inspect.md" })],
-        { stage: { phase: "replicate", input: ["Findings file: /hq/bp.a.runs/inspect.md"], fix: true, node: A } }],
-    ["the fix round's replicate goes back to that child's inspect", at({ phase: "replicate", input: [], fix: true, node: A }, { nodes: tree("building", "inspecting", "inspecting"), rounds: 1 }), "replicate", [{ ...done({ changed_files: ["src/a.js"] }), node: A }],
-        { stage: inspecting(A) }],
-    ["a child's extract moves on to the next child with fresh bounds", at({ phase: "extract", input: [], node: A }, { nodes: tree("building", "inspecting", "inspecting"), findings: 0, stalls: 1, blocks: 1, findingsFile: "/hq/bp.a.runs/inspect.md" }), "extract", [done({ captured: ["rule a"] })],
-        { stage: inspecting(B), nodes: tree("building", "done", "inspecting"), findings: null, stalls: 0, blocks: 0, findingsFile: null, status: "running" }],
-    ["the last child's extract hands over to the root's replicate", at({ phase: "extract", input: [], node: B }, { nodes: tree("building", "done", "inspecting") }), "extract", [done()],
-        { stage: { phase: "replicate", input: [] }, nodes: tree("building", "done", "done") }],
-    ["a root that delegated everything skips its replicate and goes to inspect", at({ phase: "replicate", input: [] }, { nodes: tree("building", "done", "done"), changed: ["src/a.js"], rounds: 1 }), "replicate", [],
-        { stage: inspecting(ROOT), nodes: tree("inspecting", "done", "done") }],
-    ["a clean root goes to its own extract", at(inspecting(ROOT), { nodes: tree("inspecting", "done", "done") }), "inspect", [done({ findings: 0 })],
-        { stage: { phase: "extract", input: [], node: ROOT } }],
-    ["the root's extract ends the run with the lessons of every node", at({ phase: "extract", input: [], node: ROOT }, { nodes: tree("inspecting", "done", "done"), report: { captured: ["rule a", "rule b"], retired: ["old"] } }), "extract", [done({ captured: ["rule r"] })],
-        { status: "done", stage: null, nodes: tree("done", "done", "done"), report: { captured: ["rule a", "rule b", "rule r"], retired: ["old"] } }],
-    ["a small round skips the extract of each node and ends the run at the root", at(inspecting(ROOT), { nodes: tree("inspecting", "done", "done"), size: "small" }), "inspect", [done({ findings: 0 })],
-        { status: "done", stage: null, report: { skippedExtract: true } }],
-    ["a blocked child goes back to blueprint on its file while the others move on", at({ phase: "replicate", input: [] }, { nodes: tree("building", "building", "building") }), "replicate", [{ ...block({ blocking_issue: "no row for C2" }), node: A }, { ...done({ changed_files: ["src/b.js"] }), node: B }],
-        { blocks: 1, nodes: [node(ROOT, "building"), node(A, "building"), node(B, "inspecting", { changed: ["src/b.js"] })], stage: { phase: "blueprint", message: null, input: ["Replicate stopped; settle this in the blueprint: no row for C2"], node: A } }],
-    ["the blueprint pass after that block builds the blocked child again", at({ phase: "blueprint", message: null, input: ["Replicate stopped; settle this in the blueprint: x"], node: A }, { nodes: tree("building", "building", "inspecting"), blocks: 1 }), "blueprint", [done()],
-        { stage: { phase: "replicate", input: [] }, blocks: 1, blueprint: "/hq/bp.md" }],
-]) {
-    test(`advance: tree: ${name}`, () => {
-        const next = flow.advance({ ...state, blueprint: ROOT }, phase, results);
-        for (const [k, v] of Object.entries(expected)) assert.deepEqual(next[k], v, k);
-    });
-}
-
-test("a tree is walked to the end: children first, the root last", () => {
-    const run = (state, steps) => steps.reduce((s, [phase, results, withFacts]) => flow.advance(s, phase, results, { facts: withFacts ?? {} }), state);
-    const end = run(at({ phase: "blueprint", message: "t", input: [] }), [
-        ["blueprint", [done({ criteria: ["C1", "C2", "C3", "C4"] })], facts()],
-        ["replicate", [{ ...done({ changed_files: ["src/a.js"] }), node: A }, { ...done({ changed_files: ["src/b.js"] }), node: B }]],
-        ["inspect", [done({ findings: 0 })]],
-        ["extract", [done({ captured: ["a"] })]],
-        ["inspect", [done({ findings: 0 })]],
-        ["extract", [done({ captured: ["b"] })]],
-        ["replicate", [{ ...done({ changed_files: ["src/root.js"] }), node: ROOT }]],
-        ["inspect", [done({ findings: 0 })]],
-        ["extract", [done({ captured: ["r"] })]],
-    ]);
-    assert.deepEqual([end.status, end.stage, end.nodes.map((n) => n.status), end.report.captured, end.changed], ["done", null, ["done", "done", "done"], ["a", "b", "r"], ["src/a.js", "src/b.js", "src/root.js"]]);
-});
+const replicateStopped = { phase: "blueprint", message: null, input: ["Replicate stopped; settle this in the blueprint: x"] };
 
 /* ── existing tests ── */
 
@@ -291,20 +202,12 @@ for (const [name, state, phase, results, options, expected] of [
         { status: "asking", ask: { ...T1_ASK, decisions: [{ ...T1_ASK.decisions[0], question: "1 line of existing tests was removed or rewritten by the change (test/a.test.js). Keep them and change the code until they pass, or confirm the removal?" }] } }],
     ["removed lines without file names still ask", at(inspectStage), "inspect", [clean], { testLinesRemoved: 2 },
         { status: "asking", ask: { ...T1_ASK, decisions: [{ ...T1_ASK.decisions[0], question: "2 lines of existing tests were removed or rewritten by the change. Keep them and change the code until they pass, or confirm the removal?" }] } }],
-    ["a small change asks before it skips extract", at(inspectStage, { size: "small" }), "inspect", [clean], CUT,
-        { status: "asking", ask: T1_ASK }],
-    ["a node of a tree asks on its own file and keeps its place", at(inspecting(A), { nodes: tree("building", "inspecting", "inspecting") }), "inspect", [clean], CUT,
-        { status: "asking", ask: T1_ASK, stage: inspecting(A) }],
     ["removed lines already decided: no ask, the flow goes on", at(inspectStage, { testsDecided: true }), "inspect", [clean], CUT,
         { status: "running", ask: null, stage: { phase: "extract", input: [] } }],
-    ["removed lines already decided after a small change: the run ends", at(inspectStage, { testsDecided: true, size: "small" }), "inspect", [clean], CUT,
-        { status: "done", stage: null, report: { skippedExtract: true } }],
     ["removed lines with findings: the fix round first, no ask", at(inspectStage), "inspect", [done({ findings: 2, findings_file: INSPECT_FILE })], CUT,
         { status: "running", ask: null, testsDecided: false, stage: { phase: "replicate", input: [`Findings file: ${INSPECT_FILE}`], fix: true } }],
     ["removed lines with proposed criteria: blueprint first, no ask", at(inspectStage), "inspect", [done({ findings: 0, findings_file: INSPECT_FILE, proposed_criteria: ["When x, y shall z (data: a.js:1)"] })], CUT,
         { status: "running", ask: null, testsDecided: false, stage: { phase: "blueprint", message: null, input: [`Proposed criteria from inspect, with evidence in ${INSPECT_FILE}:`, "When x, y shall z (data: a.js:1)"], fix: true } }],
-    ["the next node asks afresh", at({ phase: "extract", input: [], node: A }, { nodes: tree("building", "inspecting", "inspecting"), testsDecided: true }), "extract", [done()], CUT,
-        { testsDecided: false, stage: inspecting(B) }],
 ]) {
     test(`advance: existing tests: ${name}`, () => {
         const next = flow.advance({ ...state, blueprint: ROOT }, phase, results, options);
@@ -321,7 +224,6 @@ for (const [name, state, answers, expected, testsAnswer] of [
     ["keep chosen as recommended stays a default", at(inspectStage), { T1: { choice: "keep" } }, fixBlueprintFor(T1_ANSWER("keep")), "keep"],
     ["remove is the user's own choice", at(inspectStage), { T1: { choice: "remove" } }, fixBlueprintFor(T1_ANSWER("remove")), "remove"],
     ["own words win over the radio button", at(inspectStage), { T1: { choice: "keep", text: "remove only test/b.test.js" } }, fixBlueprintFor(`Q: ${T1_QUESTION} A: remove only test/b.test.js`), "remove only test/b.test.js"],
-    ["in a tree the fix round stays on that node", at(inspecting(A), { nodes: tree("building", "inspecting", "inspecting") }), {}, fixBlueprintFor(T1_ANSWER("keep"), { node: A }), "keep"],
 ]) {
     test(`answer: removed test lines: ${name}`, () => {
         const asking = asked(state);
@@ -379,65 +281,21 @@ test("an answered removal is applied in a fix round, inspected again and not ask
 
 /* ── jobs and prompts ── */
 
-const G = (id, wave, parallel, boundaries, criteria) => ({ id, wave, parallel, boundaries, criteria });
-
-for (const [name, groups, expected] of [
-    ["one parallel wave", [G("G1", 1, true, ["B1"], ["C1"]), G("G2", 1, true, ["B2"], ["C2"])], [{ parallel: true, groups: ["G1", "G2"] }]],
-    ["a serial wave and a later one", [G("G3", 2, true, ["B3"], ["C3"]), G("G1", 1, false, ["B1"], ["C1"]), G("G2", 1, false, ["B2"], ["C2"])], [{ parallel: false, groups: ["G1", "G2"] }, { parallel: true, groups: ["G3"] }]],
-]) {
-    test(`waves: ${name}`, () => {
-        const w = flow.waves({ ...base(), stage: { phase: "replicate", input: [] }, groups });
-        assert.deepEqual(w.map((x) => ({ parallel: x.parallel, groups: x.jobs.map((j) => j.group) })), expected);
-    });
-}
-
-test("waves takes a group's criteria from its boundary rows in the current blueprint", () => {
-    const state = { ...base(), stage: { phase: "replicate", input: [] }, criteria: ["C1", "C3", "C5", "C6"], groups: [G("G3", 1, true, ["B3"], ["C3"]), G("G4", 1, true, ["B4"], ["C6"])] };
-    const [wave] = flow.waves(state, { boundaryCriteria: { B3: ["C3", "C5"], B4: ["C6"] } });
-    assert.match(wave.jobs[0].input[0], /boundaries B3; criteria C3, C5\./);
-    assert.match(wave.jobs[1].input[0], /boundaries B4; criteria C6\./);
-});
-
-test("a small round's groups keep only that round's criteria and drop the ones left empty", () => {
-    const state = { ...base(), stage: { phase: "replicate", input: [] }, criteria: ["C7"], groups: [G("G1", 1, true, ["B1"], ["C1", "C7"]), G("G2", 1, true, ["B2"], ["C2", "C3"])] };
-    assert.deepEqual(flow.waves(state), [{ parallel: false, jobs: [{ phase: "replicate", input: ["Criterion IDs: C7"], message: null }] }]);
-});
-
-test("one group with every boundary is one ordinary replicate job", () => {
-    const state = { ...base(), stage: { phase: "replicate", input: [] }, criteria: ["C7"], groups: [G("G1", 1, false, ["B1", "B2", "B3", "B4"], ["C1", "C2", "C7"])] };
-    assert.deepEqual(flow.waves(state), [{ parallel: false, jobs: [{ phase: "replicate", input: ["Criterion IDs: C7"], message: null }] }]);
-});
-
-test("waves gives a fix round one replicate job even when groups exist", () => {
-    const w = flow.waves({ ...base(), stage: { phase: "replicate", input: ["Findings file: /f.md"], fix: true }, groups: [G("G1", 1, true, ["B1"], ["C1"])] });
-    assert.deepEqual(w, [{ parallel: false, jobs: [{ phase: "replicate", input: ["Findings file: /f.md"], message: null }] }]);
-});
-
 const replicating = { phase: "replicate", input: [] };
-const buildJob = (file, ...input) => ({ phase: "replicate", node: file, input });
 
-for (const [name, state, withFacts, expected] of [
-    ["an inspect is always of the code: the changed files, never a request to review the text", { ...base(), stage: inspectStage, nodes: [node(ROOT, "inspecting")], changed: ["a.js"] }, {},
+for (const [name, state, expected] of [
+    ["an inspect is always of the code: the changed files, never a request to review the text", { ...base(), stage: inspectStage, changed: ["a.js"] },
         [{ parallel: false, jobs: [{ phase: "inspect", input: ["Changed files: a.js"], message: null }] }]],
-    ["a blueprint pass after a replicate block names its file", { ...base(), stage: replicateStopped, nodes: tree("building", "building", "building") }, {},
-        [{ parallel: false, jobs: [{ phase: "blueprint", input: replicateStopped.input, message: null, node: ROOT }] }]],
-    ["children build one after another", { ...base(), stage: replicating, nodes: tree("building", "building", "building") }, facts(),
-        [{ parallel: false, jobs: [buildJob(A, "Criterion IDs: C2, C3"), buildJob(B, "Criterion IDs: C4")] }]],
-    ["the root builds its own rows once the children are done", { ...base(), stage: replicating, nodes: tree("building", "done", "done") }, facts(),
-        [{ parallel: false, jobs: [buildJob(ROOT, "Criterion IDs: C1", "Boundary rows: B1")] }]],
-    ["a root that delegated everything has nothing to build", { ...base(), stage: replicating, nodes: tree("building", "done", "done") }, facts({ boundaries: [], criteria: [] }), []],
-    ["a small round builds the criteria of the round only", { ...base(), stage: replicating, size: "small", criteria: ["C3"], nodes: tree("building", "building", "done") }, facts(),
-        [{ parallel: false, jobs: [buildJob(A, "Criterion IDs: C3")] }]],
-    ["a child is inspected on the files its replicate changed", { ...base(), stage: inspecting(A), changed: ["src/a.js", "src/b.js"], nodes: [node(ROOT, "building"), node(A, "inspecting", { changed: ["src/a.js"] }), node(B, "inspecting")] }, {},
-        [{ parallel: false, jobs: [{ phase: "inspect", input: ["Changed files: src/a.js"], message: null, node: A }] }]],
-    ["the root is inspected on all changed files", { ...base(), stage: inspecting(ROOT), changed: ["src/a.js", "src/b.js"], nodes: tree("inspecting", "done", "done") }, {},
-        [{ parallel: false, jobs: [{ phase: "inspect", input: ["Changed files: src/a.js, src/b.js"], message: null, node: ROOT }] }]],
-    ["a fix round in a tree builds the findings of one node", { ...base(), stage: { phase: "replicate", input: ["Findings file: /f.md"], fix: true, node: A }, nodes: tree("building", "inspecting", "inspecting") }, {},
-        [{ parallel: false, jobs: [{ phase: "replicate", input: ["Findings file: /f.md"], message: null, node: A }] }]],
-    ["a child's extract names the child", { ...base(), stage: { phase: "extract", input: [], node: A }, nodes: tree("building", "inspecting", "done") }, {},
-        [{ parallel: false, jobs: [{ phase: "extract", input: [], message: null, node: A }] }]],
+    ["a blueprint pass after a replicate block carries the issue", { ...base(), stage: replicateStopped },
+        [{ parallel: false, jobs: [{ phase: "blueprint", input: replicateStopped.input, message: null }] }]],
+    ["one replicate job builds the whole blueprint with the round's criteria", { ...base(), stage: replicating, criteria: ["C1", "C2"] },
+        [{ parallel: false, jobs: [{ phase: "replicate", input: ["Criterion IDs: C1, C2"], message: null }] }]],
+    ["a fix round carries the findings file and no criterion list", { ...base(), stage: { phase: "replicate", input: ["Findings file: /f.md"], fix: true }, criteria: ["C1"] },
+        [{ parallel: false, jobs: [{ phase: "replicate", input: ["Findings file: /f.md"], message: null }] }]],
+    ["an inspect after a feedback round names the criteria to recheck and the baseline", { ...base(), stage: { phase: "inspect", input: [], recheck: ["C4"] }, changed: ["a.js"], baseline: "ran: npm test on HEAD abc → 3 passed" },
+        [{ parallel: false, jobs: [{ phase: "inspect", input: ["Changed files: a.js", "Criterion IDs to recheck: C4", "Baseline: ran: npm test on HEAD abc → 3 passed"], message: null }] }]],
 ]) {
-    test(`waves: ${name}`, () => assert.deepEqual(flow.waves(state, { facts: withFacts }), expected));
+    test(`waves: ${name}`, () => assert.deepEqual(flow.waves(state), expected));
 }
 
 const template = flow.templateFrom(ORCHESTRATION);
@@ -461,14 +319,10 @@ for (const [name, job, state, has, lacks] of [
         ["Use the minime blueprint skill.", "Blueprint: new", "Repo: /r", "User message:\nfix the export\nEnd of user message.", "Reply with one JSON object in a json code block and nothing else"], ["<phase input", "End your reply"]],
     ["replicate carries its IDs and no user message", { phase: "replicate", input: ["Criterion IDs: C1, C2"], message: null }, { ...base(), blueprint: "/hq/bp.md" },
         ["Use the minime replicate skill.", "Blueprint: /hq/bp.md", "Criterion IDs: C1, C2"], ["User message:", "End of user message.", "<the user's text"]],
-    ["inspect names the blueprint and the changed files", { phase: "inspect", input: ["Changed files: a.js"], message: null, node: ROOT }, { ...base(), blueprint: ROOT },
+    ["inspect names the blueprint and the changed files", { phase: "inspect", input: ["Changed files: a.js"], message: null }, { ...base(), blueprint: ROOT },
         ["Use the minime inspect skill.", `Blueprint: ${ROOT}`, "Repo: /r", "Changed files: a.js"], ["Blueprint only", "User message:"]],
-    ["the blueprint pass after a replicate block carries the issue, no user message", { phase: "blueprint", input: replicateStopped.input, message: null, node: ROOT }, { ...base(), blueprint: ROOT },
+    ["the blueprint pass after a replicate block carries the issue, no user message", { phase: "blueprint", input: replicateStopped.input, message: null }, { ...base(), blueprint: ROOT },
         ["Use the minime blueprint skill.", `Blueprint: ${ROOT}`, "Replicate stopped; settle this in the blueprint: x"], ["User message:", "End of user message."]],
-    ["a child's replicate names the child's file and criteria", buildJob(A, "Criterion IDs: C2, C3"), { ...base(), blueprint: ROOT },
-        ["Use the minime replicate skill.", `Blueprint: ${A}`, "Criterion IDs: C2, C3"], [`Blueprint: ${ROOT}`]],
-    ["a child's extract names the child's file", { phase: "extract", input: [], message: null, node: A }, { ...base(), blueprint: ROOT },
-        ["Use the minime extract skill.", `Blueprint: ${A}`, "Repo: /r"], [`Blueprint: ${ROOT}`, "Criterion IDs"]],
 ]) {
     test(`promptFor: ${name}`, () => {
         const p = flow.promptFor(template, job, state);
@@ -505,6 +359,8 @@ for (const [name, state, expected] of [
     ["two different issues", { ...base(), jobs: [job("blueprint", { issue: "a" }), job("blueprint", { issue: "b" })] }, null],
     ["a done pass between two identical issues", { ...base(), jobs: [job("replicate", { issue: "a" }), job("blueprint"), job("replicate", { issue: "a" })] }, null],
     ["repeats raised to three", { ...base(), budget: { repeats: 3 }, jobs: [job("blueprint", { issue: "a" }), job("blueprint", { issue: "a" })] }, null],
+    ["the same open decision reworded twice", { ...base(), jobs: [{ ...job("blueprint", { issue: "I3 names no paths" }), result: { status: "blocked", blocking_issue: "I3 names no paths", open_decisions: [{ id: "C6", question: "Which paths?" }] } }, { ...job("blueprint", { issue: "I4 supplies no paths either" }), result: { status: "blocked", blocking_issue: "I4 supplies no paths either", open_decisions: [{ id: "C6", question: "What are the paths?" }] } }] }, "the same blocking issue 2 times: open decision C6"],
+    ["different open decisions in a row", { ...base(), jobs: [{ ...job("blueprint", { issue: "a" }), result: { status: "blocked", blocking_issue: "a", open_decisions: [{ id: "C6" }] } }, { ...job("blueprint", { issue: "b" }), result: { status: "blocked", blocking_issue: "b", open_decisions: [{ id: "C7" }] } }] }, null],
     ["repeats off", { ...base(), budget: { repeats: 0 }, jobs: [job("blueprint", { issue: "a" }), job("blueprint", { issue: "a" })] }, null],
 ]) {
     test(`overBudget: ${name}`, () => assert.equal(flow.overBudget(state), expected));
@@ -552,5 +408,43 @@ test("a replicate reply without a preflight line keeps the earlier baseline and 
 test("scores add up the board and the finished jobs", () => {
     const state = { ...base(), rounds: 2, jobs: [{ started: 0, ended: 90_000, usage: { premiumRequests: 3 } }, { started: 0, ended: null }] };
     const board = { criteria: [{ tests: ["t.js"], finding: false }, { tests: ["t.js"], finding: true }, { tests: [], finding: false }], diff: { added: 10, removed: 14, duplicates: [{}] }, check: { sources: { surprise: 1, default: 2 } } };
-    assert.deepEqual(flow.scores(state, board), { proven: 1, criteria: 3, netLines: -4, copiedBlocks: 1, surprises: 1, defaults: 2, rounds: 2, requests: 3, minutes: 1.5 });
+    assert.deepEqual(flow.scores(state, board), { proven: 1, criteria: 3, netLines: -4, copiedBlocks: 1, surprises: 1, defaults: 2, wiki: 0, rounds: 2, requests: 3, minutes: 1.5 });
 });
+
+/* ── the read side: scope, wiki input, receipts ── */
+
+for (const [name, origin, expected] of [
+    ["github https", "https://github.com/acme/todo.git", { org: "acme", repo: "todo" }],
+    ["github ssh", "git@github.com:acme/todo.git", { org: "acme", repo: "todo" }],
+    ["azure devops", "https://dev.azure.com/acme/proj/_git/todo", { org: "acme", repo: "todo" }],
+    ["no remote", "", { org: "local", repo: "todo-dir" }],
+    ["a bare name", "todo", { org: "todo", repo: "todo" }],
+]) {
+    test(`scopeOf: ${name}`, () => assert.deepEqual(flow.scopeOf(origin, "todo-dir"), expected));
+}
+
+test("waves pastes the wiki index and the past runs into a blueprint dispatch and nothing into the others", () => {
+    const wiki = { index: { path: "/hq/wiki/orgs/acme/todo/index.md", text: "# acme/todo\n- [Dates](./dates.md)\n" }, runs: { path: "/hq/raw/acme/todo/runs.md", text: "| 2026-11-03 | fix | proven | blueprint 1 | 4 req, 6 min | ran: pytest on HEAD abc → 3 passed | - |" } };
+    const bp = flow.waves({ ...base(), stage: { phase: "blueprint", message: "m", input: [] } }, { wiki });
+    assert.deepEqual(bp[0].jobs[0].input, [
+        "Wiki index of this repo (/hq/wiki/orgs/acme/todo/index.md); cite a rule you apply as [research: wiki <page path>#<anchor>]:",
+        "# acme/todo\n- [Dates](./dates.md)",
+        "Past runs of this repo (/hq/raw/acme/todo/runs.md); the test command of a proven run is the preflight command:",
+        wiki.runs.text,
+    ]);
+    const rep = flow.waves({ ...base(), stage: { phase: "replicate", input: [] } }, { wiki });
+    assert.deepEqual(rep[0].jobs[0].input, []);
+    const none = flow.waves({ ...base(), stage: { phase: "blueprint", message: "m", input: [] } }, { wiki: { index: null, runs: null } });
+    assert.deepEqual(none[0].jobs[0].input, []);
+});
+
+for (const [name, state, verdict, expected] of [
+    ["a proven run", { ...base(), status: "done", baseline: "ran: pytest -q on HEAD abc → 3 passed, 0 failed", jobs: [job("blueprint"), job("replicate", { issue: "x" }), job("replicate"), { ...job("inspect"), result: { status: "done", findings: 2 } }, { ...job("inspect"), result: { status: "done", findings: 0 } }, job("extract")] }, { proven: true, gaps: [] },
+        "| 2026-11-03 | fix the export | proven | blueprint 1, replicate 2 (1 blocked), inspect 2 (findings 2 → 0), extract 1 | 6 req, 6 min | ran: pytest -q on HEAD abc → 3 passed, 0 failed | - |"],
+    ["a run the fuel gauge stopped", { ...base(), status: "stopped", stopReason: "the same blocking issue 2 times: no | test", jobs: [job("blueprint", { requests: 2 })] }, { proven: false, gaps: ["C1: no test", "no inspection"] },
+        "| 2026-11-03 | fix the export | unproven: C1: no test; no inspection | blueprint 1 | 2 req, 1 min | - | the same blocking issue 2 times: no / test |"],
+    ["a failed run with a report", { ...base(), status: "failed", report: { phase: "replicate", blocking_issue: "needs Azure" }, jobs: [] }, { proven: false, gaps: ["no criteria"] },
+        "| 2026-11-03 | fix the export | unproven: no criteria | - | 0 req, 0 min | - | needs Azure |"],
+]) {
+    test(`receipt: ${name}`, () => assert.equal(flow.receipt(state, { criteria: [] }, verdict, Date.UTC(2026, 10, 3, 12)), expected));
+}

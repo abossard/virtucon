@@ -7,7 +7,7 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
@@ -76,24 +76,6 @@ function describe(data) {
 
 /* ── the blueprint tree ── */
 
-// What the flow reads from the blueprint files, from the root through the rows that name a child:
-// { [file]: { children, criteria, own: the rows that name no child } }.
-function readFacts(root) {
-    const facts = {};
-    const visit = (file) => {
-        if (facts[file] || !existsSync(file)) return;
-        const bp = parse(readFileSync(file, "utf8"));
-        const own = bp.boundaries.filter((b) => !b.child);
-        facts[file] = {
-            children: [...new Set(bp.boundaries.filter((b) => b.child).map((b) => path.join(path.dirname(file), b.child)))],
-            criteria: bp.criteria.map((c) => c.id),
-            own: { boundaries: own.map((b) => b.id), criteria: [...new Set(own.flatMap((b) => b.criteria))].sort() },
-        };
-        facts[file].children.forEach(visit);
-    };
-    visit(root);
-    return facts;
-}
 
 /* ── existing tests ── */
 
@@ -128,11 +110,23 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /* ── the run ── */
 
 export function createConductor({ repo, hq, model, budget, store, state: seeded = null }) {
+    // The repo's wiki scope: its index and its run receipts go to every blueprint dispatch, and every run ends with a receipt.
+    const scope = flow.scopeOf(spawnSync("git", ["remote", "get-url", "origin"], { cwd: repo, encoding: "utf8" }).stdout, path.basename(repo));
+    const wikiIndex = path.join(hq, "wiki", "orgs", scope.org, scope.repo, "index.md");
+    const runsFile = path.join(hq, "raw", scope.org, scope.repo, "runs.md");
+    const wiki = () => ({
+        index: existsSync(wikiIndex) ? { path: wikiIndex, text: readFileSync(wikiIndex, "utf8") } : null,
+        runs: existsSync(runsFile) ? { path: runsFile, text: readFileSync(runsFile, "utf8").trim().split("\n").filter((l) => l.startsWith("| 2")).slice(-5).join("\n") } : null,
+    });
+    const writeReceipt = (line) => {
+        mkdirSync(path.dirname(runsFile), { recursive: true });
+        if (!existsSync(runsFile)) writeFileSync(runsFile, flow.RUNS_HEADER);
+        appendFileSync(runsFile, line + "\n");
+    };
     const template = flow.templateFrom(readFileSync(path.join(PLUGIN, "assets", "ORCHESTRATION.md"), "utf8"));
     const children = new Set();
     const pausedFile = path.join(hq, "PAUSED");
-    // A blueprint opened without a run is a tree of finished nodes.
-    let state = seeded?.blueprint && !seeded.nodes?.length ? { ...seeded, nodes: flow.grow([], seeded.blueprint, readFacts(seeded.blueprint)).map((n) => ({ ...n, status: "done" })) } : seeded;
+    let state = seeded;
     let board = null;
     let driving = false;
     const tree = () => { try { return treeHash(state.repo); } catch { return null; } };
@@ -159,12 +153,10 @@ export function createConductor({ repo, hq, model, budget, store, state: seeded 
         };
     }
 
-    // The root's fields stay at the top of the board, every node (the root included) is listed under `nodes`.
     function refreshBoard() {
         if (!state?.blueprint || !existsSync(state.blueprint)) return;
         try {
-            const nodes = (state.nodes.length ? state.nodes : [{ file: state.blueprint, parent: null, status: state.status }]).filter((n) => existsSync(n.file)).map(readNode);
-            board = { ...nodes.find((n) => !n.parent), nodes, diff: diff(state.repo) };
+            board = { ...readNode({ file: state.blueprint, parent: null, status: state.status }), diff: diff(state.repo) };
         } catch (error) {
             board = { ...(board ?? {}), error: error.message };
         }
@@ -180,7 +172,7 @@ export function createConductor({ repo, hq, model, budget, store, state: seeded 
     }
 
     async function runJob(job) {
-        const record = { id: state.jobs.length + 1, phase: job.phase, group: job.group ?? null, node: job.node ?? null, started: Date.now(), ended: null, status: "running", activity: [], usage: null };
+        const record = { id: state.jobs.length + 1, phase: job.phase, started: Date.now(), ended: null, status: "running", activity: [], usage: null };
         set({ ...state, jobs: [...state.jobs, record] });
         const prompt = flow.promptFor(template, job, state);
         const onActivity = (line) => { record.activity = [...record.activity.slice(-7), line]; };
@@ -196,7 +188,7 @@ export function createConductor({ repo, hq, model, budget, store, state: seeded 
         Object.assign(record, { ended: Date.now(), status: result.status, usage: run.usage, sessionId: run.sessionId, result, tree: tree() });
         set({ ...state, jobs: state.jobs.map((j) => (j.id === record.id ? record : j)) });
         // The flow matches a result to its node.
-        return job.node ? { ...result, node: job.node } : result;
+        return result;
     }
 
     async function drive() {
@@ -209,26 +201,24 @@ export function createConductor({ repo, hq, model, budget, store, state: seeded 
                 if (state.status !== "running") break;
                 const phase = state.stage.phase;
                 const results = [];
-                const rows = state.blueprint && existsSync(state.blueprint) ? parse(readFileSync(state.blueprint, "utf8")).boundaries : [];
-                const boundaryCriteria = Object.fromEntries(rows.map((b) => [b.id, b.criteria]));
-                for (const wave of flow.waves(state, { boundaryCriteria, facts: state.blueprint ? readFacts(state.blueprint) : {} })) {
+                for (const wave of flow.waves(state, { wiki: wiki() })) {
                     if (wave.parallel) results.push(...await Promise.all(wave.jobs.map(runJob)));
                     else for (const job of wave.jobs) results.push(await runJob(job));
                     if (state.status !== "running") break;
                 }
                 if (state.status !== "running") break;
-                // A pass on a child works on the child's file; any other pass names the root.
-                const reported = results.find((r) => r.blueprint_path)?.blueprint_path;
-                const root = state.stage.node ? state.blueprint : reported ?? state.blueprint;
-                const file = state.stage.node ?? root;
+                const file = results.find((r) => r.blueprint_path)?.blueprint_path ?? state.blueprint;
                 const checkOpen = phase === "blueprint" && file && existsSync(file) ? check(readFileSync(file, "utf8")).open : [];
                 const tests = phase === "inspect" ? removedTestLines(state.repo, results[0]) : {};
-                set(flow.advance(state, phase, results, { checkOpen, facts: root ? readFacts(root) : {}, ...tests }));
+                set(flow.advance(state, phase, results, { checkOpen, ...tests }));
                 const fuel = flow.overBudget(state);
                 if (fuel) set(flow.stopped(state, fuel));
                 refreshBoard();
                 // A run that ends, however it ends, records what the proof board says; the run file is the record.
-                if (!state.stage) set({ ...state, verdict: flow.verdict(state, board, tree()) });
+                if (!state.stage) {
+                    set({ ...state, verdict: flow.verdict(state, board, tree()) });
+                    writeReceipt(flow.receipt(state, board, state.verdict, Date.now()));
+                }
                 save();
             }
         } finally {
@@ -261,13 +251,11 @@ export function createConductor({ repo, hq, model, budget, store, state: seeded 
             for (const child of children) child.kill("SIGTERM");
             if (state) set(flow.stopped(state, "stopped from the board"));
         },
-        // Boundaries of one node (the root without `node`), and only while no worker can be writing the blueprint.
+        // The blueprint's boundaries, and only while no worker can be writing the blueprint.
         edit(rows) {
             if (!state?.blueprint || !existsSync(state.blueprint)) return { ok: false, errors: ["there is no blueprint yet"] };
             if (!["asking", "done", "stopped", "failed"].includes(state.status)) return { ok: false, errors: ["a worker may be writing the blueprint: wait until it asks or finishes"] };
-            const file = rows?.node ?? state.blueprint;
-            if (file !== state.blueprint && !state.nodes.some((n) => n.file === file)) return { ok: false, errors: ["unknown blueprint"] };
-            if (!existsSync(file)) return { ok: false, errors: ["that blueprint file is gone"] };
+            const file = state.blueprint;
             const text = readFileSync(file, "utf8");
             const edited = applyEdit(text, rows ?? {});
             if (!edited.ok) return edited;
@@ -366,12 +354,13 @@ async function main(argv) {
     const repo = path.resolve(opt("repo") ?? process.cwd());
     const hq = defaultHq();
     const blueprint = opt("blueprint");
-    const cap = (name) => (opt(name) === undefined ? undefined : Number(opt(name)));
+    // Only the caps given on the command line; the run keeps its defaults for the rest.
+    const budget = Object.fromEntries(["requests", "minutes", "repeats"].filter((name) => opt(name) !== undefined).map((name) => [name, Number(opt(name))]));
     const board = await startBoard({
         repo,
         hq,
         model: opt("model"),
-        budget: { requests: cap("requests"), minutes: cap("minutes"), repeats: cap("repeats") },
+        budget,
         // No run yet: the blueprint is open for reading and editing, and a task typed on the page starts a run.
         state: blueprint && {
             ...flow.newRun({ task: `Blueprint ${path.basename(blueprint, ".md")}`, repo, hq, plugin: PLUGIN, model: opt("model"), now: Date.now() }),

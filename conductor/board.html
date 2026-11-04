@@ -118,12 +118,6 @@ svg .bold { font-weight: 700; }
         <div class="badges" id="badges"></div>
     </section>
 
-    <section class="panel hidden" id="nodesPanel">
-        <h2>Blueprints</h2>
-        <div class="scroll" id="nodeMap"></div>
-        <div class="quote mt6">The root and the children its rows name. Click one to show and edit its boundaries and proof. Border: amber drafting, dashed blue building or inspection, green done.</div>
-    </section>
-
     <section class="panel hidden" id="design">
         <div class="row">
             <h2>Boundaries</h2>
@@ -263,11 +257,8 @@ function log(view) {
 let draft = null; // { boundaries } once the first edit starts; the poll never redraws over it
 let sel = null; // the selected boundary id
 let lastSig = "";
-let nodeSig = "";
-let selNode = null; // the blueprint file shown; the root until a node is clicked
 const EDITABLE = ["asking", "done", "stopped", "failed"]; // no worker can be writing the blueprint
-const nodeList = () => current?.state?.nodes ?? [];
-const nodeView = () => { const all = current?.board?.nodes ?? []; return all.find((n) => n.file === selNode) ?? all.find((n) => !n.parent) ?? null; };
+const nodeView = () => (current?.board?.file ? current.board : null);
 const base = () => ({ boundaries: nodeView()?.boundaries ?? [] });
 const data = () => draft ?? base();
 const own = () => { $("designErr").innerHTML = ""; return (draft ??= structuredClone(base())); };
@@ -319,7 +310,7 @@ function bar() {
     const ed = editable();
     for (const id of ["draftChip", "saveDraft", "discardDraft"]) $(id).classList.toggle("hidden", !draft);
     $("addB").classList.toggle("hidden", !ed);
-    const which = nodeList().length > 1 && nodeView() ? `${nodeLabel(nodeView())}: ` : "";
+    const which = "";
     $("designHint").textContent = which + (ed ? "Edits rewrite the Boundaries table, and the old blueprint goes to raw. Ask Dr. Evil for a new round to rebuild." : current?.state ? "Read-only while a worker runs." : "");
 }
 function draw() { $("diagram").innerHTML = map(data()); bar(); }
@@ -337,50 +328,6 @@ function design() {
     drawAll();
 }
 
-// The root and its children as boxes, parent → child, one column per depth.
-const nodeLabel = (n) => {
-    const name = (f) => f.split(/[\\/]/).pop().replace(/\.md$/, "");
-    const parent = nodeList().find((p) => p.file === n.parent);
-    return parent && name(n.file).startsWith(`${name(parent.file)}.`) ? name(n.file).slice(name(parent.file).length + 1) : name(n.file);
-};
-function nodeMap() {
-    const list = nodeList();
-    $("nodesPanel").classList.toggle("hidden", list.length < 2);
-    const picked = nodeView()?.file;
-    const nsig = JSON.stringify([list.map((n) => [n.file, n.parent, n.status]), picked]);
-    if (list.length < 2 || nsig === nodeSig) return;
-    nodeSig = nsig;
-    const w = 190, h = 54, gx = 70, gy = 14;
-    const byFile = Object.fromEntries(list.map((n) => [n.file, n]));
-    const depth = (n) => (byFile[n.parent] ? depth(byFile[n.parent]) + 1 : 0);
-    const rows = {};
-    const at = Object.fromEntries(list.map((n) => { const k = depth(n), r = (rows[k] = (rows[k] ?? -1) + 1); return [n.file, { x: 20 + k * (w + gx), y: 10 + r * (h + gy) }]; }));
-    const W = 40 + (Math.max(...Object.keys(rows).map(Number)) + 1) * (w + gx) - gx, H = 20 + (Math.max(...Object.values(rows)) + 1) * (h + gy) - gy;
-    const edges = list.filter((n) => byFile[n.parent]).map((n) => {
-        const p = at[n.parent], q = at[n.file], y1 = p.y + h / 2, y2 = q.y + h / 2, x1 = p.x + w;
-        return `<path class="arrow" d="M${x1} ${y1} C${x1 + gx / 2} ${y1} ${q.x - gx / 2} ${y2} ${q.x} ${y2}"/>${head(q.x, y2, 1, 0)}`;
-    }).join("");
-    const boxes = list.map((n) => {
-        const { x, y } = at[n.file];
-        return `<g class="node n-${esc(n.status)} ${n.file === picked ? "pick" : ""}" data-n="${esc(n.file)}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/>
-            <text class="bold" x="${x + w / 2}" y="${y + 24}" text-anchor="middle">${esc(cut(nodeLabel(n), 24))}</text>
-            <text class="dim" x="${x + w / 2}" y="${y + 41}" text-anchor="middle">${esc(n.status)}${n.parent ? "" : " · root"}</text><title>${esc(n.file)}</title></g>`;
-    }).join("");
-    $("nodeMap").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="The root blueprint and its children">${edges}${boxes}</svg>`;
-}
-$("nodeMap").onclick = (e) => {
-    const t = e.target.closest("[data-n]");
-    if (!t || t.dataset.n === nodeView()?.file) return;
-    if (draft) { $("designErr").innerHTML = "<li>Save or discard the unsaved edits first.</li>"; return; }
-    selNode = t.dataset.n;
-    sel = null;
-    lastSig = "";
-    nodeSig = "";
-    $("designErr").innerHTML = "";
-    nodeMap();
-    design();
-    proof(nodeView());
-};
 
 const lookup = () => sel && own().boundaries.find((x) => x.id === sel);
 $("diagram").onclick = (e) => {
@@ -439,7 +386,6 @@ async function refresh() {
         rail(s);
         tiles(view.scores, view);
         proof(nodeView());
-        nodeMap();
         design();
         ask(s);
         log(view);

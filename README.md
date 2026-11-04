@@ -20,7 +20,7 @@
 
 minime is a GitHub Copilot CLI plugin that carries a coding task through planning, implementation, independent inspection, and knowledge capture. It addresses requirements drift in long agent sessions, reviews built on summaries instead of executed proof, and useful lessons that disappear when a session ends.
 
-You start with a task description. The conductor (or the `minime:dr-evil` agent inside a chat) runs four phases: blueprint, replicate, inspect, and extract. Each phase is a fresh Copilot worker. Large builds split into groups that run in waves, follow-up rounds stay scoped to the criteria they touch, and you only judge choices that data can't settle. A board on `127.0.0.1` shows the proof as it builds up and lets you answer questions, steer, pause or stop.
+You start with a task description. The conductor (or the `minime:dr-evil` agent inside a chat) runs four phases: blueprint, replicate, inspect, and extract. Each phase is a fresh Copilot worker. A blueprint is one file built by one replicate job, follow-up rounds stay scoped to the criteria they touch, and you only judge choices that data can't settle. A board on `127.0.0.1` shows the proof as it builds up and lets you answer questions, steer, pause or stop.
 
 ## Features
 
@@ -55,7 +55,7 @@ Since 0.3.1b (2026-10-23):
 - **Lean blueprint.** Three sections: Inputs, Criteria, Boundaries. Decisions, Flows, Constraints, Out of scope and Tests are gone; every value a criterion states ends with the evidence that settled it (`ran:`, `data:`, `research:`, `user:`, `default:` or an `open:` question), and `check` rejects the old sections, a criterion without evidence and `(D1)` references. The size goal is 2 KB without the inputs. An existing blueprint with a Decisions or Flows section fails `check`: fold its facts into the criteria and boundary rows.
 - **No review before the build.** A blueprint that returns done is built at once; inspect runs after replicate only. Workers reply with one JSON object and nothing else, and the report is one line per item.
 - **Existing tests are the contract.** Removed or rewritten lines of existing tests are counted mechanically and need your answer once per blueprint, with keep recommended. Replicate starts from a reproduction or the thinnest end-to-end slice.
-- **Groups and splits.** A round that touches more than three boundary rows builds in groups and waves; a blueprint past the size goal splits into a tree of children, built before the root.
+- **One build per blueprint.** Groups, waves and child blueprints are gone (measured in rounds 3, 4 and 6: every group fight was a block on a file another group owned); the size goal stays a warning and modularity lives in the Boundaries rows.
 - **Wiki.** A rule needs a receipt (a test, a command with its output, your words); one rule changes at a time; pages no blueprint cited retire to `raw/_retired/` after 60 days (`wiki-lint.mjs` lists them as unused); each repository scope keeps `process-<phase>.md` pages with rules the phases read.
 - **Worker guard rails.** The conductor denies workers the `git` commands that stage, commit, push or rewrite the tree, and GitHub writes (`gh repo fork`, `gh pr create` and the like).
 - **Benchmark record.** Three rounds of the flow measured against hidden tests on SWE-bench and the author's own tasks, with the decisions for the next variant, in [docs/autoresearch.md](docs/autoresearch.md). Those decisions (one build per blueprint, defaults instead of asks, process pages parked) are not in this version.
@@ -85,7 +85,7 @@ Run the conductor from your repository and open the board link it prints:
 node ~/.copilot/installed-plugins/virtucon/minime/conductor/minime.mjs --repo . "describe the change"
 ```
 
-Options: `--port <n>` (default 4177), `--model <id>`, `--open` to open the board in the browser, and the fuel gauge: `--requests <n>` and `--minutes <n>` stop the run at a cap, `--repeats <n>` (default 2) when the same blocking issue returns. A `PAUSED` file in `$VIRTUCON_HQ` holds every run. Without a task, the board asks for one. The board's verdict (proven, or the gaps) is computed from the proof board, never from a worker's reply. The session nudge prints the exact path of your installed copy.
+Options: `--port <n>` (default 4177), `--model <id>`, `--open` to open the board in the browser, and the fuel gauge: `--requests <n>` and `--minutes <n>` stop the run at a cap, `--repeats <n>` (default 2) when the same blocking issue or the same open decision returns. A `PAUSED` file in `$VIRTUCON_HQ` holds every run. Without a task, the board asks for one. The board's verdict (proven, or the gaps) is computed from the proof board, never from a worker's reply. The session nudge prints the exact path of your installed copy.
 
 Or start Copilot CLI with Dr. Evil:
 

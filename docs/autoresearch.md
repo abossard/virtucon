@@ -2,7 +2,7 @@
 
 The record of the benchmark that drives minime's flow changes: what was run, what it showed, what is decided and how to continue. The experiment itself lives in `minime-workspace/swe/` on the author's machine, excluded from git through `.git/info/exclude`, because it holds 21 GB of repository clones, worker homes and run logs. This page is the versioned state; paths below are relative to that workspace unless they start with `docs/`, `conductor/` or `skills/`.
 
-State on 2026-10-29: three rounds done, round 3 pinned at 08:22, no sequence running. The source carries the round-3 winner (v7l, the lean blueprint) uncommitted, plus three conductor fixes made the same day (a sign-off line after a bare JSON reply, object-valued proposed criteria, GitHub write commands denied). Suites: blueprint 201, conductor 152, extract 58. The `conductor/` directory is untracked.
+State on 2026-11-04 evening: rounds 4, 6 and 7 done (round 5, the public pool, is built and not run). The source carries, uncommitted: the repeat cap keyed on decision IDs, the read side (kept by the user after round 6), and one build per blueprint (round 7's winner). Suites: conductor 161, blueprint 192, extract 106, hooks 47. The source carries the round-4 additions (committed as `77e7a63`) plus, uncommitted, the repeat cap keyed on decision IDs and the read side (`ROUND6.md`). A public pool of 26 SWE-bench Pro V2 and Multi-SWE-bench flash tasks is built and its images pulled (`ROUND5.md`), not yet checked or run. Suites: blueprint 201, conductor 204, extract 106, hooks 47.
 
 ## Method
 
@@ -17,6 +17,9 @@ State on 2026-10-29: three rounds done, round 3 pinned at 08:22, no sequence run
 |---|---|---|---|---|
 | 1 | 2026-10-27 to 28 | v0 to v4 | dev 4/4 in both runs (v0 2/4), holdout 4/5 (v0 3/5). The gains came from bounded loops (v1) and existing tests as a contract with a mechanical removed-line count (v4). | v4 |
 | 2 | 2026-10-28 | v4s, v5 (blueprint tree, text review), v6 (test-removal ask, shape-named process rules) | dev 10/10 in both runs (v4s 9/10), holdout 6/10 (same as v4s). One task moved, through the test-removal ask. The tree split once in 40 runs; process rules were written and cited but changed no outcome. | v6 |
+| 7 | 2026-11-04 | v7lh control (the source after round 6), v7li (one build per blueprint: groups, waves and child blueprints removed, the size goal a warning) | 7 of 9 against 6 of 9 by majority, no control task lost, 6.2 against 9.1 requests per run, no run at the limit against three, no group blocks against 24. alt-text-directive, lost 0 of 3 in round 6, is 3 of 3 with every verdict proven. Blueprints grow to 4.2 KB from 2.7 KB without inputs. All five predictions held. | v7li |
+| 6 | 2026-11-04 | v7lg2 control (round-4 candidate plus the repeat cap keyed on open-decision IDs), v7lh (plus the read side: the conductor pastes the repository's wiki index and its run receipts into every blueprint dispatch; every run ends with a receipt line) | 6 of 9 by majority for both arms; v7lh gained one task and lost one to group fights on a first task with nothing pasted, so not won by the rule; 10.5 against 9.1 requests per run. The read side works as built: every later task of a repository cites the pages the earlier task's extract wrote (the control cites none), the receipts hand the test command forward, and the first run ever to resolve lane-labels-toggle was a citing candidate run. The decision-ID cap ended the ask loops at 2 to 3 requests in both arms (round 4: 58 to 77). | user's call |
+| 4 | 2026-11-03 to 04 | v7lf control (the source after round 3), v7lg (fuel gauge: request, minute and repeat caps and a PAUSED file; verdict computed from the proof board, tree hash and ratchet; replicate preflight on untouched HEAD; guard hook) | 9 of the author's tasks, three runs per arm, majority: 7 of 9 for both arms. 11.9 against 14.1 requests per run, so the control wins by the rule; the gap is one task's ask loop (one decision asked 58 to 77 times per run in both arms) that the repeat cap never caught because it compared issue text. Verdict proven on three done runs the hidden tests failed; HEAD fails its own suite in three runs; no blueprint cites a topic page and later tasks of a repo cost more than the first. | none (the additions stay as instrumentation; the cap is fixed to key on decision IDs) |
 | 3 | 2026-10-29 | v6 control, v7l lean (three sections, inline evidence brackets, no review, JSON-only replies), v7m modular (one child blueprint per module) | On the 8 tasks every arm ran twice: v6 3/8, v7l 4/8, v7m 4/8. Single runs v6 14/22, v7l 12/19, v7m 12/19. Plans 4645 / 2729 / 4857 bytes without inputs, 14.9 / 18.3 / 21.5 requests per run. Accuracy did not separate the arms; v7l applied for the minimal-plan goal at the lower cost. | v7l |
 
 ## What round 3 showed
@@ -57,6 +60,30 @@ Round 4 harness:
 
 Rejected: the request outranking repository instructions and the existing-tests rule; dependency-ordered groups and children; mining replacement tasks before round 4; a benchmark kit committed to this repository (it stays local).
 
+## What round 4 showed
+
+- Both arms resolve 7 of 9 of the author's tasks by majority; round 3 had 3 and 4 of 8 on the comparable set. The gain is the harness (readable instructions, a venv per run) and a stand-in user that stops a run on an ask without a recommendation, not a flow change. The two unresolved tasks fail for task reasons in every run of every arm (source paths that exist nowhere; hidden tests that pin a colour the request never names). Nine tasks separate nothing any more.
+- The flow's status predicts nothing in either direction: 11 runs resolved while the flow said failed or stopped, 6 said done while the hidden tests fail. The computed verdict was unproven on 4 done runs the grade resolved and proven on 3 it failed: it measures the proof's shape, not the code.
+- The ask loop is the cost sink: 80 and 181 asks answered per arm, 76 on one decision in one run. A cap keyed on the decision ID ends such a run after the second pass; an exact-text cap never fires on a model that rewords.
+- Preflight finds HEAD failing its own suite in a third of the repositories touched.
+- Extract writes, blueprint does not read: 18 to 20 pages per sequence with evidence, 33 blueprints cite the one process page the skill names, none a topic page, and the second and third task of one repository cost more than the first in both arms. Round 6 closes that loop: the conductor pastes the repository's wiki index and its run receipts (one line per run: verdict, jobs per phase, cost, test command, stop cause) into every blueprint dispatch.
+- Minutes are a host metric (load 100 to 400 through the night); only requests compare between arms run at the same time.
+
+## What round 7 showed
+
+- Groups were the authority failure: with one replicate job per blueprint the candidate had no block naming another group's file (the control had 24), resolved every alt-text run and spent a third fewer requests per run. The blueprint tool, the skill, the orchestration guide and the board lost about 230 lines for it.
+- The read side carries over: every later task of a repository cites the wiki in both arms, and under one build the second always_on_v2 task cost 5.3 requests against 12.3.
+- One file per blueprint costs size: mean 4.2 KB without inputs against 2.7 KB, one at 7.4 KB. The check warns; nothing measured suffers yet.
+- The preflight trap is the next failure cause: a suite that regenerates tracked snapshot files, which the guard forbids the worker to restore, so the run blocks on an ask after one job (one candidate run, three control runs). The fix is mechanical: let the worker restore, by path under the test directories, the tracked files its own test run rewrote, or have the conductor do it.
+- Two tasks stay task-level: pele-legend-once (hidden tests pin values the request never names; every run of every arm ends done and proven) and lane-labels-toggle (resolved only when the wiki has a page about the repository, 2 of 12 runs over two rounds).
+
+## What round 6 showed
+
+- The read side closes the loop mechanically: paste the repository's wiki index and run receipts into the blueprint prompt and the worker reads and cites them (a path in a nudge was never opened in three rounds). Citations do not make later tasks cheaper on their own: the cost of a repository's second and third task is set by ask loops, limit stops and group fights, not by what the blueprint knows.
+- Groups are the remaining authority failure: all three candidate losses on alt-text-directive were replicate groups blocked on a test file owned by an unassigned boundary row; the control lost the same way once. One build per blueprint, decided on 2026-10-29 and still unbuilt, is the next change.
+- A cap keyed on the decision ID works where a text cap did not: four stops, each after 2 or 3 requests, on the question earlier rounds asked 60 to 76 times.
+- The verdict stays a proof-shape measure: done-and-proven runs that fail the hidden tests exist in both arms (pele-legend-once), and runs stopped on an ask or at the limit resolve the hidden tests anyway (6 and 7 per arm).
+
 ## Additions (2026-11-03)
 
 From the harness and self-improvement survey in `research/harness-trends-2026-11-03/README.md`, applied to the method:
@@ -67,9 +94,8 @@ From the harness and self-improvement survey in `research/harness-trends-2026-11
 
 ## How to continue
 
-1. Kit, about 30 lines, none done yet: `kit/round.sh` takes the run count (r1 to r3); `kit/round3_table.py` counts a majority and takes an uncounted list; `kit/watch.py` stops a run on an ask without a recommendation instead of answering it, and grades after the conductor has exited; `kit/pools/round4.main` (9 tasks) and `round4.authority` (3). The venv clone and the HQ-hosted instructions in `run.sh` are tested in isolation only: run one task first.
-2. Build v8 from `v8-SPEC.md` in `variants/v8`, starting from a copy of the source as applied (not from `variants/v7l`, which lacks the three conductor fixes); snapshot the same source as `variants/v7lf` for the control. Suites green. A reviewer sub-session checks the variant against the spec, as ledger rows 43 and 60 did for v6 and v7l.
-3. Smoke one task per arm through the kit, remove `seq/STOP`, then `nohup ./kit/round.sh round4 v7lf v8 > seq/round4.log 2>&1 &`. Expect 5 to 8 hours for 12 tasks, two arms, three runs on a loaded host. Pin with `date > seq/STOP`.
-4. Table: `python3 kit/round3_table.py --arms v7lf,v8 --runs r1,r2,r3`. Apply the winner with `./kit/apply.sh <arm>`; record in `RESULTS.md`, `LEDGER.md` and this page.
+1. Round 8: the preflight snapshot trap. Decide the mechanism (a narrow guard allowance for `git restore <path>` under test directories on files a test run rewrote, or the conductor restoring them after the preflight), write the predictions in `ROUND8.md`, build it as `variants/v7lj` against the source as applied (v7li), smoke, `RUNS="r10 r11 r12" nohup ./kit/round.sh round4 v7li v7lj > seq/round8.log 2>&1 &`.
+2. Round 5, the public pool (`ROUND5.md`): `./kit/public_check.sh` once, then `nohup ./kit/round.sh public <control> <candidate> > seq/round5.log 2>&1 &` with whatever two arms are current; expect 10 to 15 hours and about 1500 premium requests under amd64 emulation.
+3. Every round: predictions first, one mechanical change, the majority table, the decision by the rule in `kit/README.md`, the record here. `minime-workspace/swe/RALPH.md` holds the loop's rules, backlog and state.
 
-Rules that keep the measurement honest, from `kit/README.md`: workers never see `hidden/`; the wiki is bare, never the author's real one; project checkouts are cloned, never used; every run has its own venv; nothing stages or commits; never kill a conductor you did not start; pool tasks that ask for an outward action stay out.
+Rules that keep the measurement honest, from `kit/README.md`: workers never see `hidden/`; the wiki is bare, never the author's real one; project checkouts are cloned, never used; every run has its own venv or container; nothing stages or commits; never kill a conductor you did not start; pool tasks that ask for an outward action stay out.

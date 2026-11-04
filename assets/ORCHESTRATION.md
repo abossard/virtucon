@@ -5,21 +5,23 @@ The owner runs the flow. Phase workers do the work in fresh contexts and return 
 ## Flow
 
 1. A question gets a short answer from what the owner can read. A request for a single phase gets only that phase.
-2. For a new task, dispatch **blueprint** with the user's message verbatim.
+2. For a new task, dispatch **blueprint** with the user's message verbatim, the repo's wiki index and the last lines of its run receipts (`raw/<org>/<repo>/runs.md`) pasted into the prompt, so the plan starts from what earlier runs on this repo proved. A chat dispatcher pastes the same two files.
 3. If blueprint returns `blocked` with open decisions, ask the user (see Ask), then dispatch **blueprint** again with the answers in `User message:` as `Q: <question> A: <answer>` pairs, without form field names or option tags. Mark an answer that keeps the recommendation unchanged as `A (default):`, so blueprint cites it as `default:`. The blueprint already holds the earlier message, so don't send it again. Repeat until it returns `done`.
-4. A blueprint that returns `done` is built at once; its text gets no review. Dispatch **replicate** with the criterion IDs blueprint added or changed. When blueprint returns groups, dispatch them as described in Groups; when it returns children, build as described in Splits. If replicate returns `blocked`, dispatch **blueprint** once with its blocking issue as input, then replicate again; a second block ends the run.
-5. Dispatch **inspect** to `minime:frau` with all changed files and replicate's preflight line (the project's tests on untouched HEAD) as `Baseline:`. After a feedback round, add the criterion IDs that round touched. In a split tree each inspect covers every criterion of its blueprint.
+4. A blueprint that returns `done` is built at once; its text gets no review. Dispatch **replicate** once with the criterion IDs blueprint added or changed: one build per blueprint, whatever its size. If replicate returns `blocked`, dispatch **blueprint** once with its blocking issue as input, then replicate again; a second block ends the run.
+5. Dispatch **inspect** to `minime:frau` with all changed files and replicate's preflight line (the project's tests on untouched HEAD) as `Baseline:`. After a feedback round, add the criterion IDs that round touched.
 
    Existing tests are the contract. When the change removes or rewrites lines of existing tests and inspect is otherwise clean, the user decides once per blueprint whether to keep them (recommended) or confirm the removal (see Ask). The conductor counts the lines with the blueprint tool's `diff` (`testLinesRemoved`); a chat dispatcher, which has no diff tool, takes `ratchet.test_lines_removed` from inspect's result. The answer goes to **blueprint** as the user's answer, then to **replicate** as a fix round (restoring the tests on `keep`), and **inspect** runs again.
 6. If inspect reports proposed criteria, dispatch **blueprint** with the proposals and their evidence first. Then dispatch **replicate** with the findings file and **inspect** again. After two rounds without fewer findings, show the user the evidence and ask how to proceed; if the next round still shows no fewer findings, stop and report the findings file.
-7. When inspect reports no findings, dispatch **extract** once. Skip it when blueprint returned `size: small`: a later extract reads the whole blueprint, including these inputs.
-8. Report one line each: the verdict, the absolute blueprint path (and its children's), the test counts, the changed files, what extract captured.
+7. When inspect reports no findings, dispatch **extract** once.
+8. Report one line each: the verdict, the absolute blueprint path, the test counts, the changed files, what extract captured.
+
+Every run ends with one receipt line in `raw/<org>/<repo>/runs.md`, written by the conductor from the run state: the verdict, the jobs per phase with blocks and findings, the cost, the preflight test command and what stopped the run. It is the evidence of what worked on this repo, read by the next blueprint; extract may cite it like any raw source.
 
 The verdict is computed, never reported: proven when every criterion names a test file and has no finding, inspect ran on the tree as it is now and found nothing, and the ratchet is clean; otherwise the gaps, one per line. A worker's `status` only says what happens next.
 
 ## Fuel
 
-A run stops with what it has, and the board keeps the proof so far, when it passes a cap: premium requests (`--requests`), worker minutes (`--minutes`), or the same blocking issue returned twice (`--repeats`, default 2; an ask answered with the same issue returning counts). A file named `PAUSED` in `VIRTUCON_HQ` holds every run before its next dispatch until the file is removed; the guard hook reads the same file. A chat dispatcher stops at the same repeat.
+A run stops with what it has, and the board keeps the proof so far, when it passes a cap: premium requests (`--requests`), worker minutes (`--minutes`), or the same blocking issue returned twice (`--repeats`, default 2): the identical issue text, or the same open decisions by criterion ID however the question is worded; an ask answered with the same decision returning counts. A file named `PAUSED` in `VIRTUCON_HQ` holds every run before its next dispatch until the file is removed; the guard hook reads the same file. A chat dispatcher stops at the same repeat.
 
 ## Feedback
 
@@ -29,25 +31,11 @@ A reviewer's diff or CI result after the report, given as a lesson and not as a 
 
 A review the user asks for without naming when (another model, a rubber duck) runs on the blueprint before step 4. Like inspect, it reports only failing tests, failing inputs at a boundary and deviations from the blueprint text; its proposals go to **blueprint**.
 
-## Groups
-
-blueprint returns groups when a round adds or changes more than three boundary rows: each group lists boundary and criterion IDs, numbered by wave. Dispatch each group as its own `replicate` task with its IDs. The groups of a wave marked `parallel` go out as task calls in the same turn; otherwise one after another. Wait for every group of a wave before the next wave, then run one **inspect** over all changed files. Groups never message each other: an interface one group needs from another is in the blueprint and, from the next wave on, in the code.
-
-## Splits
-
-A blueprint can be split into a root and children: files `<parent name>.<short-name>.md` next to the parent, named as the Owner of a Boundaries row that delegates criteria to them. Blueprint splits one that grows past its size goal and returns the files as `children`; the dispatcher proposes no splits. Build the children first:
-
-1. **replicate** with the child's criterion IDs. Children go out one after another.
-2. Per child, one after another: **inspect** with the child's changed files, the fix rounds of step 6, then **extract**.
-3. The root last: **replicate** with the criterion IDs and boundary row IDs of its own rows, skipped when every row names a child, then **inspect** with all changed files against the root, then **extract**.
-
-Build the deepest first. Each blueprint has its own limits: the second block of step 4, the stall rules of step 6 and the test question of step 5 count per blueprint. Groups apply only to an unsplit blueprint. In a small feedback round, a child none of whose criteria the round touched is skipped.
-
 ## Dispatch
 
 - Name each task after its phase: `blueprint`, `replicate`, `inspect`, `extract`, so progress reads the same in every client.
 - Every dispatch starts a new worker. Run workers synchronously and wait for each result. Don't start background workers or poll them, and don't send a worker more messages after it returns: the next round is a new dispatch that names the findings file.
-- Workers don't see the conversation, so every prompt stands alone. Send only these fields; the blueprint holds the context, so don't restate it. `Blueprint:` is the file the task works on: a child's own path for its tasks, the root's otherwise:
+- Workers don't see the conversation, so every prompt stands alone. Send only these fields; the blueprint holds the context, so don't restate it. `Blueprint:` is the file the task works on:
 
   ```text
   Use the minime <phase> skill.

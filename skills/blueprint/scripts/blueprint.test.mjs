@@ -373,112 +373,37 @@ test("splitRow keeps pipes inside code spans", () => {
     assert.deepEqual(splitRow("| B1 | `a | b` | x |"), ["B1", "`a | b`", "x"]);
 });
 
-/* ── splits ── */
+/* ── one file per blueprint ── */
 
 const CHILD_FILE = "2026-10-22-due-dates.sort.md";
-const PARENT_HEADER = "Repo: acme/todo | Created: 2026-10-22 | Parent: 2026-10-22-due-dates.md";
-const DELEGATING = `| B3 | \`${CHILD_FILE}\` | items → sorted items; missing date sorts last | new | C2 |`;
-const PARENT = VALID.replace("| changed | C1, C2 |", "| changed | C1 |").replace("| unchanged | C1 |\n", `| unchanged | C1 |\n${DELEGATING}\n`);
-const CHILD = `# Blueprint: due-dates.sort
 
-${PARENT_HEADER}
-
-## Inputs
-
-- **I1** (2026-10-22 09:14):
-  > add a --due flag so I can sort by due date
-- **I2** (2026-10-22 09:20):
-  > don't touch the storage format
-
-## Criteria
-
-- **C2** (I1 "--due flag"): When \`--due\` gets a value that is not a date, the CLI shall exit with code 2 and name the bad value. ${C2_EVIDENCE}
-
-## Boundaries
-
-| ID | Owner | Contract | Change | Criteria |
-|----|-------|----------|--------|----------|
-| B1 | \`src/store.js\` sortByDue | items → sorted items; missing date sorts last | new | C2 |
-`;
-
-test("a parent with a delegating row is valid: the row covers its criteria", () => {
-    const r = run(PARENT);
-    assert.deepEqual(r.errors, []);
-    assert.deepEqual(r.warnings, []);
-    assert.deepEqual([r.parent, r.children], [null, [CHILD_FILE]]);
-});
-
-test("a child that copies the parent's inputs is valid and reports its parent", () => {
-    const r = run(CHILD);
-    assert.deepEqual(r.errors, []);
-    assert.deepEqual([r.parent, r.children, r.counts.criteria], ["2026-10-22-due-dates.md", [], 1]);
-});
-
-for (const [name, text, errors] of [
-    ["an input none of a child's items trace", CHILD, 0],
-    ["the same input in a root", VALID.replace(" (I2)", ""), 1],
+for (const [name, text, error] of [
+    ["a Parent in the header", VALID.replace("Created: 2026-10-22", "Created: 2026-10-22 | Parent: 2026-10-22-due-dates.md"), "the header names a Parent: blueprints are not split, fold the child into this file"],
+    ["a row whose owner is a blueprint file", VALID.replace("| unchanged | C1 |\n", `| unchanged | C1 |\n| B3 | \`${CHILD_FILE}\` | items → sorted items | new | C2 |\n`), `B3 names the blueprint file ${CHILD_FILE} as its owner: blueprints are not split, keep the row's real owner`],
 ]) {
-    test(`check on untraced inputs: ${name}`, () => assert.equal(run(text).errors.filter((e) => e.includes("I2 is not traced")).length, errors));
+    test(`check rejects ${name}`, () => assert.ok(run(text).errors.includes(error), JSON.stringify(run(text).errors)));
 }
 
-for (const [name, header, parent, extracted] of [
-    ["a parent", "Repo: acme/todo | Created: 2026-10-22 | Parent: bp.md", "bp.md", null],
-    ["a parent, then Extracted", "Repo: acme/todo | Created: 2026-10-22 | Parent: bp.md | Extracted: 2026-10-23", "bp.md", "2026-10-23"],
-    ["no parent", "Repo: acme/todo | Created: 2026-10-22", null, null],
+for (const [owner] of [["`docs/due-dates.sort.md`"], ["`CHANGELOG.md`"], [`\`${CHILD_FILE}\` section`], ["`src/store.js` sortByDue"]]) {
+    test(`check takes ${owner} for an ordinary owner`, () => assert.deepEqual(run(VALID.replace("`src/store.js` sortByDue", owner)).errors, []));
+}
+
+for (const [name, header, extracted] of [
+    ["an Extracted date", "Repo: acme/todo | Created: 2026-10-22 | Extracted: 2026-10-23", "2026-10-23"],
+    ["no Extracted date", "Repo: acme/todo | Created: 2026-10-22", null],
 ]) {
     test(`check reads the header with ${name}`, () => {
         const r = run(VALID.replace("Repo: acme/todo | Created: 2026-10-22", header));
-        assert.deepEqual([r.errors, r.parent, r.extracted], [[], parent, extracted]);
+        assert.deepEqual([r.errors, r.extracted], [[], extracted]);
     });
 }
 
-test("check rejects Extracted before Parent in the header", () => {
-    const r = run(VALID.replace("Created: 2026-10-22", "Created: 2026-10-22 | Extracted: 2026-10-23 | Parent: bp.md"));
-    assert.ok(r.errors.some((e) => e.includes("missing header")), JSON.stringify(r.errors));
-});
-
-for (const [owner, children] of [
-    [`\`${CHILD_FILE}\``, [CHILD_FILE]],
-    ["`docs/due-dates.sort.md`", []],
-    ["`CHANGELOG.md`", []],
-    [`\`${CHILD_FILE}\` section`, []],
-    ["`src/store.js` sortByDue", []],
-]) {
-    test(`check takes ${owner} ${children.length ? "as a delegating row" : "for an ordinary owner"}`, () => {
-        assert.deepEqual(run(PARENT.replace(`\`${CHILD_FILE}\``, owner)).children, children);
-    });
-}
-
-for (const [name, siblings, errors] of [
-    ["the child is not looked for without a directory listing", null, []],
-    ["the child is there", [CHILD_FILE, "other.md"], []],
-    ["the child is missing", ["other.md"], [`B3 delegates to ${CHILD_FILE}, which does not exist next to the blueprint`]],
-]) {
-    test(`check with siblings: ${name}`, () => assert.deepEqual(check(PARENT, placeholders(TEMPLATE), siblings).errors, errors));
-}
-
-test("checkFile and the check command look for the child file next to the blueprint", () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "bp-split-"));
-    const file = path.join(dir, "2026-10-22-due-dates.md");
-    writeFileSync(file, PARENT);
-    const cli = () => spawnSync(process.execPath, [SCRIPT, "check", file], { encoding: "utf8" });
-    assert.equal(cli().status, 1);
-    assert.ok(checkFile(file).errors.some((e) => e.includes(`B3 delegates to ${CHILD_FILE}`)));
-    writeFileSync(path.join(dir, CHILD_FILE), CHILD);
-    assert.deepEqual(checkFile(file).errors, []);
-    const out = cli();
-    assert.equal(out.status, 0);
-    assert.deepEqual(JSON.parse(out.stdout).children, [CHILD_FILE]);
-});
-
-test("applyEdit keeps a delegating row and the Parent header, and drops only the Extracted date", () => {
-    const child = CHILD.replace("Parent: 2026-10-22-due-dates.md", "Parent: 2026-10-22-due-dates.md | Extracted: 2026-10-23");
-    const edit = applyEdit(child, rowsOf(child));
+test("applyEdit drops only the Extracted date from the header", () => {
+    const text = VALID.replace("Created: 2026-10-22", "Created: 2026-10-22 | Extracted: 2026-10-23");
+    const edit = applyEdit(text, rowsOf(text));
     assert.equal(edit.ok, true);
-    assert.deepEqual([parse(edit.text).header.parent, parse(edit.text).header.extracted], ["2026-10-22-due-dates.md", null]);
-    const parent = applyEdit(PARENT, rowsOf(PARENT));
-    assert.deepEqual(parent.ok && parse(parent.text).boundaries.map((b) => b.child), [null, null, CHILD_FILE]);
-    assert.equal(applyEdit(parent.text, rowsOf(parent.text)).text, parent.text);
+    assert.equal(parse(edit.text).header.extracted, null);
+    assert.equal(applyEdit(edit.text, rowsOf(edit.text)).text, edit.text);
 });
 
 /* ── coverage ── */

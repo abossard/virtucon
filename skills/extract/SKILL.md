@@ -24,8 +24,6 @@ From the blueprint, in order of value:
 
 Skip values whose bracket is `data:`; the code already says them.
 
-A child blueprint (`Parent:` in its header) is harvested like a root, and its lessons cite the child file. The root's extract reads the children's blueprints too and doesn't repeat their rules.
-
 ## Red pen
 
 The user's edits of agent code are the clearest statement of their taste.
