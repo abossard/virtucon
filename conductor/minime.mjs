@@ -3,7 +3,7 @@
 // and serves a board on 127.0.0.1 to watch and steer the run. No dependencies.
 //   node conductor/minime.mjs [--repo <dir>] [--port <n>] [--model <id>] [--requests <n>] [--minutes <n>] [--repeats <n>] [--open] ["task"]
 //   node conductor/minime.mjs --blueprint <file> [--open]   the board for an existing blueprint, to view and edit its boundaries
-// A file named PAUSED in VIRTUCON_HQ holds every run until it is removed (the guard hook reads the same file).
+// A file named PAUSED in VIRTUCON_HQ holds every run until it is removed.
 
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
@@ -13,14 +13,13 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { DENIED } from "../hooks/guard-rules.mjs";
 import { applyEdit, check, checkFile, coverage, diff, parse } from "../skills/blueprint/scripts/blueprint.mjs";
 import * as flow from "./flow.mjs";
 
 const PLUGIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-// Unattended workers never change history or anything outside the machine: the guard hook's list, denied to the worker's shell
-// too; `git restore` is the hook's alone (by file, under a test directory), and MINIME_UNATTENDED keeps the user's allow-git
-// lever from reaching a worker.
+// Unattended workers never change history or anything outside the machine: one --deny-tool per entry for the worker's shell.
+const DENIED = ["git push", "git commit", "git add", "git stash", "git reset", "git checkout", "git rebase",
+    "gh repo fork", "gh repo create", "gh repo delete", "gh pr create", "gh pr merge", "gh release create", "gh issue create", "gh api -X", "gh api --method"];
 
 /* ── workers ── */
 
@@ -38,7 +37,7 @@ function copilotArgs({ phase, prompt, repo, hq, model }) {
 function runWorker(job, state, onActivity, children) {
     return new Promise((resolve) => {
         const child = spawn("copilot", copilotArgs({ ...job, repo: state.repo, hq: state.hq, model: state.model }), {
-            env: { ...process.env, VIRTUCON_HQ: state.hq, MINIME_UNATTENDED: "1" },
+            env: { ...process.env, VIRTUCON_HQ: state.hq },
             stdio: ["ignore", "pipe", "pipe"],
         });
         children.add(child);

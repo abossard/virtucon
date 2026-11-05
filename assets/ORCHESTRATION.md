@@ -21,7 +21,7 @@ The verdict is computed, never reported: proven when every criterion names a tes
 
 ## Fuel
 
-A run stops with what it has, and the board keeps the proof so far, when it passes a cap: premium requests (`--requests`), worker minutes (`--minutes`), or the same blocking issue returned twice (`--repeats`, default 2): the identical issue text, or the same open decisions by criterion ID however the question is worded; an ask answered with the same decision returning counts. A file named `PAUSED` in `VIRTUCON_HQ` holds every run before its next dispatch until the file is removed; the guard hook reads the same file. A chat dispatcher stops at the same repeat.
+A run stops with what it has, and the board keeps the proof so far, when it passes a cap: premium requests (`--requests`), worker minutes (`--minutes`), or the same blocking issue returned twice (`--repeats`, default 2): the identical issue text, or the same open decisions by criterion ID however the question is worded; an ask answered with the same decision returning counts. A file named `PAUSED` in `VIRTUCON_HQ` holds every run before its next dispatch until the file is removed. A chat dispatcher stops at the same repeat.
 
 ## Feedback
 
