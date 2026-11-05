@@ -18,7 +18,9 @@ import { applyEdit, check, checkFile, coverage, diff, parse } from "../skills/bl
 import * as flow from "./flow.mjs";
 
 const PLUGIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-// Unattended workers never change history or anything outside the machine: the guard hook's list, denied to the worker's shell too.
+// Unattended workers never change history or anything outside the machine: the guard hook's list, denied to the worker's shell
+// too; `git restore` is the hook's alone (by file, under a test directory), and MINIME_UNATTENDED keeps the user's allow-git
+// lever from reaching a worker.
 
 /* ── workers ── */
 
@@ -36,7 +38,7 @@ function copilotArgs({ phase, prompt, repo, hq, model }) {
 function runWorker(job, state, onActivity, children) {
     return new Promise((resolve) => {
         const child = spawn("copilot", copilotArgs({ ...job, repo: state.repo, hq: state.hq, model: state.model }), {
-            env: { ...process.env, VIRTUCON_HQ: state.hq },
+            env: { ...process.env, VIRTUCON_HQ: state.hq, MINIME_UNATTENDED: "1" },
             stdio: ["ignore", "pipe", "pipe"],
         });
         children.add(child);

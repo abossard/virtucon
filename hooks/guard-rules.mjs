@@ -5,7 +5,8 @@
 
 import { createHash } from "node:crypto";
 
-// Same list as the conductor's worker denials: nothing that changes history or leaves the machine.
+// The conductor denies the same list to its workers (one --deny-tool per entry): nothing that changes history or leaves the
+// machine. `git restore` is not in it: a flat deny list cannot carry a path condition, so the hook alone judges restores.
 export const DENIED = ["git push", "git commit", "git add", "git stash", "git reset", "git checkout", "git rebase",
     "gh repo fork", "gh repo create", "gh repo delete", "gh pr create", "gh pr merge", "gh release create", "gh issue create", "gh api -X", "gh api --method"];
 
@@ -14,33 +15,58 @@ export const BREAKER_LIMIT = 3;
 export function isShell(toolName) { return /^(bash|shell|powershell|run_in_terminal|terminal|execute)/i.test(toolName ?? ""); }
 
 export function commandOf(input) {
-    const args = input.tool_input ?? input.toolArgs ?? input.tool_args ?? {};
+    let args = input.tool_input ?? input.toolArgs ?? input.tool_args ?? {};
+    if (typeof args === "string" && args.trimStart().startsWith("{")) { try { args = JSON.parse(args); } catch { /* a plain command */ } }
     if (typeof args === "string") return args;
     return String(args.command ?? args.cmd ?? args.script ?? "");
 }
 
-// A test run may rewrite tracked snapshots and screenshots; the one git restore allowed puts them back: worktree only, by
-// path, every path under a test directory.
-export const TEST_DIR = /(^|\/)(tests?|__tests__|specs?|snapshots?|__snapshots__|screenshots|fixtures|testdata)(\/|$)/;
-export const RESTORE_RULE = "a worktree restore by path (git restore -- <paths>) of files under a test directory that a test run rewrote";
+// Shell words: quotes keep a word together and stay in it until a rule strips them.
+const WORD = /(?:'[^']*'|"[^"]*"|[^\s'"])+/g;
+const words = (text) => text.match(WORD) ?? [];
 
-export function allowedRestore(segment) {
-    const words = (segment.replace(/^git\s+restore\s*/, "").match(/'[^']*'|"[^"]*"|\S+/g) ?? []).map((w) => w.replace(/^['"]|['"]$/g, ""));
-    const paths = [];
-    for (let i = 0; i < words.length; i++) {
-        const w = words[i];
-        if (w === "--" || w === "--worktree" || w === "-W" || w === "--source=HEAD") continue;
-        if ((w === "--source" || w === "-s") && words[i + 1] === "HEAD") { i++; continue; }
-        if (w.startsWith("-")) return false;
-        paths.push(w);
-    }
-    return paths.length > 0 && paths.every((p) => TEST_DIR.test(p));
+// What stands before the command and does not change it: wrappers with their options, VAR=value, shell keywords, a subshell's
+// parenthesis. Then git's own options before the subcommand (-C <dir>, -c k=v, --no-pager, --git-dir <path>).
+const WRAPPERS = new Set(["sudo", "env", "command", "xargs", "time", "exec", "nohup", "do", "then", "else", "{", "(", "!"]);
+const GIT_VALUE_OPTIONS = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path", "--config-env"]);
+export function normalizeCommand(segment) {
+    const w = words(segment.replace(/^[\s({!]+|[\s)}]+$/g, ""));
+    let i = 0;
+    while (i < w.length && (WRAPPERS.has(w[i]) || /^[A-Za-z_][A-Za-z0-9_]*=/.test(w[i]) || (i > 0 && WRAPPERS.has(w[i - 1]) && w[i].startsWith("-")))) i++;
+    if (w[i] !== "git") return w.slice(i).join(" ");
+    for (i++; i < w.length && w[i].startsWith("-"); i++) if (GIT_VALUE_OPTIONS.has(w[i])) i++;
+    return ["git", ...w.slice(i)].join(" ");
 }
 
-// The first denied command in a chain. Segments split on the shell's own separators; a leading sudo/env/command wrapper is skipped.
+// A test run may rewrite tracked snapshots and screenshots; the one git restore allowed puts them back: from HEAD into the
+// worktree, by file (a name with an extension, never a directory), every file under a test directory, nothing the shell would
+// expand or git would read as pathspec magic.
+const TEST_DIR = /(^|\/)(tests?|testing|__tests__|specs?|snapshots?|__snapshots__|screenshots|fixtures|testdata)\/.*\.[^/.]+$/i;
+const RESTORE_FLAGS = new Set(["--worktree", "-W", "--source=HEAD", "-q", "--quiet"]);
+const UNSAFE_PATH = /[*?[\]{}$`\\<>|&;#!~=]|(^|\/)\.\.(\/|$)|^[:/]/;
+const REDIRECT = /^\d*(>>?|<|&>)\S*$/;
+
+export function allowedRestore(segment) {
+    if ((segment.match(/['"]/g) ?? []).length % 2) return false;
+    const rest = normalizeCommand(segment).replace(/^git\s+restore(\s+|$)/, "");
+    const out = [];
+    const raw = words(rest);
+    for (let i = 0; i < raw.length; i++) {
+        if (raw[i].startsWith("#")) break;
+        if (REDIRECT.test(raw[i])) { if (/^\d*(>>?|<|&>)$/.test(raw[i])) i++; continue; }
+        out.push(raw[i].replace(/['"]/g, ""));
+    }
+    const sep = out.indexOf("--");
+    const flags = sep < 0 ? out.filter((w) => w.startsWith("-")) : out.slice(0, sep);
+    const paths = sep < 0 ? out.filter((w) => !w.startsWith("-")) : out.slice(sep + 1);
+    return flags.every((f) => RESTORE_FLAGS.has(f)) && paths.length > 0
+        && paths.every((p) => !p.startsWith("-") && !UNSAFE_PATH.test(p) && TEST_DIR.test(p));
+}
+
+// The first denied command in a chain. Segments split on the shell's own separators (a backslash-newline joins lines).
 export function deniedCommand(command) {
-    for (const seg of String(command).split(/\s*(?:&&|\|\||;|\n|\|)\s*/)) {
-        const s = seg.replace(/^(sudo|env|command)\s+/, "").trim();
+    for (const seg of String(command).replace(/\\\n/g, " ").split(/&&|\|\||[;\n|&]/)) {
+        const s = normalizeCommand(seg);
         const hit = DENIED.find((d) => s === d || s.startsWith(d + " "));
         if (hit) return hit;
         if (/^git\s+restore(\s|$)/.test(s) && !allowedRestore(s)) return "git restore";
@@ -50,6 +76,12 @@ export function deniedCommand(command) {
 
 export function attributed(command) { return /co-?authored-by:\s*claude|generated with \[?claude/i.test(String(command)); }
 
+const RESTORE_RULE = "a worktree restore from HEAD, by file (git restore -- <paths>), of files under a test directory that a test run rewrote";
+const WHY = {
+    "git restore": `is allowed only as ${RESTORE_RULE}; the user allows more`,
+    "git checkout": `changes history or leaves the machine (a file a test run rewrote goes back with ${RESTORE_RULE}); the user commits, or allows it`,
+};
+
 // One decision for every event. `allow` means the hook stays silent.
 export function decide({ event, toolName, command, paused, allowGit, tripped }) {
     if (paused) return { decision: "deny", reason: `minime: PAUSED file at ${paused}; remove it to continue` };
@@ -57,8 +89,7 @@ export function decide({ event, toolName, command, paused, allowGit, tripped }) 
     if (event !== "PreToolUse" || !isShell(toolName)) return { decision: "allow" };
     if (attributed(command)) return { decision: "deny", reason: "minime: no AI attribution in commits or PRs; drop the Co-Authored-By / Generated with line" };
     const hit = deniedCommand(command);
-    if (hit === "git restore" && !allowGit) return { decision: "deny", reason: `minime: 'git restore' is allowed only as ${RESTORE_RULE}; the user allows more with MINIME_ALLOW_GIT=1 or an allow-git file in VIRTUCON_HQ` };
-    if (hit && !allowGit) return { decision: "deny", reason: `minime: '${hit}' changes history or leaves the machine; the user commits, or allows it for this session with MINIME_ALLOW_GIT=1 or an allow-git file in VIRTUCON_HQ` };
+    if (hit && !allowGit) return { decision: "deny", reason: `minime: '${hit}' ${WHY[hit] ?? "changes history or leaves the machine; the user commits, or allows it"} for this session with MINIME_ALLOW_GIT=1 or an allow-git file in VIRTUCON_HQ` };
     return { decision: "allow" };
 }
 

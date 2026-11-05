@@ -240,7 +240,7 @@ test("feedback that replaces the test question leaves the gate armed, so the nex
     assert.equal(flow.advance({ ...fed, stage: inspectStage }, "inspect", [clean], CUT).status, "asking");
 });
 
-const KEEP_LINE = "The user keeps the existing tests: restore every removed or rewritten line in test/a.test.js, test/b.test.js and change the code until they pass.";
+const KEEP_LINE = "The user keeps the existing tests: put back every removed or rewritten line in test/a.test.js, test/b.test.js by hand (no git restore: those files hold your new tests) and change the code until they pass.";
 
 for (const [name, answers, line] of [
     ["keep restores every removed line", {}, KEEP_LINE],

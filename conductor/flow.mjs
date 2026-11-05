@@ -174,7 +174,7 @@ const testsAsk = (removed, files) => ({
 
 // What the replicate fix round after that answer is told, besides the findings file: the blueprint holds the answer, this says what to do.
 const testsInput = (answer, files) => answer === "keep"
-    ? `The user keeps the existing tests: restore every removed or rewritten line in ${files.length ? files.join(", ") : "the existing test files"} and change the code until they pass.`
+    ? `The user keeps the existing tests: put back every removed or rewritten line in ${files.length ? files.join(", ") : "the existing test files"} by hand (no git restore: those files hold your new tests) and change the code until they pass.`
     : answer === "remove" ? "The user confirmed removing the existing test lines." : `The user answered the question about the existing tests: ${answer}`;
 
 // `testLinesRemoved` and `testFiles` are what the conductor counted in the repo after an inspect.

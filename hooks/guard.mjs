@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Guard hook for minime, registered for PreToolUse, UserPromptSubmit and Stop in hooks/hooks.json (both hosts).
 // Reads the host's JSON on stdin, decides with guard-rules.mjs, prints one JSON object. Never fails: exits 0 with {} on any error.
-// State under VIRTUCON_HQ: PAUSED (a file: everything stops), allow-git (a file younger than 8 h: git writes allowed), breaker/<key>.json.
+// State under VIRTUCON_HQ: PAUSED (a file: everything stops), allow-git (a file younger than 8 h: git writes allowed, never for
+// a conductor worker, which runs with MINIME_UNATTENDED=1), breaker/<key>.json.
 
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
@@ -71,7 +72,7 @@ async function main() {
         event, paused, tripped,
         toolName: input.tool_name ?? input.toolName ?? "",
         command: event === "PreToolUse" ? commandOf(input) : "",
-        allowGit: process.env.MINIME_ALLOW_GIT === "1" || fresh(path.join(HQ, "allow-git"), ALLOW_GIT_HOURS),
+        allowGit: process.env.MINIME_UNATTENDED !== "1" && (process.env.MINIME_ALLOW_GIT === "1" || fresh(path.join(HQ, "allow-git"), ALLOW_GIT_HOURS)),
     });
     return output(event, verdict);
 }

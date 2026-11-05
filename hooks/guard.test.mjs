@@ -31,6 +31,30 @@ for (const [command, expected] of [
     ["git restore -- src/app.py", "git restore"],
     ["pytest; git restore -- tests/a.svg && git status", null],
     ["npm test && git restore .", "git restore"],
+    ["git -C . restore -- src/app.py", "git restore"],
+    ["git --no-pager push origin main", "git push"],
+    ["git -c core.hooksPath=/dev/null commit -m x", "git commit"],
+    ["FOO=1 git restore .", "git restore"],
+    ["true & git restore .", "git restore"],
+    ["(git restore .)", "git restore"],
+    ["git ls-files -m | xargs git restore --", "git restore"],
+    ["  sudo git push", "git push"],
+    ["git restore -- \\\ntests/a.svg \\\ntests/b.svg", null],
+    ["git restore -- 'tests/a.s[;v]g' src/app.py", "git restore"],
+    ["git -C \"my dir\" push", "git push"],
+    ["git -c \"user.name=A B\" push", "git push"],
+    ["git --git-dir foo push", "git push"],
+    ["git -C \"my dir\" restore -- src/a.py", "git restore"],
+    ["for f in a b; do git add $f; done", "git add"],
+    ["if true; then git push; fi", "git push"],
+    ["{ git push; }", "git push"],
+    ["! git push", "git push"],
+    ["time git push", "git push"],
+    ["xargs -n1 git push", "git push"],
+    ["FOO=\"a b\" git push", "git push"],
+    ["git --version", null],
+    ["git -p log", null],
+    ["echo \"a & git push is blocked\"", "git push"],
 ]) {
     test(`deniedCommand ${JSON.stringify(command)} is ${expected}`, () => assert.equal(deniedCommand(command), expected));
 }
@@ -38,16 +62,42 @@ for (const [command, expected] of [
 for (const [segment, expected] of [
     ["git restore -- tests/screenshots/a.svg", true],
     ["git restore --source=HEAD --worktree -- pkg/__tests__/x.snap", true],
-    ["git restore --source HEAD -W -- 'tests/a b.svg'", true],
+    ["git restore -W -- 'tests/a b.svg'", true],
     ["git restore tests/fixtures/a.json spec/b.yml", true],
+    ["git restore -- Tests/__Snapshots__/a.png", true],
+    ["git restore -q -- tests/a.svg 2>/dev/null", true],
+    ["git restore -- tests/a.svg > /dev/null 2>&1", true],
+    ["git restore -- tests/a.svg # rewritten by the suite", true],
+    ["git restore -- tests/sub/a.svg", true],
+    ["git restore -- tests/", false],
+    ["git restore -- tests/sub/", false],
+    ["git restore -- tests/.", false],
+    ["git restore -- tests//", false],
+    ["git restore -- tests/a.svg 'tests/a\" #' src/x.py", false],
     ["git restore", false],
     ["git restore -- tests/a.svg src/a.py", false],
     ["git restore --staged -- tests/a.svg", false],
     ["git restore -S tests/a.svg", false],
     ["git restore --source=main -- tests/a.svg", false],
+    ["git restore --source HEAD -- tests/a.svg", false],
     ["git restore -- .", false],
+    ["git restore -- tests", false],
+    ["git restore -- bin/test", false],
     ["git restore -- testsuite/a.svg", false],
     ["git restore -- contest/a.svg", false],
+    ["git restore -- tests/../src/app.py", false],
+    ["git restore -- tests/..", false],
+    ["git restore -- /repo/tests/a.svg", false],
+    ["git restore -- ':(exclude)tests/fixtures'", false],
+    ["git restore -- ':!src/tests'", false],
+    ["git restore -- tests/*.svg", false],
+    ["git restore -- tests/$X", false],
+    ["git restore -- tests/{a,../b}.svg", false],
+    ["git restore -- \"tests/$(git push)\"", false],
+    ["git restore \"--\"pathspec-from-file=./tests/files.txt", false],
+    ["git restore \\--pathspec-from-file=./tests/files.txt", false],
+    ["git restore -- tests/a.svg --worktree", false],
+    ["git restore -- 'tests/a.svg", false],
 ]) {
     test(`allowedRestore ${JSON.stringify(segment)} is ${expected}`, () => assert.equal(allowedRestore(segment), expected));
 }
@@ -63,6 +113,7 @@ for (const [command, expected] of [
 for (const [input, expected] of [
     [{ tool_input: { command: "git push" } }, "git push"],
     [{ toolArgs: { command: "ls" } }, "ls"],
+    [{ toolArgs: "{\"command\":\"git push\"}" }, "git push"],
     [{ tool_input: "raw" }, "raw"],
     [{}, ""],
 ]) {
@@ -93,9 +144,12 @@ for (const [name, args, expected] of [
     test(`decide ${name}: ${expected}`, () => assert.equal(decide(args).decision, expected));
 }
 
-test("decide names the one restore allowed", () => {
-    assert.match(decide({ event: "PreToolUse", toolName: "Bash", command: "git restore -- src/app.py" }).reason, /under a test directory/);
-});
+for (const [command, pattern] of [
+    ["git restore -- src/app.py", /'git restore' is allowed only as .*under a test directory.*MINIME_ALLOW_GIT=1/],
+    ["git checkout -- tests/a.svg", /'git checkout' .*git restore -- <paths>.*MINIME_ALLOW_GIT=1/],
+]) {
+    test(`decide reason for ${JSON.stringify(command)}`, () => assert.match(decide({ event: "PreToolUse", toolName: "Bash", command }).reason, pattern));
+}
 
 test("decide names the command and the way to allow it", () => {
     const v = decide({ event: "PreToolUse", toolName: "Bash", command: "git push" });

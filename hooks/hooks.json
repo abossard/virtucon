@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${PLUGIN_ROOT}/hooks/session-start.js\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.js\""
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${PLUGIN_ROOT}/hooks/guard.mjs\" PreToolUse"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs\" PreToolUse"
           }
         ]
       }
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${PLUGIN_ROOT}/hooks/guard.mjs\" UserPromptSubmit"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs\" UserPromptSubmit"
           }
         ]
       }
@@ -37,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${PLUGIN_ROOT}/hooks/guard.mjs\" Stop"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs\" Stop"
           }
         ]
       }
