@@ -9,7 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { attributed, breakerState, commandOf, decide, deniedCommand, firstPrompt, isShell, key, lastAssistant, normalize, output } from "./guard-rules.mjs";
+import { allowedRestore, attributed, breakerState, commandOf, decide, deniedCommand, firstPrompt, isShell, key, lastAssistant, normalize, output } from "./guard-rules.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -26,8 +26,30 @@ for (const [command, expected] of [
     ["echo 'git push' > notes.md", null],
     ["gh pr view 12", null],
     ["", null],
+    ["git restore -- tests/screenshots/a.svg tests/b.svg", null],
+    ["git restore --staged tests/a.svg", "git restore"],
+    ["git restore -- src/app.py", "git restore"],
+    ["pytest; git restore -- tests/a.svg && git status", null],
+    ["npm test && git restore .", "git restore"],
 ]) {
     test(`deniedCommand ${JSON.stringify(command)} is ${expected}`, () => assert.equal(deniedCommand(command), expected));
+}
+
+for (const [segment, expected] of [
+    ["git restore -- tests/screenshots/a.svg", true],
+    ["git restore --source=HEAD --worktree -- pkg/__tests__/x.snap", true],
+    ["git restore --source HEAD -W -- 'tests/a b.svg'", true],
+    ["git restore tests/fixtures/a.json spec/b.yml", true],
+    ["git restore", false],
+    ["git restore -- tests/a.svg src/a.py", false],
+    ["git restore --staged -- tests/a.svg", false],
+    ["git restore -S tests/a.svg", false],
+    ["git restore --source=main -- tests/a.svg", false],
+    ["git restore -- .", false],
+    ["git restore -- testsuite/a.svg", false],
+    ["git restore -- contest/a.svg", false],
+]) {
+    test(`allowedRestore ${JSON.stringify(segment)} is ${expected}`, () => assert.equal(allowedRestore(segment), expected));
 }
 
 for (const [command, expected] of [
@@ -64,9 +86,16 @@ for (const [name, args, expected] of [
     ["a prompt whose breaker tripped", { event: "UserPromptSubmit", tripped: "/hq/breaker/abc.json" }, "deny"],
     ["a prompt otherwise", { event: "UserPromptSubmit" }, "allow"],
     ["a commit in a Copilot shell tool", { event: "PreToolUse", toolName: "shell", command: "git add -A" }, "deny"],
+    ["a restore of rewritten snapshots", { event: "PreToolUse", toolName: "shell", command: "git restore -- tests/screenshots/a.svg" }, "allow"],
+    ["a restore of a source file", { event: "PreToolUse", toolName: "Bash", command: "git restore -- src/app.py" }, "deny"],
+    ["a restore of a source file the user allowed", { event: "PreToolUse", toolName: "Bash", command: "git restore -- src/app.py", allowGit: true }, "allow"],
 ]) {
     test(`decide ${name}: ${expected}`, () => assert.equal(decide(args).decision, expected));
 }
+
+test("decide names the one restore allowed", () => {
+    assert.match(decide({ event: "PreToolUse", toolName: "Bash", command: "git restore -- src/app.py" }).reason, /under a test directory/);
+});
 
 test("decide names the command and the way to allow it", () => {
     const v = decide({ event: "PreToolUse", toolName: "Bash", command: "git push" });

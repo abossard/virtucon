@@ -18,7 +18,7 @@ Build exactly what the blueprint specifies and prove it with tests in the projec
 
 ## Preflight
 
-Before the first edit, run the project's test command on the untouched tree and record it as the first evidence excerpt: `ran: <command> on HEAD <short sha> → <pass>/<fail>`. Check in the same pass that what the criteria need is there: a local server a test talks to is up, the test runner is the project's one, a tool a boundary names (a browser, a sandbox) answers. A test command that is missing or fails to start, a server that is down or a tool that is absent is a block with the obstacle named, not a code failure; a test already failing on HEAD is the baseline the inspector compares against. A wrong belief formed here costs the whole run.
+Before the first edit, run the project's test command on the untouched tree and record it as the first evidence excerpt: `ran: <command> on HEAD <short sha> → <pass>/<fail>`. Check in the same pass that what the criteria need is there: a local server a test talks to is up, the test runner is the project's one, a tool a boundary names (a browser, a sandbox) answers. A test command that is missing or fails to start, a server that is down or a tool that is absent is a block with the obstacle named, not a code failure; a test already failing on HEAD is the baseline the inspector compares against. A test run that rewrites tracked files under a test directory (snapshots, screenshots) is not an edit: put them back by path with `git restore -- <paths>`, the one restore the guard allows, and say so in the preflight line. A wrong belief formed here costs the whole run.
 
 ## Start running, then grow
 

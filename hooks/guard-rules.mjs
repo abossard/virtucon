@@ -6,7 +6,7 @@
 import { createHash } from "node:crypto";
 
 // Same list as the conductor's worker denials: nothing that changes history or leaves the machine.
-export const DENIED = ["git push", "git commit", "git add", "git stash", "git reset", "git checkout", "git restore", "git rebase",
+export const DENIED = ["git push", "git commit", "git add", "git stash", "git reset", "git checkout", "git rebase",
     "gh repo fork", "gh repo create", "gh repo delete", "gh pr create", "gh pr merge", "gh release create", "gh issue create", "gh api -X", "gh api --method"];
 
 export const BREAKER_LIMIT = 3;
@@ -19,12 +19,31 @@ export function commandOf(input) {
     return String(args.command ?? args.cmd ?? args.script ?? "");
 }
 
+// A test run may rewrite tracked snapshots and screenshots; the one git restore allowed puts them back: worktree only, by
+// path, every path under a test directory.
+export const TEST_DIR = /(^|\/)(tests?|__tests__|specs?|snapshots?|__snapshots__|screenshots|fixtures|testdata)(\/|$)/;
+export const RESTORE_RULE = "a worktree restore by path (git restore -- <paths>) of files under a test directory that a test run rewrote";
+
+export function allowedRestore(segment) {
+    const words = (segment.replace(/^git\s+restore\s*/, "").match(/'[^']*'|"[^"]*"|\S+/g) ?? []).map((w) => w.replace(/^['"]|['"]$/g, ""));
+    const paths = [];
+    for (let i = 0; i < words.length; i++) {
+        const w = words[i];
+        if (w === "--" || w === "--worktree" || w === "-W" || w === "--source=HEAD") continue;
+        if ((w === "--source" || w === "-s") && words[i + 1] === "HEAD") { i++; continue; }
+        if (w.startsWith("-")) return false;
+        paths.push(w);
+    }
+    return paths.length > 0 && paths.every((p) => TEST_DIR.test(p));
+}
+
 // The first denied command in a chain. Segments split on the shell's own separators; a leading sudo/env/command wrapper is skipped.
 export function deniedCommand(command) {
     for (const seg of String(command).split(/\s*(?:&&|\|\||;|\n|\|)\s*/)) {
         const s = seg.replace(/^(sudo|env|command)\s+/, "").trim();
         const hit = DENIED.find((d) => s === d || s.startsWith(d + " "));
         if (hit) return hit;
+        if (/^git\s+restore(\s|$)/.test(s) && !allowedRestore(s)) return "git restore";
     }
     return null;
 }
@@ -38,6 +57,7 @@ export function decide({ event, toolName, command, paused, allowGit, tripped }) 
     if (event !== "PreToolUse" || !isShell(toolName)) return { decision: "allow" };
     if (attributed(command)) return { decision: "deny", reason: "minime: no AI attribution in commits or PRs; drop the Co-Authored-By / Generated with line" };
     const hit = deniedCommand(command);
+    if (hit === "git restore" && !allowGit) return { decision: "deny", reason: `minime: 'git restore' is allowed only as ${RESTORE_RULE}; the user allows more with MINIME_ALLOW_GIT=1 or an allow-git file in VIRTUCON_HQ` };
     if (hit && !allowGit) return { decision: "deny", reason: `minime: '${hit}' changes history or leaves the machine; the user commits, or allows it for this session with MINIME_ALLOW_GIT=1 or an allow-git file in VIRTUCON_HQ` };
     return { decision: "allow" };
 }
