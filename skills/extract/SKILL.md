@@ -30,7 +30,12 @@ The user's edits of agent code are the clearest statement of their taste.
 
 1. Save this task's change: write `git diff HEAD` of its changed files (and the content of new untracked ones) to `raw/<org>/<repo>/<date>-<topic>.diff`.
 2. Look for earlier `.diff` files in `raw/<org>/<repo>/`. For each one, check with `git log --since=<its date> -- <its files>` whether the user changed those files since. Where they did, compare the agent's lines in the diff with the current code. What the user deleted, rewrote or moved is a human correction: harvest the pattern behind it ("a function exists only when two places call it"), not the single edit. The user's commit is the evidence.
-3. The user's words in past sessions are the other red pen. Run the session red pen tool from the nudge with `--since <the blueprint's date> --repo <repo name>`: it reads the Claude Code and Copilot CLI session logs on this machine and lists the rules the user restated (each with the user's quote, session and date as its receipt) and the corrections no rule names. Save its output to `raw/<org>/<repo>/<date>-redpen.md`. A rule restated in two or more sessions is a candidate; the quote is its evidence and Keep or drop applies as for any claim.
+3. The user's words in past sessions are the other red pen. Use the GrepMem tool from the nudge with `--since <the blueprint's date> --repo <repo name>`. Start with broad, case-insensitive regular expressions for corrections and preferences, use `--count` to size broad searches, then page exact strings with `--offset` and `--context-lines` until each candidate has enough surrounding context to identify the speaker, session and intent. GrepMem reads the unmodified Claude Code and Copilot CLI JSONL histories; it does not classify or summarize them. Save the selected hits and query commands verbatim to `raw/<org>/<repo>/<date>-history.md`. Search exact names, identifiers, numbers and dates rather than synonyms, and refine from the returned lines. A hit is only a candidate receipt: Keep or drop applies, and a repeated rule still needs the user's original words.
+
+```bash
+node <GrepMem tool> --pattern 'never|don.t|instead|wrong|should|prefer' \
+  --since <blueprint date> --repo <repo name> --context-lines 2 --max-matches 30
+```
 
 ## Keep or drop
 

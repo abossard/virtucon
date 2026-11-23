@@ -118,7 +118,7 @@ function buildNudge(orgRepo) {
     `  Orchestration guide: ${path.join(PLUGIN_ROOT, 'assets', 'ORCHESTRATION.md')}`,
     `  Blueprint tool: ${tool('blueprint', 'scripts', 'blueprint.mjs')}`,
     `  Wiki lint tool: ${tool('extract', 'scripts', 'wiki-lint.mjs')}`,
-    `  Session red pen tool: ${tool('extract', 'scripts', 'redpen.mjs')} --since <date> --repo <repo>`,
+    `  GrepMem history tool: ${tool('extract', 'scripts', 'grepmem.mjs')} --pattern '<regex>' --since <date> --repo <repo>`,
     `  Wiki schema: ${VIRTUCON_HQ}/schema.md`,
     `  Repo wiki index: ${VIRTUCON_HQ}/wiki/orgs/${org}/${repo}/index.md`,
     `  Wiki index: ${VIRTUCON_HQ}/wiki/index.md`,

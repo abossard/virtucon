@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const PLUGIN_ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const HOOK = resolve(PLUGIN_ROOT, "hooks", "session-start.js");
+const GREPMEM = resolve(PLUGIN_ROOT, "skills", "extract", "scripts", "grepmem.mjs");
 const SCRATCH_PARENT = resolve(fileURLToPath(new URL("../", import.meta.url)), ".tmp-hook-entry");
 
 function runHook(hq, cwd) {
@@ -48,6 +49,7 @@ const EXPECTED = [
     ["absolute blueprint tool", (t) => t.includes(`Blueprint tool: node ${resolve(PLUGIN_ROOT, "skills", "blueprint", "scripts", "blueprint.mjs")}`)],
     ["wiki paths", (t, hq) => t.includes(`Wiki index: ${hq}/wiki/index.md`) && t.includes(`Wiki schema: ${hq}/schema.md`) && /Repo wiki index: .*\/wiki\/orgs\/[^/]+\/[^/]+\/index\.md/.test(t)],
     ["absolute wiki lint tool", (t) => t.includes(`Wiki lint tool: node ${resolve(PLUGIN_ROOT, "skills", "extract", "scripts", "wiki-lint.mjs")}`)],
+    ["absolute GrepMem tool", (t) => t.includes(`GrepMem history tool: node ${resolve(PLUGIN_ROOT, "skills", "extract", "scripts", "grepmem.mjs")}`)],
     ["full flow points to dr-evil", (t) => t.includes("minime:dr-evil")],
     ["flow rules live in the agent, not the nudge", (t) => !/blueprint -> replicate|Every phase returns/.test(t)],
     ["no invented role selector", (t) => !/MINIME_ROLE|process\.env\.ROLE/.test(t)],
@@ -113,6 +115,35 @@ test("bootstrap seeds only the scratch HQ", async () => {
         runHook(hq, dir);
         await stat(resolve(hq, "_TEMPLATE.md"));
         await stat(resolve(hq, "schema.md"));
+    });
+});
+
+test("GrepMem searches, paginates, counts, and rejects invalid patterns", async () => {
+    await withScratch(async (dir) => {
+        const { mkdir } = await import("node:fs/promises");
+        const claude = resolve(dir, "claude");
+        const copilot = resolve(dir, "copilot");
+        await mkdir(resolve(claude, "project"), { recursive: true });
+        await mkdir(copilot, { recursive: true });
+        const events = [
+            { type: "user", timestamp: "2026-11-01T00:00:00Z", cwd: "/r/virtucon", message: { role: "user", content: "first Needle-42" } },
+            { type: "assistant", timestamp: "2026-11-01T00:00:01Z", cwd: "/r/virtucon", message: { role: "assistant", content: "second Needle-43" } },
+        ].map((event) => JSON.stringify(event)).join("\n");
+        await writeFile(resolve(claude, "project", "session.jsonl"), events);
+        const run = (...args) => spawnSync(process.execPath, [GREPMEM, ...args, "--claude", claude, "--copilot", copilot], { encoding: "utf8" });
+
+        const paged = run("--pattern", "needle", "--max-matches", "1", "--offset", "1", "--context-lines", "0");
+        assert.equal(paged.status, 0, paged.stderr);
+        assert.match(paged.stdout, /Needle-43/);
+        assert.match(paged.stdout, /showing matches 2-2 of 2/);
+        assert.doesNotMatch(paged.stdout, /continue with/);
+        const counted = run("--pattern", "needle", "--count");
+        assert.equal(counted.status, 0, counted.stderr);
+        assert.match(counted.stdout, /2 matching line\(s\)/);
+        assert.doesNotMatch(counted.stdout, /Needle-4/);
+        const invalid = run("--pattern", "[");
+        assert.equal(invalid.status, 2);
+        assert.match(invalid.stderr, /invalid regular expression/);
     });
 });
 
